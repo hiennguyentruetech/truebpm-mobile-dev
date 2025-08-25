@@ -1192,14 +1192,14 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           gradient: _isUploading
               ? LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400])
               : const LinearGradient(
                   colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                 ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: _isUploading ? [] : [
             BoxShadow(
               color: const Color(0xFF667EEA).withOpacity(0.4),
