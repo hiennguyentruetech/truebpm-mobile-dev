@@ -1,0 +1,2163 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:truebpm/providers/core_detail_provider.dart';
+import 'package:truebpm/services/auth_service.dart';
+import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/widgets/core/core_tab_body.dart';
+import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
+import 'package:truebpm/widgets/loading_overlay.dart';
+import 'package:open_filex/open_filex.dart';
+
+/// File model for selected files
+class SelectedFile {
+  final String name;
+  final int size;
+  final Uint8List bytes;
+  final String? path;
+
+  SelectedFile({
+    required this.name,
+    required this.size,
+    required this.bytes,
+    this.path,
+  });
+}
+
+/// Core tab body for Documents (DOC) - Reusable for all modules
+/// Handles file upload, download, delete and view with stunning UI
+class TabDocCoreBodyScreen extends CoreTabBody {
+  const TabDocCoreBodyScreen({
+    super.key,
+    required super.moduleCode,
+    required super.tabCode,
+    super.itemId,
+    super.initialData,
+    super.onDataChanged,
+  });
+
+  @override
+  CoreTabBodyState<TabDocCoreBodyScreen> createState() => _TabDocCoreBodyScreenState();
+}
+
+class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> {
+  // Response data
+  Map<String, dynamic> _response = {};
+  Map<String, dynamic> _itemDetail = {};
+  List<dynamic> _files = [];
+  
+  // File upload data
+  List<SelectedFile> _selectedFiles = [];
+  bool _isUploading = false;
+  bool _isProcessing = false;
+  bool _isUploadAreaExpanded = false;
+  
+  // No sub-tab state here anymore; handled by DetailCoreScreen
+
+  @override
+  void initState() {
+    super.initState();
+    // Use initial data from parent; provider updates will come via didUpdateWidget
+    _updateDataFromInitialData();
+  }
+
+  @override
+  void didUpdateWidget(TabDocCoreBodyScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.initialData != widget.initialData) {
+      _updateDataFromInitialData();
+    }
+  }
+
+  void _updateDataFromInitialData() {
+    if (widget.initialData != null) {
+      _response = Map<String, dynamic>.from(widget.initialData!);
+      _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
+      _files = List<dynamic>.from(_itemDetail['files'] ?? []);
+      
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+  
+  
+
+  Future<void> _pickFiles() async {
+    // Show options for file picking using custom dialog style
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 8,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.folder_open,
+                  size: 32,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Title
+              const Text(
+                'Select Source',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              // Message
+              Text(
+                'Choose where to pick files from:',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Options
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('files'),
+                      icon: const Icon(Icons.folder),
+                      label: const Text('Device Storage'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('gallery'),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Photo Gallery'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (choice == null) return;
+
+    if (choice == 'files') {
+      await _pickFromStorage();
+    } else if (choice == 'gallery') {
+      await _pickFromGallery();
+    }
+  }
+
+  Future<void> _pickFromStorage() async {
+    try {
+      setState(() => _isProcessing = true);
+
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+        allowedExtensions: null,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        for (final file in result.files) {
+          if (file.bytes != null) {
+            final selectedFile = SelectedFile(
+              name: file.name,
+              size: file.size,
+              bytes: file.bytes!,
+              path: file.path,
+            );
+            
+            setState(() {
+              _selectedFiles.add(selectedFile);
+              // Auto-expand upload area when files are selected
+              if (!_isUploadAreaExpanded) {
+                _isUploadAreaExpanded = true;
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking files: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      setState(() => _isProcessing = true);
+      
+      final ImagePicker picker = ImagePicker();
+      final List<XFile> images = await picker.pickMultipleMedia(
+        maxHeight: 1920,
+        maxWidth: 1080,
+        imageQuality: 85,
+      );
+
+      for (final image in images) {
+        final file = File(image.path);
+        final bytes = await file.readAsBytes();
+        
+        final selectedFile = SelectedFile(
+          name: image.name,
+          size: bytes.length,
+          bytes: bytes,
+          path: image.path,
+        );
+        
+        setState(() {
+          _selectedFiles.add(selectedFile);
+          // Auto-expand upload area when files are selected
+          if (!_isUploadAreaExpanded) {
+            _isUploadAreaExpanded = true;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking from gallery: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _pickFromCamera() async {
+    try {
+      setState(() => _isProcessing = true);
+      
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        final file = File(image.path);
+        final bytes = await file.readAsBytes();
+        
+        final selectedFile = SelectedFile(
+          name: image.name,
+          size: bytes.length,
+          bytes: bytes,
+          path: image.path,
+        );
+        
+        setState(() {
+          _selectedFiles.add(selectedFile);
+          // Auto-expand upload area when files are selected
+          if (!_isUploadAreaExpanded) {
+            _isUploadAreaExpanded = true;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error taking photo: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  void _removeSelectedFile(int index) {
+    setState(() {
+      _selectedFiles.removeAt(index);
+    });
+  }
+
+  Future<void> _uploadFiles() async {
+    if (_selectedFiles.isEmpty || _isUploading) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final authService = AuthService();
+      final userInfo = await authService.getSavedUserInfo();
+      final provider = Provider.of<CoreDetailProvider>(context, listen: false);
+      final currentData = provider.rawResponse;
+
+      if (currentData == null) {
+        throw Exception('No data available for upload');
+      }
+
+      if (userInfo == null) {
+        throw Exception('User information not available');
+      }
+
+      // Upload files one by one using the specialized uploadFile method
+      Map<String, dynamic>? lastSuccessfulResponse;
+      final currentSubTabCode = Provider.of<CoreDetailProvider>(context, listen: false).currentDocSubTabCode;
+
+      for (final file in _selectedFiles) {
+        final response = await CoreService.instance.uploadFile(
+          widget.moduleCode,
+          file.name,
+          file.bytes,
+          userInfo.id,
+          userInfo.code,
+          currentData['itemDetail']?['value']?['id'] ?? '',
+          currentData['itemDetail']?['value']?['code'] ?? '',
+          tabModuleCode: widget.tabCode, // Always use main tab code for URL
+          subTabModuleCode: currentSubTabCode, // Pass subtab code separately for payload
+        );
+
+        if (response == null || response['success'] != true) {
+          throw Exception('Failed to upload ${file.name}: ${response?['message'] ?? 'Unknown error'}');
+        }
+
+        // Keep the last successful response to update UI
+        lastSuccessfulResponse = response;
+      }
+
+      // Clear selected files after successful upload
+      setState(() {
+        _selectedFiles.clear();
+      });
+
+      // Update data using the last upload response instead of calling API again
+      if (mounted && lastSuccessfulResponse != null) {
+        final provider2 = Provider.of<CoreDetailProvider>(context, listen: false);
+
+        // Use the response data from upload to update the provider
+        // This avoids an extra API call since upload response contains updated data
+        provider2.updateRawResponse(lastSuccessfulResponse);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Files uploaded successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+//       print('🔥 [DOC TAB] Upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
+  Future<void> _downloadFile(Map<String, dynamic> file) async {
+    try {
+      LoadingOverlay.show(context, message: 'Downloading...');
+      setState(() => _isProcessing = true);
+
+      final authService = AuthService();
+      final userInfo = await authService.getSavedUserInfo();
+      if (userInfo == null) {
+        throw Exception('User information not available');
+      }
+
+      // Convert userInfo to Map format required by API
+      final userInfoMap = {
+        'id': userInfo.id,
+        'code': userInfo.code,
+        'fullName': userInfo.fullName,
+        'phone': userInfo.phone,
+        'email': userInfo.email,
+        'personalEmail': userInfo.personalEmail,
+        'position': userInfo.position,
+        'createdDate': userInfo.createdDate,
+        'managerFullName': userInfo.managerFullName,
+        'roles': userInfo.roles,
+      };
+
+      // Get current sub-tab code from provider if DOC has sub-tabs
+      final provider = Provider.of<CoreDetailProvider>(context, listen: false);
+      final currentSubTabCode = provider.currentDocSubTabCode;
+
+      final response = await CoreService.downloadFile(
+        widget.moduleCode,
+        userInfoMap,
+        file,
+        tabModuleCode: widget.tabCode, // Always use main tab code for URL
+        subTabModuleCode: currentSubTabCode, // Pass subtab code separately for payload
+      );
+
+      // Accept both structures: with or without 'success' flag
+      if (response != null) {
+        // Extract base64 data from response (expected under key 'data')
+        final dynamic raw = response['data'] ?? response['value']?['data'];
+        if (raw != null && raw.toString().isNotEmpty) {
+          // Some APIs may return data URIs; handle both pure base64 and data URI
+          String dataStr = raw.toString();
+          if (dataStr.contains(',')) {
+            // Take the part after the comma if present (data:<mime>;base64,<data>)
+            dataStr = dataStr.split(',').last;
+          }
+          final bytes = base64Decode(dataStr);
+
+          final fileName = file['fileName']?.toString() ?? 'downloaded_file';
+          final fileType = file['fileType']?.toString() ?? 'application/octet-stream';
+          
+          // Hide loading overlay before showing dialog
+          LoadingOverlay.hide();
+          setState(() => _isProcessing = false);
+          
+          await _showDownloadOptionsDialog(fileName, fileType, bytes, file);
+        } else {
+          throw Exception('No file data received from server');
+        }
+      } else {
+        throw Exception('Download failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        // Only hide loading if still showing (in case of error)
+        if (LoadingOverlay.isShowing) {
+          LoadingOverlay.hide();
+        }
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _showDownloadOptionsDialog(
+    String fileName, 
+    String fileType, 
+    Uint8List bytes, 
+    Map<String, dynamic> fileInfo,
+  ) async {
+    final isOffice = () {
+      final c = _classifyMime(_resolveMime(fileType, fileName));
+      return c == 'word' || c == 'excel' || c == 'powerpoint';
+    }();
+
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 8,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // File Icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: _getFileTypeColor(fileType).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _getFileTypeIcon(fileType),
+                  size: 32,
+                  color: _getFileTypeColor(fileType),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // File Name
+              Text(
+                fileName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              
+              // File Info
+              Text(
+                '${_formatFileSize(bytes.length)} • ${_getFileTypeDisplayName(fileType)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Action Buttons
+              Column(
+                children: [
+                  // View File Button (if supported)
+                  if (_isViewableFileType(fileType)) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context).pop('view'),
+                        icon: const Icon(Icons.visibility),
+                        label: const Text('View File'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  if (isOffice) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).pop('open'),
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Open in another app'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Download Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop('download'),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download to Device'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Cancel Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (choice == 'view') {
+      LoadingOverlay.hide();
+      setState(() => _isProcessing = false);
+      await _viewFile(fileName, fileType, bytes, fileInfo);
+    } else if (choice == 'download') {
+      await _saveFileToDevice(fileName, bytes);
+    } else if (choice == 'open') {
+      await _openWithSystemApp(fileName, bytes);
+    }
+  }
+
+  Future<void> _openWithSystemApp(String fileName, Uint8List bytes) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final tempPath = '${tempDir.path}/$fileName';
+      final f = File(tempPath);
+      await f.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(tempPath);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cannot open file: ${result.message}'), backgroundColor: Colors.orange),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Open error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // MIME helpers
+  String _resolveMime(String fileType, String? fileName) {
+    String mime = fileType.trim().toLowerCase();
+    if (mime.isEmpty || !mime.contains('/')) {
+      // Fallback to extension-based guess
+      final ext = (fileName ?? '').split('.').length > 1
+          ? fileName!.split('.').last.toLowerCase()
+          : '';
+      final guessed = _mimeFromExtension(ext);
+      if (guessed.isNotEmpty) return guessed;
+      return 'application/octet-stream';
+    }
+    return mime;
+  }
+
+  String _mimeFromExtension(String ext) {
+    switch (ext) {
+      // Documents
+      case 'pdf':
+        return 'application/pdf';
+      case 'rtf':
+        return 'application/rtf';
+      case 'epub':
+        return 'application/epub+zip';
+      // Word
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'docm':
+        return 'application/vnd.ms-word.document.macroEnabled.12';
+      case 'dot':
+        return 'application/msword';
+      case 'dotx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.template';
+      case 'dotm':
+        return 'application/vnd.ms-word.template.macroEnabled.12';
+      // Excel
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'xlsm':
+        return 'application/vnd.ms-excel.sheet.macroEnabled.12';
+      case 'xltx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.template';
+      case 'xltm':
+        return 'application/vnd.ms-excel.template.macroEnabled.12';
+      case 'xlam':
+        return 'application/vnd.ms-excel.addin.macroEnabled.12';
+      case 'xlsb':
+        return 'application/vnd.ms-excel.sheet.binary.macroEnabled.12';
+      case 'csv':
+        return 'text/csv';
+      case 'tsv':
+        return 'text/tab-separated-values';
+      // PowerPoint
+      case 'ppt':
+        return 'application/vnd.ms-powerpoint';
+      case 'pptx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'pptm':
+        return 'application/vnd.ms-powerpoint.presentation.macroEnabled.12';
+      case 'potx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.template';
+      case 'potm':
+        return 'application/vnd.ms-powerpoint.template.macroEnabled.12';
+      case 'pps':
+        return 'application/vnd.ms-powerpoint';
+      case 'ppsx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.slideshow';
+      case 'ppsm':
+        return 'application/vnd.ms-powerpoint.slideshow.macroEnabled.12';
+      // OpenDocument
+      case 'odt':
+        return 'application/vnd.oasis.opendocument.text';
+      case 'ott':
+        return 'application/vnd.oasis.opendocument.text-template';
+      case 'ods':
+        return 'application/vnd.oasis.opendocument.spreadsheet';
+      case 'ots':
+        return 'application/vnd.oasis.opendocument.spreadsheet-template';
+      case 'odp':
+        return 'application/vnd.oasis.opendocument.presentation';
+      case 'otp':
+        return 'application/vnd.oasis.opendocument.presentation-template';
+      // Images
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'bmp':
+        return 'image/bmp';
+      case 'tiff':
+      case 'tif':
+        return 'image/tiff';
+      case 'webp':
+        return 'image/webp';
+      case 'svg':
+      case 'svgz':
+        return 'image/svg+xml';
+      case 'heic':
+        return 'image/heic';
+      case 'heif':
+        return 'image/heif';
+      // Text / Markup
+      case 'txt':
+        return 'text/plain';
+      case 'json':
+        return 'application/json';
+      case 'xml':
+        return 'application/xml';
+      case 'html':
+      case 'htm':
+        return 'text/html';
+      case 'md':
+      case 'markdown':
+        return 'text/markdown';
+      case 'yaml':
+      case 'yml':
+        return 'application/x-yaml';
+      default:
+        return '';
+    }
+  }
+
+  String _classifyMime(String mime) {
+    final m = mime.toLowerCase();
+    if (m.startsWith('image/')) return 'image';
+    if (m == 'application/pdf') return 'pdf';
+    if (m.startsWith('text/') ||
+        m == 'application/json' ||
+        m == 'application/xml' ||
+        m == 'application/x-yaml' ||
+        m == 'text/csv' ||
+        m == 'text/tab-separated-values' ||
+        m == 'text/markdown') return 'text';
+
+    const wordMimes = {
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-word.document.macroEnabled.12',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+      'application/vnd.ms-word.template.macroEnabled.12',
+      'application/vnd.oasis.opendocument.text',
+      'application/vnd.oasis.opendocument.text-template',
+    };
+    const excelMimes = {
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+      'application/vnd.ms-excel.template.macroEnabled.12',
+      'application/vnd.ms-excel.addin.macroEnabled.12',
+      'application/vnd.ms-excel.sheet.binary.macroEnabled.12',
+      'application/vnd.oasis.opendocument.spreadsheet',
+      'application/vnd.oasis.opendocument.spreadsheet-template',
+      'text/csv',
+      'text/tab-separated-values',
+    };
+    const pptMimes = {
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+      'application/vnd.openxmlformats-officedocument.presentationml.template',
+      'application/vnd.ms-powerpoint.template.macroEnabled.12',
+      'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+      'application/vnd.ms-powerpoint.slideshow.macroEnabled.12',
+      'application/vnd.oasis.opendocument.presentation',
+      'application/vnd.oasis.opendocument.presentation-template',
+    };
+
+    if (wordMimes.contains(m)) return 'word';
+    if (excelMimes.contains(m)) return 'excel';
+    if (pptMimes.contains(m)) return 'powerpoint';
+
+    return 'other';
+  }
+
+  bool _isViewableFileType(String fileType) {
+    final category = _classifyMime(_resolveMime(fileType, null));
+    return category == 'image' || category == 'pdf' || category == 'text';
+  }
+
+  String _getFileTypeDisplayName(String fileType, {String? fileName}) {
+    final category = _classifyMime(_resolveMime(fileType, fileName));
+    switch (category) {
+      case 'image':
+        return 'Image';
+      case 'pdf':
+        return 'PDF Document';
+      case 'text':
+        return 'Text Document';
+      case 'word':
+        return 'Word Document';
+      case 'excel':
+        return 'Excel Spreadsheet';
+      case 'powerpoint':
+        return 'PowerPoint Presentation';
+      default:
+        return 'Document';
+    }
+  }
+
+  Future<void> _viewFile(
+    String fileName,
+    String fileType,
+    Uint8List bytes,
+    Map<String, dynamic> fileInfo,
+  ) async {
+    try {
+      final category = _classifyMime(_resolveMime(fileType, fileName));
+      if (category == 'image') {
+        await _showProfessionalImageViewer(fileName, bytes, fileInfo);
+      } else if (category == 'pdf') {
+        await _showProfessionalPdfViewer(fileName, bytes, fileInfo);
+      } else if (category == 'text') {
+        await _showTextViewer(fileName, bytes, fileInfo);
+      } else if (category == 'word' || category == 'excel' || category == 'powerpoint') {
+        await _showDocumentViewer(fileName, fileType, bytes, fileInfo);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Viewer for ${_getFileTypeDisplayName(fileType, fileName: fileName)} coming soon'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error viewing file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showTextViewer(
+    String fileName, 
+    Uint8List bytes, 
+    Map<String, dynamic> fileInfo,
+  ) async {
+    try {
+      // Decode text content
+      String textContent;
+      try {
+        textContent = utf8.decode(bytes);
+      } catch (e) {
+        // If UTF-8 fails, try Latin-1
+        textContent = latin1.decode(bytes);
+      }
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text(
+                fileName,
+                style: const TextStyle(fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () => _saveFileToDevice(fileName, bytes),
+                  icon: const Icon(Icons.download),
+                  tooltip: 'Download',
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
+                // Info bar
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.indigo.shade50,
+                  child: Row(
+                    children: [
+                      Icon(Icons.article_outlined, color: Colors.indigo.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Text Document - Read-only view',
+                          style: TextStyle(
+                            color: Colors.indigo.shade700,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Text content
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        textContent,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: Container(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatFileSize(bytes.length),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  Text(
+                    _formatUploadDate(fileInfo['createdDate']?.toString() ?? ''),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error viewing text file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showProfessionalImageViewer(
+    String fileName, 
+    Uint8List bytes, 
+    Map<String, dynamic> fileInfo,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) {
+          return Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black.withOpacity(0.8),
+              foregroundColor: Colors.white,
+              title: Text(
+                fileName,
+                style: const TextStyle(fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () => _saveFileToDevice(fileName, bytes),
+                  icon: const Icon(Icons.download),
+                  tooltip: 'Download',
+                ),
+              ],
+            ),
+            body: Container(
+              child: PhotoViewGallery.builder(
+                scrollPhysics: const BouncingScrollPhysics(),
+                builder: (BuildContext context, int index) {
+                  return PhotoViewGalleryPageOptions(
+                    imageProvider: MemoryImage(bytes),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained * 0.5,
+                    maxScale: PhotoViewComputedScale.covered * 3.0,
+                    heroAttributes: PhotoViewHeroAttributes(tag: fileName),
+                  );
+                },
+                itemCount: 1,
+                loadingBuilder: (context, event) => Center(
+                  child: Container(
+                    width: 60.0,
+                    height: 60.0,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      value: event == null
+                          ? 0
+                          : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
+                    ),
+                  ),
+                ),
+                backgroundDecoration: const BoxDecoration(
+                  color: Colors.black,
+                ),
+                pageController: PageController(),
+              ),
+            ),
+            bottomNavigationBar: Container(
+              color: Colors.black.withOpacity(0.8),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatFileSize(bytes.length),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  Text(
+                    _formatUploadDate(fileInfo['createdDate']?.toString() ?? ''),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showProfessionalPdfViewer(
+    String fileName, 
+    Uint8List bytes, 
+    Map<String, dynamic> fileInfo,
+  ) async {
+    try {
+      // Save PDF to temporary file for viewing
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(bytes);
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text(
+                fileName,
+                style: const TextStyle(fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () => _saveFileToDevice(fileName, bytes),
+                  icon: const Icon(Icons.download),
+                  tooltip: 'Download',
+                ),
+              ],
+            ),
+            body: PDFView(
+              filePath: tempFile.path,
+              enableSwipe: true,
+              swipeHorizontal: false,
+              autoSpacing: false,
+              pageFling: true,
+              pageSnap: true,
+              defaultPage: 0,
+              fitPolicy: FitPolicy.BOTH,
+              preventLinkNavigation: false,
+              onRender: (pages) {
+//                 print('PDF rendered with $pages pages');
+              },
+              onError: (error) {
+//                 print('PDF Error: $error');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error loading PDF: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+              onPageError: (page, error) {
+//                 print('PDF Page $page Error: $error');
+              },
+              onViewCreated: (PDFViewController pdfViewController) {
+                // PDF controller ready
+              },
+              onLinkHandler: (String? uri) {
+//                 print('PDF Link: $uri');
+              },
+              onPageChanged: (int? page, int? total) {
+//                 print('PDF Page changed: $page/$total');
+              },
+            ),
+            bottomNavigationBar: Container(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatFileSize(bytes.length),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  Text(
+                    _formatUploadDate(fileInfo['createdDate']?.toString() ?? ''),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Clean up temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error viewing PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showDocumentViewer(
+    String fileName,
+    String fileType,
+    Uint8List bytes,
+    Map<String, dynamic> fileInfo,
+  ) async {
+    try {
+      // Save document to temporary file
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(bytes);
+
+      // Simplified fallback viewer (no WebView)
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text(
+                fileName,
+                style: const TextStyle(fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () => _saveFileToDevice(fileName, bytes),
+                  icon: const Icon(Icons.download),
+                  tooltip: 'Download',
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
+                // Info bar
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.blue.shade50,
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Document viewer - Download for full functionality',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Placeholder content
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: _getFileTypeColor(fileType).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _getFileTypeColor(fileType).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                _getFileTypeIcon(fileType),
+                                size: 64,
+                                color: _getFileTypeColor(fileType),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                fileName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${_formatFileSize(bytes.length)} • ${_getFileTypeDisplayName(fileType)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Preview not available for this document type.\nDownload the file to view it with appropriate software.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _saveFileToDevice(fileName, bytes);
+                            },
+                            icon: const Icon(Icons.download),
+                            label: const Text('Download File'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _getFileTypeColor(fileType),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: Container(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatFileSize(bytes.length),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  Text(
+                    _formatUploadDate(fileInfo['createdDate']?.toString() ?? ''),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Clean up temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error viewing document: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveFileToDevice(String fileName, Uint8List bytes) async {
+    try {
+      // Get downloads directory
+      final directory = await getExternalStorageDirectory();
+      final downloadsPath = '${directory?.path}/Download';
+      
+      // Create downloads directory if it doesn't exist
+      final downloadsDir = Directory(downloadsPath);
+      if (!await downloadsDir.exists()) {
+        await downloadsDir.create(recursive: true);
+      }
+      
+      // Create file with unique name if needed
+      String finalFileName = fileName;
+      String filePath = '$downloadsPath/$finalFileName';
+      int counter = 1;
+      
+      while (await File(filePath).exists()) {
+        final nameWithoutExt = fileName.contains('.') 
+            ? fileName.substring(0, fileName.lastIndexOf('.'))
+            : fileName;
+        final extension = fileName.contains('.') 
+            ? fileName.substring(fileName.lastIndexOf('.'))
+            : '';
+        finalFileName = '${nameWithoutExt}_$counter$extension';
+        filePath = '$downloadsPath/$finalFileName';
+        counter++;
+      }
+      
+      // Write file
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File saved to Downloads: $finalFileName'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteFile(Map<String, dynamic> file) async {
+    final fileName = file['fileName']?.toString() ?? 'this file';
+
+    final confirmed = await CustomConfirmDialog.showDelete(
+      context,
+      title: 'Delete File',
+      message: 'Are you sure you want to delete "$fileName"? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      onConfirm: () {},
+    );
+    if (confirmed == null || confirmed == false) return;
+
+    try {
+      LoadingOverlay.show(context, message: 'Deleting...');
+      setState(() => _isProcessing = true);
+
+      final authService = AuthService();
+      final userInfo = await authService.getSavedUserInfo();
+      if (userInfo == null) {
+        throw Exception('User information not available');
+      }
+
+      // Convert userInfo to Map format required by API
+      final userInfoMap = {
+        'id': userInfo.id,
+        'code': userInfo.code,
+        'fullName': userInfo.fullName,
+        'phone': userInfo.phone,
+        'email': userInfo.email,
+        'personalEmail': userInfo.personalEmail,
+        'position': userInfo.position,
+        'createdDate': userInfo.createdDate,
+        'managerFullName': userInfo.managerFullName,
+        'roles': userInfo.roles,
+      };
+
+      // Get current sub-tab code from provider if DOC has sub-tabs
+      final provider = Provider.of<CoreDetailProvider>(context, listen: false);
+      final subTabCode = provider.currentDocSubTabCode;
+
+      final response = await CoreService.deleteFile(
+        widget.moduleCode,
+        userInfoMap,
+        file,
+        tabModuleCode: widget.tabCode, // Always use main tab code for URL
+        subTabCode: subTabCode, // Pass subtab code for payload
+      );
+
+      if (response != null && (response['success'] == true || response['itemDetail'] != null)) {
+        // Update the local data from response similar to module tab load
+        if (response['itemDetail'] != null) {
+          setState(() {
+            _response = response;
+            _itemDetail = Map<String, dynamic>.from(response['itemDetail'] ?? {});
+            _files = List<dynamic>.from(_itemDetail['files'] ?? []);
+          });
+
+          // Update provider with new data
+          final provider = Provider.of<CoreDetailProvider>(context, listen: false);
+          provider.updateRawResponse(response);
+
+          if (widget.onDataChanged != null) {
+            widget.onDataChanged!(response);
+          }
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Deleted $fileName'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        throw Exception(response?['message'] ?? 'Delete failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delete error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        LoadingOverlay.hide();
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  @override
+  Widget buildTabContent(BuildContext context) {
+    // Pull latest files from provider each build
+    final provider = Provider.of<CoreDetailProvider>(context);
+    final newData = provider.rawResponse;
+    List<dynamic> files = _files;
+    if (newData != null) {
+      final itemDetail = Map<String, dynamic>.from(newData['itemDetail'] ?? {});
+      files = List<dynamic>.from(itemDetail['files'] ?? []);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.purple.shade50,
+            Colors.white,
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildUploadArea(),
+          Expanded(
+            child: provider.loading
+                ? const Center(child: CircularProgressIndicator())
+                : files.isEmpty && _selectedFiles.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: files.length,
+                        itemBuilder: (context, index) {
+                          final file = files[index] as Map<String, dynamic>;
+                          return _buildFileCard(file);
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  
+  Widget _buildUploadArea() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header (Always visible)
+          // Make the whole header tappable with ripple
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                setState(() {
+                  _isUploadAreaExpanded = !_isUploadAreaExpanded;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.cloud_upload, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Upload Documents',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Tap to expand upload options',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Selected files count badge
+                    if (_selectedFiles.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_selectedFiles.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: _isUploadAreaExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Expandable content
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            height: _isUploadAreaExpanded ? null : 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _isUploadAreaExpanded ? 1.0 : 0.0,
+              child: _isUploadAreaExpanded ? Container(
+                padding: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
+                child: Column(
+                  children: [
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.folder_open,
+                            label: 'Files & Gallery',
+                            onTap: _pickFiles,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.camera_alt,
+                            label: 'Camera',
+                            onTap: _pickFromCamera,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFA709A), Color(0xFFFEE140)],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Selected Files
+                    if (_selectedFiles.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildSelectedFilesList(),
+                      const SizedBox(height: 12),
+                      _buildUploadButton(),
+                    ],
+                  ],
+                ),
+              ) : const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required LinearGradient gradient,
+  }) {
+    return GestureDetector(
+      onTap: _isProcessing ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: _isProcessing ? LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400]) : gradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: _isProcessing ? [] : [
+            BoxShadow(
+              color: gradient.colors.first.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedFilesList() {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 150),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(8),
+        itemCount: _selectedFiles.length,
+        itemBuilder: (context, index) {
+          final file = _selectedFiles[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _getFileIcon(file.name),
+                  color: Colors.blue.shade600,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        file.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _formatFileSize(file.size),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _removeSelectedFile(index),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.red.shade400,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _getFileIcon(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+        return Icons.grid_on;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'bmp':
+        return Icons.image;
+      case 'mp4':
+      case 'avi':
+      case 'mov':
+        return Icons.videocam;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  Widget _buildUploadButton() {
+    return GestureDetector(
+      onTap: _isUploading ? null : _uploadFiles,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: _isUploading
+              ? LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400])
+              : const LinearGradient(
+                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: _isUploading ? [] : [
+            BoxShadow(
+              color: const Color(0xFF667EEA).withOpacity(0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isUploading) ...[
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ] else ...[
+              const Icon(Icons.cloud_upload, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              _isUploading ? 'Uploading...' : 'Upload ${_selectedFiles.length} file(s)',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.folder_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No documents yet',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Upload your first document!',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildFileCard(Map<String, dynamic> file) {
+    final fileName = file['fileName']?.toString() ?? 'Unknown File';
+    final fileSize = file['fileSize'] ?? 0;
+    final fileType = file['fileType']?.toString() ?? '';
+    final createdDate = file['createdDate']?.toString();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            // File Icon
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _getFileTypeColor(fileType).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getFileTypeIcon(fileType),
+                color: _getFileTypeColor(fileType),
+                size: 24,
+              ),
+            ),
+            
+            const SizedBox(width: 10),
+            
+            // File Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fileName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.visible,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        _formatFileSize(fileSize),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      if (createdDate != null) ...[
+                        Text(' • ', style: TextStyle(color: Colors.grey.shade400)),
+                        Text(
+                          _formatUploadDate(createdDate),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Action Buttons
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildFileActionButton(
+                  icon: Icons.download,
+                  color: Colors.blue,
+                  onTap: () => _downloadFile(file),
+                ),
+                const SizedBox(width: 8),
+                _buildFileActionButton(
+                  icon: Icons.delete,
+                  color: Colors.red,
+                  onTap: () => _deleteFile(file),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: _isProcessing ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  IconData _getFileTypeIcon(String fileType, {String? fileName}) {
+    final category = _classifyMime(_resolveMime(fileType, fileName));
+    switch (category) {
+      case 'image':
+        return Icons.image;
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'text':
+        return Icons.article_outlined;
+      case 'word':
+        return Icons.description;
+      case 'excel':
+        return Icons.grid_on;
+      case 'powerpoint':
+        return Icons.slideshow;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  Color _getFileTypeColor(String fileType, {String? fileName}) {
+    final category = _classifyMime(_resolveMime(fileType, fileName));
+    switch (category) {
+      case 'image':
+        return Colors.green;
+      case 'pdf':
+        return Colors.red;
+      case 'text':
+        return Colors.indigo;
+      case 'word':
+        return Colors.blue;
+      case 'excel':
+        return Colors.teal;
+      case 'powerpoint':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  String _formatUploadDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inDays == 0) {
+        return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else {
+        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+}

@@ -1,0 +1,167 @@
+import 'package:flutter/material.dart';
+import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
+
+/// CoreSelect utilities for API calls and data handling
+class CoreSelectUtils {
+  /// Load data from API
+  static Future<List<dynamic>> loadOptionsFromAPI(
+    String endpoint,
+    BuildContext context, {
+    bool showLoading = true,
+  }) async {
+    List<dynamic> options = [];
+    bool hadError = false;
+
+    // Show loading overlay
+    if (showLoading && context.mounted) {
+      LoadingOverlay.show(context, message: 'Loading options...');
+    }
+
+    try {
+      final response = await CoreService.instance.getDropdownData(endpoint);
+      
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        
+        // Handle different data types
+        if (data is List) {
+          options = List.from(data);
+        } else {
+          options = [data]; // Wrap single item in list
+        }
+      } else {
+        hadError = true;
+      }
+    } catch (e) {
+      hadError = true;
+    } finally {
+      // Hide loading overlay
+      if (showLoading && context.mounted) {
+        LoadingOverlay.hide();
+      }
+    }
+    // Optional: brief user feedback on error (non-blocking)
+    if (hadError && context.mounted) {
+      // Use a SnackBar to avoid modal interruptions
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not load options (forbidden or unavailable).'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    }
+    return options;
+  }
+
+  /// Get display text for an option
+  static String getDisplayText(dynamic option, String? displayField) {
+    if (option == null) return '';
+    
+    try {
+      if (displayField != null && option is Map) {
+        final displayValue = option[displayField];
+        if (displayValue != null) {
+          return displayValue.toString();
+        } else {
+          // If the specified display field is null, return empty string instead of fallback
+          return '';
+        }
+      }
+      
+      // For primitive values or when no displayField specified
+      if (option is String || option is num || option is bool) {
+        return option.toString();
+      }
+      
+      // For Map without displayField, try common fallback fields
+      if (option is Map) {
+        final fallbackFields = ['name', 'title', 'label', 'text', 'value'];
+        for (final field in fallbackFields) {
+          if (option[field] != null) {
+            return option[field].toString();
+          }
+        }
+        
+        // If all fallback fields are null, return empty string
+        return '';
+      }
+      
+      return option.toString();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /// Get the actual value from an option
+  static dynamic getOptionValue(dynamic option, String? displayField) {
+    if (displayField != null && option is Map) {
+      return option; // Return the whole object
+    }
+    return option; // Return the string value
+  }
+
+  /// Compare two values for equality (handles objects and primitives)
+  static bool compareValues(dynamic value1, dynamic value2, String? displayField) {
+    if (value1 == null && value2 == null) return true;
+    if (value1 == null || value2 == null) return false;
+    
+    // If both are Maps, compare by the display field or the whole object
+    if (value1 is Map && value2 is Map) {
+      if (displayField != null) {
+        return value1[displayField] == value2[displayField];
+      } else {
+        return value1.toString() == value2.toString();
+      }
+    }
+    
+    // For other types, use direct comparison
+    return value1 == value2;
+  }
+
+  /// Get default label from dataKey
+  static String getDefaultLabel(String dataKey) {
+    return dataKey.replaceAllMapped(
+      RegExp(r'([A-Z])'),
+      (match) => ' ${match.group(0)}',
+    ).trim().split(' ').map((word) => 
+      word[0].toUpperCase() + word.substring(1).toLowerCase()
+    ).join(' ');
+  }
+
+  /// Filter options based on search text
+  static List<dynamic> filterOptions(
+    List<dynamic> options,
+    String searchText,
+    String Function(dynamic) getDisplayText,
+    List<Map<String, String>>? moreDisplay,
+  ) {
+    if (searchText.isEmpty) {
+      return List.from(options);
+    } else {
+      final searchLower = searchText.toLowerCase();
+      final hasMoreDisplay = moreDisplay != null && moreDisplay.isNotEmpty;
+      
+      return options.where((option) {
+        final displayText = getDisplayText(option).toLowerCase();
+        
+        if (displayText.contains(searchLower)) {
+          return true;
+        }
+        
+        if (hasMoreDisplay && option is Map) {
+          for (final field in moreDisplay) {
+            final key = field['key'] ?? '';
+            final value = option[key]?.toString().toLowerCase() ?? '';
+            if (value.contains(searchLower)) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      }).toList();
+    }
+  }
+}
