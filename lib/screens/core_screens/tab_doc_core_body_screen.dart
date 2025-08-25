@@ -17,6 +17,7 @@ import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
 import 'package:truebpm/widgets/loading_overlay.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:truebpm/widgets/file_viewer_dialog.dart';
 
 /// File model for selected files
 class SelectedFile {
@@ -484,7 +485,14 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
           LoadingOverlay.hide();
           setState(() => _isProcessing = false);
           
-          await _showDownloadOptionsDialog(fileName, fileType, bytes, file);
+          await FileViewerDialog.showFileOptionsDialog(
+            context: context,
+            fileName: fileName,
+            fileType: fileType,
+            bytes: bytes,
+            fileInfo: file,
+            onSaveToDevice: (context, fileName, bytes) async => await _saveFileToDevice(fileName, bytes),
+          );
         } else {
           throw Exception('No file data received from server');
         }

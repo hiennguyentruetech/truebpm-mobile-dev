@@ -162,8 +162,6 @@ class _ProjectManagementPcmdrdTabBodyState extends CoreTabBodyState<ProjectManag
         'canAccessFooterActions': isPrivilegedUser,
       };
 
-
-
       // Add permissions to config
       baseConfig['permissions'] = permissions;
 

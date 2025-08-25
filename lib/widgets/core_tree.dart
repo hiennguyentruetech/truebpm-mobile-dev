@@ -963,8 +963,20 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
     
     // Priority: titleTemplate > titleKey > default fields
     if (widget.titleTemplate != null && widget.titleTemplate!.isNotEmpty) {
-      // Use template rendering
-      title = _renderTemplate(widget.titleTemplate!, item).trim();
+      // Enhance item context with children count for template rendering
+      final Map<String, dynamic> enhancedItem = Map<String, dynamic>.from(item);
+
+      // Get actual children count from tree data
+      final String itemId = item['id']?.toString() ?? '';
+      final actualChildren = _treeData.where((treeItem) =>
+        treeItem['parentId']?.toString() == itemId
+      ).toList();
+
+      // Set the actual children for template rendering
+      enhancedItem['children'] = actualChildren;
+
+      // Use template rendering with enhanced context
+      title = _renderTemplate(widget.titleTemplate!, enhancedItem).trim();
       if (title.isEmpty) title = null; // Fall back to default if template returns empty
     }
     
@@ -1112,6 +1124,9 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
         case 'document':
           icon = Icons.description_outlined;
           break;
+        case 'download':
+          icon = Icons.download_rounded;
+          break;
         default:
           icon = Icons.extension_rounded;
       }
@@ -1142,10 +1157,6 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
             // Call the onFooterAction callback if provided
             if (widget.onFooterAction != null) {
               widget.onFooterAction!(context, item, cfg);
-            } else {
-              // Fallback: print to console for debugging
-              // ignore: avoid_print
-              print('Footer action "$type" on item \'${item['id']}\' - no callback provided');
             }
           },
           padding: const EdgeInsets.all(4),
@@ -1235,11 +1246,7 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
     }
 
     if (rows.isEmpty) {
-      final name = item['name']?.toString() ?? item['displayText']?.toString() ?? 'Unnamed';
-      return Text(
-        name,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      );
+      return const SizedBox.shrink();
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
@@ -1316,16 +1323,22 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
 
   static dynamic _getByPath(Map<String, dynamic> map, String path) {
     dynamic curr = map;
-    for (final segment in path.split('.')) {
+    final segments = path.split('.');
+
+    for (int i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+
       if (segment == 'length' && curr is List) {
         return curr.length;
       }
+
       if (curr is Map && curr.containsKey(segment)) {
         curr = curr[segment];
       } else {
         return null;
       }
     }
+
     return curr;
   }
 
@@ -1559,6 +1572,16 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
         ...?widget.itemDetail['value'] as Map<String, dynamic>?,
         ...?_currentParent,
       };
+
+      // Ensure children is available for .length to work in header template
+      if (_currentParent != null && (!headerCtx.containsKey('children') || headerCtx['children'] is! List)) {
+        // Get children from current parent context
+        headerCtx['children'] = _currentItems;
+      } else if (!headerCtx.containsKey('children') || headerCtx['children'] is! List) {
+        // Fallback to empty list if no children
+        headerCtx['children'] = <Map<String, dynamic>>[];
+      }
+
       headerTitle = _renderTemplate(widget.headerTemplate!, headerCtx).trim();
       if (headerTitle.isEmpty) headerTitle = widget.label;
     }

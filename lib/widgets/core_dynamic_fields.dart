@@ -451,9 +451,13 @@ class CoreDynamicFields {
 
     // Level-based action restrictions
     final Map<String, dynamic>? levelRestrictions = config['levelRestrictions'] as Map<String, dynamic>?;
+    // ignore: unused_local_variable
     final int? minLevelForAdd = levelRestrictions?['minLevelForAdd'] as int?;
+    // ignore: unused_local_variable
     final int? minLevelForEdit = levelRestrictions?['minLevelForEdit'] as int?;
+    // ignore: unused_local_variable
     final int? minLevelForDelete = levelRestrictions?['minLevelForDelete'] as int?;
+    // ignore: unused_local_variable
     final int? minLevelForFooterActions = levelRestrictions?['minLevelForFooterActions'] as int?;
 
     // Default values for tree fields
