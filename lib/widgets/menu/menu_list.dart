@@ -1,0 +1,41 @@
+import 'package:flutter/material.dart';
+import 'package:truebpm/models/menu_model.dart';
+import 'package:truebpm/widgets/menu/menu_item.dart';
+
+class MenuList extends StatefulWidget {
+  final List<MenuModel> menuData;
+
+  const MenuList({
+    super.key,
+    required this.menuData,
+  });
+
+  @override
+  State<MenuList> createState() => _MenuListState();
+}
+
+class _MenuListState extends State<MenuList> {
+  void _onMenuUpdated() {
+    // Force rebuild when menu state changes
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return MenuItem(
+              menu: widget.menuData[index],
+              level: 0,
+              onMenuUpdated: _onMenuUpdated,
+            );
+          },
+          childCount: widget.menuData.length,
+        ),
+      ),
+    );
+  }
+}
