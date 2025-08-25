@@ -994,7 +994,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
               duration: const Duration(milliseconds: 300),
               opacity: _isUploadAreaExpanded ? 1.0 : 0.0,
               child: _isUploadAreaExpanded ? Container(
-                padding: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
+                padding: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 5),
                 child: Column(
                   children: [
                     // Action Buttons
@@ -1026,7 +1026,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                     
                     // Selected Files
                     if (_selectedFiles.isNotEmpty) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _buildSelectedFilesList(),
                       const SizedBox(height: 12),
                       _buildUploadButton(),
@@ -1051,10 +1051,10 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
       onTap: _isProcessing ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           gradient: _isProcessing ? LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade400]) : gradient,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: _isProcessing ? [] : [
             BoxShadow(
               color: gradient.colors.first.withOpacity(0.3),
