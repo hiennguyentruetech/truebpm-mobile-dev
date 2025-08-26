@@ -6,7 +6,7 @@ class FloatingAddButton extends StatelessWidget {
     required this.onPressed,
     this.size = 50,
     this.gradient,
-    this.icon = const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+    this.icon = const Icon(Icons.add_rounded, color: Colors.white, size: 40),
   });
 
   final VoidCallback onPressed;

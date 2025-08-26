@@ -11,6 +11,7 @@ import 'package:truebpm/widgets/core/core_app_bar.dart';
 import 'package:truebpm/widgets/core/core_empty_state.dart';
 import 'package:truebpm/widgets/core/core_list_item_card.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/widgets/common/floating_add_button.dart';
 
 class ListCoreScreen extends StatefulWidget {
   final String moduleCode;
@@ -355,51 +356,15 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                         animation: _fabScaleAnimation ?? Listenable.merge([]),
                         builder: (context, child) {
                           final isEnabled = provider.isNewButtonEnabled;
-                          final buttonColor = isEnabled ? const Color.fromARGB(255, 34, 79, 142) : Colors.grey;
                           return Transform.scale(
                             scale: _fabScaleAnimation?.value ?? 1.0,
-                            child: Container(
-                              width: 55,
-                              height: 55,
-                              decoration: BoxDecoration(
-                                color: buttonColor,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: buttonColor.withOpacity(0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                shape: const CircleBorder(),
-                                child: InkWell(
-                                  onTap: isEnabled
-                                      ? () {
-                                          _fabAnimationController?.forward().then((_) => _fabAnimationController?.reverse());
-                                          _navigateToNewRecord(provider);
-                                        }
-                                      : null,
-                                  borderRadius: BorderRadius.circular(34),
-                                  splashColor: Colors.white.withOpacity(0.2),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.add_rounded,
-                                      size: 50,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black26,
-                                          offset: Offset(0, 2),
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                            child: FloatingAddButton(
+                              onPressed: isEnabled
+                                  ? () {
+                                      _fabAnimationController?.forward().then((_) => _fabAnimationController?.reverse());
+                                      _navigateToNewRecord(provider);
+                                    }
+                                  : () {},
                             ),
                           );
                         },

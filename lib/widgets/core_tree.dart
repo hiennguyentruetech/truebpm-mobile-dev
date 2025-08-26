@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/common/floating_add_button.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -1661,24 +1662,15 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
         // FAB on top of content
         if (widget.allowAdd && _isActionAllowed('add'))
           Positioned(
-            right: 4,
-            bottom: 4,
+            right: 8,
+            bottom: 8,
             child: AnimatedBuilder(
               animation: _fabScaleAnimation,
               builder: (context, child) {
                 return Transform.scale(
                   scale: _fabScaleAnimation.value,
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: FloatingActionButton(
-                      onPressed: _addNewItem,
-                      backgroundColor: const Color.fromARGB(255, 51, 86, 227), // beautiful gradient purple
-                      foregroundColor: Colors.white,
-                      heroTag: null,
-                      shape: const CircleBorder(),
-                      child: const Icon(Icons.add_rounded, size: 35),
-                    ),
+                  child: FloatingAddButton(
+                    onPressed: _addNewItem,
                   ),
                 );
               },
