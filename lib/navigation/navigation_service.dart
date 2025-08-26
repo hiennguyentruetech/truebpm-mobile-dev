@@ -11,6 +11,10 @@ class NavigationService {
     navigatorKey.currentState?.pushReplacementNamed(routeName);
   }
 
+  static void replaceAllWith(String routeName) {
+    navigatorKey.currentState?.pushNamedAndRemoveUntil(routeName, (route) => false);
+  }
+
   static void replaceWithScreen(Widget screen) {
     navigatorKey.currentState?.pushReplacement(MaterialPageRoute(builder: (_) => screen));
   }
