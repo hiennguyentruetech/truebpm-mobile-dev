@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
-import 'package:truebpm/widgets/core_collection.dart';
+import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/common/floating_add_button.dart';
 
 /// Tab body for PRJMGT ESTCOSTS (Estimated Cost)
 class ProjectManagementEstCostsTabBody extends CoreTabBody {
@@ -69,56 +70,84 @@ class _ProjectManagementEstCostsTabBodyState extends CoreTabBodyState<ProjectMan
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CoreCollection(
-            dataKey: 'projectEstimatedCosts',
-            itemDetail: _itemDetail,
-            label: 'Project Estimated Costs',
-            itemLabel: 'Estimated Cost',
-            children: [
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...CoreDynamicFields.buildFields(
+            fieldConfigs: [
               {
-                'dataKey': 'purpose',
-                'label': 'Purpose',
-                'required': true,
-                'type': 'input',
-              },
-              {
-                'dataKey': 'location',
-                'label': 'Location',
-                'required': true,
-                'type': 'input',
-              },
-              {
-                'dataKey': 'total',
-                'label': 'Total Amount',
-                'required': true,
-                'type': 'number',
-              },
-              {
-                'dataKey': 'date',
-                'label': 'Date',
-                'required': true,
-                'type': 'date',
-              },
-              {
-                'dataKey': 'travelExpenseTypeId',
-                'label': 'Travel Expense Type',
-                'required': true,
-                'type': 'select',
-                'data': 'DROPDOWN.TRAVEL_EXPENSE_TYPES.ALL',
-                'display': 'name',
+                'key': 'projectEstimatedCosts',
+                'widget': 'collection',
+                'label': 'Estimated Costs',
+                'itemLabel': 'Estimated Expense',
+                'addButtonText': 'Add Estimated Cost',
+                'hintText': 'No estimated costs yet. Click Add Estimated Cost to get started.',
+                'allowAdd': true,
+                'allowRemove': true,
+                'editMode': 'modal',
+                'useFloatingAddButton': true,
+                'useAddFirstList': true,
+                'totalSummary': {
+                  'key': 'total',
+                  'label': 'Total',
+                  'format': '#,##0',
+                  'suffix': ' VND',
+                  'bgColor': '#E8F5E8',
+                  'borderColor': '#A5D6A7',
+                  'labelColor': '#2E7D32',
+                  'valueColor': '#1B5E20',
+                },
+                'summary': {
+                  'fields': [
+                    { 'key': 'travelExpenseTypeId', 'display': 'name', 'label': 'Type', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
+                    { 'key': 'total', 'label': 'Total', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  ]
+                },
+                'children': [
+                  { 'key': 'travelExpenseTypeId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Type', 'data': 'DROPDOWN.PRJMGT/TRAVELEXPENSETYPE', 'display': 'name', 'required': true },
+                  { 'key': 'total', 'widget': 'input', 'label': 'Total Amount', 'type': 'number', 'required': true },
+                ],
               },
             ],
-            onChanged: _onChanged,
-            allowAdd: true,
-            allowRemove: true,
+            itemDetail: _itemDetail,
+            moduleData: _moduleData,
+            onChanged: (k, v) => _onChanged(v as List<Map<String, dynamic>>),
           ),
         ],
+        ),
       ),
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    // Max items not enforced here; if needed, add a check
+    return FloatingAddButton(
+      onPressed: () {
+        setState(() {
+          if (_moduleData['projectEstimatedCosts'] == null) {
+            _moduleData['projectEstimatedCosts'] = [];
+          }
+          final l = _moduleData['projectEstimatedCosts'] as List;
+          // useAddFirstList = true default for FAB UX
+          l.insert(0, <String, dynamic>{
+            'id': null,
+            'total': 0,
+          });
+
+          _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+          _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+        });
+
+        if (widget.onDataChanged != null) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            widget.onDataChanged!(_response);
+          });
+        }
+      },
     );
   }
 }

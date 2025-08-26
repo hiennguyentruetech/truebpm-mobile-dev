@@ -22,6 +22,9 @@ class CoreCollection extends StatefulWidget {
   final bool required;
   final String editMode; // 'inline' or 'modal'
   final Map<String, dynamic>? summary; // Dynamic summary configuration
+  final bool useFloatingAddButton; // Use floating add button instead of regular button
+  final bool useAddFirstList; // Add new items to the beginning of list instead of end
+  final Map<String, dynamic>? totalSummary; // Configuration for total summary view
 
   const CoreCollection({
     super.key,
@@ -40,6 +43,9 @@ class CoreCollection extends StatefulWidget {
     this.required = false,
     this.editMode = 'inline',
     this.summary,
+    this.useFloatingAddButton = false,
+    this.useAddFirstList = false,
+    this.totalSummary,
   });
 
   @override
@@ -50,6 +56,7 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
   late List<Map<String, dynamic>> _items;
   Map<int, AnimationController> _scaleControllers = {};
   Map<int, Animation<double>> _scaleAnimations = {};
+  // Removed unused FAB animation since we moved to screen-level FAB
   
   @override
   void initState() {
@@ -138,7 +145,11 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
     }
     
     setState(() {
-      _items.add(<String, dynamic>{});
+      if (widget.useAddFirstList) {
+        _items.insert(0, <String, dynamic>{});
+      } else {
+        _items.add(<String, dynamic>{});
+      }
       _initializeAnimations(); // Reinitialize animations for new item count
     });
     
@@ -202,13 +213,45 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
       return const SizedBox.shrink();
     }
 
+    if (widget.useFloatingAddButton) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Collection Header
+          _buildCollectionHeader(),
+          const SizedBox(height: 0),
+
+          // Total Summary (if configured)
+          if (widget.totalSummary != null)
+            _buildTotalSummary(),
+
+          // Items List
+          if (_items.isEmpty)
+            _buildEmptyState()
+          else
+            ...(_items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return _buildCollectionItem(index, item);
+            })),
+
+          // Add some bottom padding to avoid FAB overlap
+          const SizedBox(height: 80),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Collection Header
         _buildCollectionHeader(),
         const SizedBox(height: 8),
-        
+
+        // Total Summary (if configured)
+        if (widget.totalSummary != null)
+          _buildTotalSummary(),
+
         // Items List
         if (_items.isEmpty)
           _buildEmptyState()
@@ -218,7 +261,7 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
             final item = entry.value;
             return _buildCollectionItem(index, item);
           })),
-        
+
         // Add Button
         if (widget.allowAdd && !_isDisabled && (widget.maxItems == null || _items.length < widget.maxItems!))
           _buildAddButton(),
@@ -650,9 +693,16 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
       
       // Check if this is a datetime field and format accordingly
       final String? widget = conf['widget']?.toString();
+      final String? type = conf['type']?.toString();
       final String? datetimeType = conf['datetimeType']?.toString();
-      if (widget == 'datetime' && value.isNotEmpty) {
-        value = _formatDateTimeValue(value, datetimeType, conf['displayFormat']?.toString());
+      if ((widget == 'datetime' || type == 'date') && value.isNotEmpty) {
+        value = _formatDateTimeValue(value, datetimeType ?? 'date', conf['displayFormat']?.toString());
+      }
+
+      // Check if this is a number field and format accordingly
+      if ((type == 'number' || type == 'currency') && value.isNotEmpty) {
+        final decimalPlaces = conf['decimalPlaces'] as int? ?? 0;
+        value = _formatNumberDisplay(value, decimalPlaces: decimalPlaces);
       }
       
       final String label = conf['label']?.toString() ?? keyPath.split('.').last;
@@ -1321,5 +1371,158 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
         ),
       ),
     );
+  }
+
+
+
+  Widget _buildTotalSummary() {
+    if (widget.totalSummary == null || _items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final config = widget.totalSummary!;
+    final totalKey = config['key'] as String? ?? 'total';
+    final label = config['label'] as String? ?? 'Total';
+    // format not needed since we use _formatNumberDisplay
+    final suffix = config['suffix'] as String? ?? '';
+    final bgColor = config['bgColor'] as String? ?? '#E8F5E8';
+    final borderColor = config['borderColor'] as String? ?? '#A5D6A7';
+    final labelColor = config['labelColor'] as String? ?? '#2E7D32';
+    final valueColor = config['valueColor'] as String? ?? '#1B5E20';
+
+    // Calculate total from all items
+    double total = 0.0;
+    for (final item in _items) {
+      final value = item[totalKey];
+      if (value is num) {
+        total += value.toDouble();
+      } else if (value is String) {
+        final parsed = double.tryParse(value);
+        if (parsed != null) {
+          total += parsed;
+        }
+      }
+    }
+
+    // Format the total using our custom EU-style formatter with decimalPlaces = 0
+    String formattedTotal = _formatNumberDisplay(total, decimalPlaces: 0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _hexToColor(bgColor),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _hexToColor(borderColor),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: _hexToColor(labelColor),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            '$formattedTotal$suffix',
+            style: TextStyle(
+              color: _hexToColor(valueColor),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _hexToColor(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return Colors.grey;
+    }
+  }
+
+  // Format number for display (EU style: thousand '.' and decimal ',')
+  String _formatNumberDisplay(dynamic value, {int decimalPlaces = -1}) {
+    if (value == null) return '';
+    String s = value is num ? value.toString() : value.toString().trim();
+    if (s.isEmpty) return '';
+
+    String intRaw = '';
+    String decRaw = '';
+
+    if (s.contains(',')) {
+      // EU-style input: remove thousand dots, comma is decimal
+      final cleaned = s.replaceAll('.', '');
+      final idx = cleaned.indexOf(',');
+      intRaw = (idx >= 0 ? cleaned.substring(0, idx) : cleaned);
+      decRaw = (idx >= 0 ? cleaned.substring(idx + 1) : '');
+    } else if (s.contains('.') && !s.contains(',') && s.split('.').length == 2) {
+      // Treat single dot as decimal separator (common machine format like 342432.0)
+      final parts = s.split('.');
+      intRaw = parts[0];
+      decRaw = parts[1];
+    } else {
+      // Pure integer or treat dots as thousand separators
+      intRaw = s.replaceAll('.', '');
+      decRaw = '';
+    }
+
+    // Keep digits only
+    intRaw = intRaw.replaceAll(RegExp(r'[^0-9]'), '');
+    decRaw = decRaw.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (intRaw.isEmpty) return '';
+
+    // Handle decimal places
+    if (decimalPlaces >= 0) {
+      if (decimalPlaces == 0 && decRaw.isNotEmpty) {
+        // Round based on first decimal digit then drop decimals
+        final first = int.tryParse(decRaw[0]) ?? 0;
+        if (first >= 5) {
+          final intVal = int.parse(intRaw) + 1;
+          intRaw = intVal.toString();
+        }
+        decRaw = '';
+      } else if (decimalPlaces > 0) {
+        if (decRaw.length > decimalPlaces) {
+          decRaw = decRaw.substring(0, decimalPlaces);
+        } else if (decRaw.length < decimalPlaces) {
+          decRaw = decRaw.padRight(decimalPlaces, '0');
+        }
+      }
+    }
+
+    final grouped = _groupThousands(intRaw);
+
+    if (decimalPlaces > 0 || (decimalPlaces == -1 && decRaw.isNotEmpty)) {
+      return '$grouped,$decRaw';
+    }
+    return grouped;
+  }
+
+  String _groupThousands(String digits) {
+    if (digits.isEmpty) return '';
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i != 0 && (digits.length - i) % 3 == 0) buf.write('.');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
   }
 }

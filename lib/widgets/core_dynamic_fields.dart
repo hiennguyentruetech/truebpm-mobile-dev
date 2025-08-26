@@ -402,7 +402,10 @@ class CoreDynamicFields {
     final int? minItems = config['minItems'];
     final String editMode = config['editMode'] ?? 'inline';
     final Map<String, dynamic>? summary = config['summary'] as Map<String, dynamic>?;
-    
+    final bool useFloatingAddButton = config['useFloatingAddButton'] ?? false;
+    final bool useAddFirstList = config['useAddFirstList'] ?? false;
+    final Map<String, dynamic>? totalSummary = config['totalSummary'] as Map<String, dynamic>?;
+
     return CoreCollection(
       dataKey: fieldName,
       itemDetail: itemDetail,
@@ -419,6 +422,9 @@ class CoreDynamicFields {
       required: isRequired,
       editMode: editMode,
       summary: summary,
+      useFloatingAddButton: useFloatingAddButton, // When true, CoreCollection hides bottom add button
+      useAddFirstList: useAddFirstList,
+      totalSummary: totalSummary,
     );
   }
 

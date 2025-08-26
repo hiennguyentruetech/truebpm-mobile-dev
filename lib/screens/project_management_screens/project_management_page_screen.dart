@@ -56,8 +56,8 @@ class ProjectManagementPageScreen extends StatelessWidget {
     ),
     TabConfig(code: 'FOLDEREXPLORER', name: 'Folder Explorer', tabBodyBuilder: ProjectManagementFolderExplorerTabBody.new),
     TabConfig(code: 'CMT', name: 'Project Note', tabBodyBuilder: TabCmtCoreBodyScreen.new),
-    TabConfig(code: 'ADDCOST', name: 'Additional Cost', tabBodyBuilder: ProjectManagementAddCostDocTabBody.new),
-    TabConfig(code: 'ESTCOSTS', name: 'Estimated Cost', tabBodyBuilder: ProjectManagementEstCostsTabBody.new),
+    TabConfig(code: 'ADDCOST', name: 'Additional Costs', tabBodyBuilder: ProjectManagementAddCostDocTabBody.new),
+    TabConfig(code: 'ESTCOSTS', name: 'Estimated Costs', tabBodyBuilder: ProjectManagementEstCostsTabBody.new),
   ];
 
   @override
