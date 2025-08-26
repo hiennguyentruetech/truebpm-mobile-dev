@@ -218,16 +218,16 @@ class MenuAppBar extends StatelessWidget {
             context: context,
             barrierDismissible: false,
             builder: (context) => AppThemedDialog(
-              title: 'Đăng xuất',
-              message: 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+              title: 'Sign out',
+              message: 'Are you sure you want to sign out of your account?',
               type: AppDialogType.warning,
-              confirmText: 'Đăng xuất',
+              confirmText: 'Sign out',
               onConfirm: () async {
                 Navigator.of(context).pop();
                 await auth.clearSavedCredentials();
                 NavigationService.replaceAllWith('/login');
               },
-              cancelText: 'Hủy',
+              cancelText: 'Cancel',
               onCancel: () => Navigator.of(context).pop(),
               icon: Icons.logout_rounded,
             ),

@@ -25,32 +25,16 @@ class CoreActionDialog {
     final messageType = response['messageType']?.toString().toLowerCase() ?? '';
     final message = response['message']?.toString() ?? 
                    (success ? 'Operation completed successfully' : 'Operation failed');
-
-    Color primaryColor;
-    Color backgroundColor;
-    IconData icon;
     
     // Determine colors and icon based on messageType
     switch (messageType) {
       case 'success':
-        primaryColor = Colors.green;
-        backgroundColor = Colors.green.shade50;
-        icon = Icons.check_circle_outline;
         break;
       case 'error':
-        primaryColor = Colors.red;
-        backgroundColor = Colors.red.shade50;
-        icon = Icons.error_outline;
         break;
       case 'warning':
-        primaryColor = Colors.orange;
-        backgroundColor = Colors.orange.shade50;
-        icon = Icons.warning_outlined;
         break;
       default:
-        primaryColor = Colors.blue;
-        backgroundColor = Colors.blue.shade50;
-        icon = success ? Icons.check_circle_outline : Icons.info_outline;
     }
 
     showDialog(

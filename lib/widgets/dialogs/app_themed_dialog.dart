@@ -38,8 +38,7 @@ class AppThemedDialog extends StatelessWidget {
       case AppDialogType.info:
         return AppColors.info;
       case AppDialogType.neutral:
-      default:
-        return AppColors.primary;
+      return AppColors.primary;
     }
   }
 
@@ -54,8 +53,7 @@ class AppThemedDialog extends StatelessWidget {
       case AppDialogType.info:
         return AppColors.infoDark;
       case AppDialogType.neutral:
-      default:
-        return AppColors.primaryDark;
+      return AppColors.primaryDark;
     }
   }
 
@@ -71,8 +69,7 @@ class AppThemedDialog extends StatelessWidget {
       case AppDialogType.info:
         return Icons.info_outline_rounded;
       case AppDialogType.neutral:
-      default:
-        return Icons.info_outline_rounded;
+      return Icons.info_outline_rounded;
     }
   }
 
