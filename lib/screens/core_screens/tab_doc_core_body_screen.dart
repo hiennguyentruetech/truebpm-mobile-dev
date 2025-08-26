@@ -21,18 +21,54 @@ class SelectedFile {
   final int size;
   final Uint8List bytes;
   final String? path;
+  final String? revisionId;
+  final String? revisionCode;
+  final String? documentTypeId;
+  final String? documentTypeName;
 
   SelectedFile({
     required this.name,
     required this.size,
     required this.bytes,
     this.path,
+    this.revisionId,
+    this.revisionCode,
+    this.documentTypeId,
+    this.documentTypeName,
   });
+
+  /// Create a copy with updated revision/documentType info
+  SelectedFile copyWith({
+    String? name,
+    int? size,
+    Uint8List? bytes,
+    String? path,
+    String? revisionId,
+    String? revisionCode,
+    String? documentTypeId,
+    String? documentTypeName,
+  }) {
+    return SelectedFile(
+      name: name ?? this.name,
+      size: size ?? this.size,
+      bytes: bytes ?? this.bytes,
+      path: path ?? this.path,
+      revisionId: revisionId ?? this.revisionId,
+      revisionCode: revisionCode ?? this.revisionCode,
+      documentTypeId: documentTypeId ?? this.documentTypeId,
+      documentTypeName: documentTypeName ?? this.documentTypeName,
+    );
+  }
 }
 
 /// Core tab body for Documents (DOC) - Reusable for all modules
 /// Handles file upload, download, delete and view with stunning UI
 class TabDocCoreBodyScreen extends CoreTabBody {
+  final bool enableRevision;
+  final bool enableDocumentType;
+  final String? dataRevision;
+  final String? dataDocumentType;
+
   const TabDocCoreBodyScreen({
     super.key,
     required super.moduleCode,
@@ -40,6 +76,10 @@ class TabDocCoreBodyScreen extends CoreTabBody {
     super.itemId,
     super.initialData,
     super.onDataChanged,
+    this.enableRevision = false,
+    this.enableDocumentType = false,
+    this.dataRevision,
+    this.dataDocumentType,
   });
 
   @override
@@ -51,13 +91,19 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
   Map<String, dynamic> _response = {};
   Map<String, dynamic> _itemDetail = {};
   List<dynamic> _files = [];
-  
+
   // File upload data
   List<SelectedFile> _selectedFiles = [];
   bool _isUploading = false;
   bool _isProcessing = false;
   bool _isUploadAreaExpanded = false;
-  
+
+  // Dropdown data for revision and documentType
+  List<Map<String, dynamic>> _revisionOptions = [];
+  List<Map<String, dynamic>> _documentTypeOptions = [];
+  bool _isLoadingRevision = false;
+  bool _isLoadingDocumentType = false;
+
   // No sub-tab state here anymore; handled by DetailCoreScreen
 
   @override
@@ -65,6 +111,14 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     super.initState();
     // Use initial data from parent; provider updates will come via didUpdateWidget
     _updateDataFromInitialData();
+
+    // Load dropdown data if options are enabled
+    if (widget.enableRevision) {
+      _loadRevisionOptions();
+    }
+    if (widget.enableDocumentType) {
+      _loadDocumentTypeOptions();
+    }
   }
 
   @override
@@ -222,13 +276,13 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
       if (result != null && result.files.isNotEmpty) {
         for (final file in result.files) {
           if (file.bytes != null) {
-            final selectedFile = SelectedFile(
+            final selectedFile = _createSelectedFileWithDefaults(
               name: file.name,
               size: file.size,
               bytes: file.bytes!,
               path: file.path,
             );
-            
+
             setState(() {
               _selectedFiles.add(selectedFile);
               // Auto-expand upload area when files are selected
@@ -265,7 +319,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         final file = File(image.path);
         final bytes = await file.readAsBytes();
         
-        final selectedFile = SelectedFile(
+        final selectedFile = _createSelectedFileWithDefaults(
           name: image.name,
           size: bytes.length,
           bytes: bytes,
@@ -307,7 +361,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         final file = File(image.path);
         final bytes = await file.readAsBytes();
         
-        final selectedFile = SelectedFile(
+        final selectedFile = _createSelectedFileWithDefaults(
           name: image.name,
           size: bytes.length,
           bytes: bytes,
@@ -337,6 +391,106 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     setState(() {
       _selectedFiles.removeAt(index);
     });
+  }
+
+  /// Create SelectedFile with default revision and document type if enabled
+  SelectedFile _createSelectedFileWithDefaults({
+    required String name,
+    required int size,
+    required Uint8List bytes,
+    String? path,
+  }) {
+    String? defaultRevisionId;
+    String? defaultRevisionCode;
+    String? defaultDocumentTypeId;
+    String? defaultDocumentTypeName;
+
+    // Set default revision if enabled and options are available
+    if (widget.enableRevision && _revisionOptions.isNotEmpty) {
+      final firstRevision = _revisionOptions.first;
+      defaultRevisionId = firstRevision['id']?.toString();
+      defaultRevisionCode = firstRevision['name']?.toString();
+    }
+
+    // Set default document type if enabled and options are available
+    if (widget.enableDocumentType && _documentTypeOptions.isNotEmpty) {
+      final firstDocumentType = _documentTypeOptions.first;
+      defaultDocumentTypeId = firstDocumentType['id']?.toString();
+      defaultDocumentTypeName = firstDocumentType['name']?.toString();
+    }
+
+    return SelectedFile(
+      name: name,
+      size: size,
+      bytes: bytes,
+      path: path,
+      revisionId: defaultRevisionId,
+      revisionCode: defaultRevisionCode,
+      documentTypeId: defaultDocumentTypeId,
+      documentTypeName: defaultDocumentTypeName,
+    );
+  }
+
+  /// Load revision dropdown data
+  Future<void> _loadRevisionOptions() async {
+    if (_revisionOptions.isNotEmpty || _isLoadingRevision || !widget.enableRevision) return;
+
+    setState(() => _isLoadingRevision = true);
+
+    try {
+      // Use custom endpoint if provided, otherwise use default
+      final apiKey = widget.dataRevision ?? 'DROPDOWN.RESOURCE/REVISION';
+
+      final response = await CoreService.instance.getDropdownData(apiKey);
+
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        if (data is List) {
+          setState(() {
+            _revisionOptions = data.cast<Map<String, dynamic>>();
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading revision options: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isLoadingRevision = false);
+    }
+  }
+
+  /// Load document type dropdown data
+  Future<void> _loadDocumentTypeOptions() async {
+    if (_documentTypeOptions.isNotEmpty || _isLoadingDocumentType || !widget.enableDocumentType) return;
+
+    setState(() => _isLoadingDocumentType = true);
+
+    try {
+      // Use custom endpoint if provided, otherwise use default
+      final apiKey = widget.dataDocumentType ?? 'DROPDOWN.PRJMGT/PROJECTDOCTYPE';
+
+      final response = await CoreService.instance.getDropdownData(apiKey);
+
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        if (data is List) {
+          setState(() {
+            _documentTypeOptions = data.cast<Map<String, dynamic>>();
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading document type options: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isLoadingDocumentType = false);
+    }
   }
 
   Future<void> _uploadFiles() async {
@@ -373,6 +527,8 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
           currentData['itemDetail']?['value']?['code'] ?? '',
           tabModuleCode: widget.tabCode, // Always use main tab code for URL
           subTabModuleCode: currentSubTabCode, // Pass subtab code separately for payload
+          revisionId: file.revisionId,
+          documentTypeId: file.documentTypeId,
         );
 
         if (response == null || response['success'] != true) {
@@ -1082,6 +1238,8 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     );
   }
 
+
+
   Widget _buildSelectedFilesList() {
     return Container(
       constraints: const BoxConstraints(maxHeight: 150),
@@ -1121,8 +1279,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
                       Text(
                         _formatFileSize(file.size),
@@ -1131,9 +1288,15 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                           color: Colors.grey.shade600,
                         ),
                       ),
+                      // Revision and Document Type dropdowns in same row
+                      if (widget.enableRevision || widget.enableDocumentType) ...[
+                        const SizedBox(height: 4),
+                        _buildFileDropdownsRow(index),
+                      ],
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => _removeSelectedFile(index),
                   child: Container(
@@ -1153,6 +1316,120 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFileDropdownsRow(int fileIndex) {
+    return Row(
+      children: [
+        // Revision dropdown
+        if (widget.enableRevision) ...[
+          Expanded(
+            child: _buildFileRevisionDropdown(fileIndex),
+          ),
+          if (widget.enableDocumentType) const SizedBox(width: 6),
+        ],
+        // Document Type dropdown
+        if (widget.enableDocumentType) ...[
+          Expanded(
+            child: _buildFileDocumentTypeDropdown(fileIndex),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFileRevisionDropdown(int fileIndex) {
+    final file = _selectedFiles[fileIndex];
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: file.revisionId,
+          hint: Text(
+            'Revision',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+          ),
+          style: const TextStyle(fontSize: 10, color: Colors.black87),
+          items: _revisionOptions.map((option) {
+            return DropdownMenuItem<String>(
+              value: option['id']?.toString(),
+              child: Text(
+                option['name']?.toString() ?? '',
+                style: const TextStyle(fontSize: 10),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              final selectedOption = _revisionOptions.firstWhere(
+                (option) => option['id']?.toString() == value,
+                orElse: () => {},
+              );
+              setState(() {
+                _selectedFiles[fileIndex] = file.copyWith(
+                  revisionId: value,
+                  revisionCode: selectedOption['name']?.toString(),
+                );
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileDocumentTypeDropdown(int fileIndex) {
+    final file = _selectedFiles[fileIndex];
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.purple.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: file.documentTypeId,
+          hint: Text(
+            'Doc Type',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+          ),
+          style: const TextStyle(fontSize: 10, color: Colors.black87),
+          items: _documentTypeOptions.map((option) {
+            return DropdownMenuItem<String>(
+              value: option['id']?.toString(),
+              child: Text(
+                option['name']?.toString() ?? '',
+                style: const TextStyle(fontSize: 10),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              final selectedOption = _documentTypeOptions.firstWhere(
+                (option) => option['id']?.toString() == value,
+                orElse: () => {},
+              );
+              setState(() {
+                _selectedFiles[fileIndex] = file.copyWith(
+                  documentTypeId: value,
+                  documentTypeName: selectedOption['name']?.toString(),
+                );
+              });
+            }
+          },
+        ),
       ),
     );
   }
@@ -1277,6 +1554,8 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     final fileSize = file['fileSize'] ?? 0;
     final fileType = file['fileType']?.toString() ?? '';
     final createdDate = file['createdDate']?.toString();
+    final revisionCode = file['revisionCode']?.toString();
+    final documentTypeName = file['documentTypeName']?.toString();
     
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
@@ -1347,6 +1626,50 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                       ],
                     ],
                   ),
+                  // Show revision and document type info if available
+                  if (revisionCode != null || documentTypeName != null) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      children: [
+                        if (revisionCode != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Text(
+                              'Rev: $revisionCode',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        if (documentTypeName != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.purple.shade200),
+                            ),
+                            child: Text(
+                              'Type: $documentTypeName',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.purple.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

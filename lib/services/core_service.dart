@@ -368,6 +368,8 @@ class CoreService {
     String recordCode, {
     String? tabModuleCode,
     String? subTabModuleCode,
+    String? revisionId,
+    String? documentTypeId,
   }) async {
     final startTime = DateTime.now();
     
@@ -437,6 +439,14 @@ class CoreService {
         'tabModuleCode': finalTabModuleCode,
       };
 
+      // Add optional revision and document type parameters
+      if (revisionId != null && revisionId.isNotEmpty) {
+        formDataMap['revisionId'] = revisionId;
+      }
+      if (documentTypeId != null && documentTypeId.isNotEmpty) {
+        formDataMap['documentTypeId'] = documentTypeId;
+      }
+
       final formData = FormData.fromMap(formDataMap);
 
       final headers = <String, String>{
@@ -457,6 +467,14 @@ class CoreService {
         'moduleCode': moduleCode,
         'tabModuleCode': finalTabModuleCode, // Same value as formDataMap
       };
+
+      // Add optional revision and document type parameters to log
+      if (revisionId != null && revisionId.isNotEmpty) {
+        logPayload['revisionId'] = revisionId;
+      }
+      if (documentTypeId != null && documentTypeId.isNotEmpty) {
+        logPayload['documentTypeId'] = documentTypeId;
+      }
 
       // Add debug info to show the logic used (priority: subTab > tab > default)
       if (subTabModuleCode != null) {

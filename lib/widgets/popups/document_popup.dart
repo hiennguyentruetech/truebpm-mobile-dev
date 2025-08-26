@@ -166,6 +166,10 @@ class _DocumentPopupState extends State<DocumentPopup> {
                             moduleCode: widget.moduleCode,
                             tabCode: widget.tabModuleCode,
                             initialData: provider.rawResponse,
+                            enableRevision: true,
+                            enableDocumentType: true,
+                            dataRevision: 'DROPDOWN.RESOURCE/REVISION',
+                            dataDocumentType: 'DROPDOWN.PRJMGT/PROJECTDOCTYPE',
                             onDataChanged: (data) {
                               // Handle data changes if needed
                             },
