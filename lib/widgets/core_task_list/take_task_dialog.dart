@@ -16,13 +16,13 @@ class TakeTaskDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
       ),
       elevation: 16,
       child: Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
           gradient: LinearGradient(
             colors: [
               Colors.white,
@@ -62,29 +62,29 @@ class TakeTaskDialog extends StatelessWidget {
                     child: Icon(
                       Icons.assignment_ind_rounded,
                       color: AppColors.primary,
-                      size: 40,
+                      size: 32,
                     ),
                   ),
                 );
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 7),
             
             // Title
             const Text(
               'Take Task Assignment',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             
             // Message
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: AppColors.info.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
@@ -105,7 +105,7 @@ class TakeTaskDialog extends StatelessWidget {
                     child: Text(
                       'To fill out the form, you need to take this task. This means you will be the only one able to do it.',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         color: AppColors.textSecondary,
                         height: 1.4,
                       ),
@@ -120,9 +120,9 @@ class TakeTaskDialog extends StatelessWidget {
             Text(
               'To make it available to the team again, you can release it later.',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: AppColors.textSecondary,
-                fontStyle: FontStyle.italic,
+                fontStyle: FontStyle.normal,
                 height: 1.3,
               ),
               textAlign: TextAlign.center,
@@ -139,7 +139,7 @@ class TakeTaskDialog extends StatelessWidget {
                     isSecondary: true,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: _DialogButton(
                     onPressed: onTake,
@@ -220,7 +220,7 @@ class _DialogButtonState extends State<_DialogButton>
                         end: Alignment.bottomRight,
                       ),
                 color: widget.isSecondary ? Colors.transparent : null,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: widget.isSecondary
                     ? Border.all(
                         color: AppColors.divider,
@@ -240,14 +240,14 @@ class _DialogButtonState extends State<_DialogButton>
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   onTap: widget.onPressed,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
                       widget.text,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: widget.isSecondary
                             ? AppColors.textSecondary
