@@ -18,17 +18,10 @@ class DataSpySelector extends StatelessWidget {
     if (dataSpies == null) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(7),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -37,7 +30,7 @@ class DataSpySelector extends StatelessWidget {
           icon: Icon(Icons.keyboard_arrow_down, color: Colors.blue.shade600),
           style: TextStyle(
             color: Colors.blue.shade800,
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           items: dataSpies!.data

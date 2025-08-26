@@ -4,7 +4,7 @@ class CoreConstants {
   static const double cardElevation = 4.0;
   static const double cardPadding = 7.0;
   static const double circleSize = 40.0;
-  static const double searchBorderRadius = 12.0;
+  static const double searchBorderRadius = 7.0;
   static const double infoBorderRadius = 0.0;
   
   // Animation Constants

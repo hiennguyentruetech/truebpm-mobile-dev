@@ -23,19 +23,11 @@ class CoreSearchInput extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.all(2),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(7),
         ),
         child: TextField(
           controller: controller,
@@ -43,16 +35,15 @@ class CoreSearchInput extends StatelessWidget {
             hintText: hintText,
             hintStyle: TextStyle(
               color: Colors.grey.shade400,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w400,
             ),
-            border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 16,
+              horizontal: 7,
+              vertical: 7,
             ),
             prefixIcon: Container(
-              margin: const EdgeInsets.all(12),
+              margin: const EdgeInsets.all(7),
               child: Icon(
                 Icons.search,
                 color: Colors.blue.shade400,
@@ -60,30 +51,23 @@ class CoreSearchInput extends StatelessWidget {
               ),
             ),
             suffixIcon: Container(
-              margin: const EdgeInsets.all(8),
+              margin: const EdgeInsets.all(10),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(7),
                   onTap: onSearch,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.blue.shade500, Colors.blue.shade700],
                       ),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(7),
                     ),
                     child: const Icon(
                       Icons.send_rounded,
                       color: Colors.white,
-                      size: 20,
+                      size: 15,
                     ),
                   ),
                 ),
@@ -92,8 +76,8 @@ class CoreSearchInput extends StatelessWidget {
           ),
           onSubmitted: (_) => onSearch(),
           style: TextStyle(
-            color: Colors.grey.shade800,
-            fontSize: 16,
+            color: Colors.grey.shade700,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
         ),

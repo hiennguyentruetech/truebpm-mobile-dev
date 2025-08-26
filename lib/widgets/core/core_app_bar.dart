@@ -61,11 +61,11 @@ class CoreAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               // Search Input
               if (isSearchVisible) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 7),
                 CoreSearchInput(
                   controller: searchController,
                   onSearch: onSearch,
-                  hintText: 'Tìm kiếm ${moduleCode.toLowerCase()}...',
+                  hintText: 'Tìm kiếm...',
                 ),
               ],
             ],
