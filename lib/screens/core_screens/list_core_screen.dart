@@ -45,12 +45,12 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
     super.initState();
     _provider = CoreListProvider();
     _provider.initialize(
-      widget.moduleCode, 
+      widget.moduleCode,
       widget.moduleName,
       onSessionExpired: _handleSessionExpired,
     );
     _scrollController.addListener(_onScroll);
-    
+
     // Initialize FAB animation
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 150),
@@ -75,7 +75,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - CoreConstants.scrollThreshold) {
       _provider.loadMoreData(widget.moduleCode, widget.tabModuleCode);
     }
@@ -111,7 +111,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       'code': null, // Will be auto-generated
       'action': 'NEW', // Special flag to indicate this is a new record
     };
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) {
@@ -120,7 +120,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
           if (customScreen != null) {
             return customScreen;
           }
-          
+
           return GenericDetailCoreScreen(
             moduleCode: widget.moduleCode,
             moduleName: provider.displayModuleName,
@@ -154,11 +154,11 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
     if (confirmed == true) {
       try {
         // Note: We'll use existing loading mechanism instead of setLoadingOverlay
-        
+
         // Get required data for payload
         final userData = await _getUserData();
         final dataSpy = provider.dataSpy ?? {};
-        
+
         // Call API through CoreService - deleteItemFromList uses listItem directly
         final response = await CoreService.instance.deleteItemFromList(
           widget.moduleCode,
@@ -166,12 +166,12 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
           item, // Direct list item
           dataSpy,
         );
-        
+
         if (mounted && response != null) {
           if (response['success'] == true) {
             // Force refresh and keep scroll to ensure item is removed but position stays
             await _refreshListKeepingScroll(provider);
-            
+
             if (mounted) {
               CoreActionDialog.showResponseDialog(
                 context,
@@ -210,7 +210,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
           } catch (stringError) {
             errorMessage = 'Delete operation failed due to an unexpected error';
           }
-          
+
           CoreActionDialog.showResponseDialog(
             context,
             response: {
@@ -343,8 +343,8 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                   searchController: _searchController,
                   onSearch: () {
                     provider.performSearch(
-                      widget.moduleCode, 
-                      widget.tabModuleCode, 
+                      widget.moduleCode,
+                      widget.tabModuleCode,
                       _searchController.text
                     );
                   },
@@ -372,33 +372,10 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                     : null,
                 floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               ),
-              
-              // Loading Overlay
+
+              // Loading Overlay (unified with detail screen)
               if (provider.showLoadingOverlay)
-                Container(
-                  color: Colors.black.withOpacity(0.3),
-                  child: const Center(
-                    child: Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(color: Colors.blue),
-                            SizedBox(height: 16),
-                            Text(
-                              CoreConstants.loadingText,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                const LoadingOverlayWidget(),
             ],
           );
         },
@@ -411,7 +388,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
     if (provider.dataSpies == null) {
       return const Center(child: Text('No data available'));
     }
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -541,7 +518,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                         if (customScreen != null) {
                           return customScreen;
                         }
-                        
+
                         return GenericDetailCoreScreen(
                           moduleCode: widget.moduleCode,
                           moduleName: provider.displayModuleName,

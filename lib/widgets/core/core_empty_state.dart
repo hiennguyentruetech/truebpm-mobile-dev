@@ -22,35 +22,29 @@ class CoreEmptyState extends StatelessWidget {
             Text(
               CoreConstants.noDataTitle,
               style: TextStyle(
-                fontSize: 18, 
+                fontSize: 16, 
                 color: Colors.grey.shade600, 
                 fontWeight: FontWeight.w500
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              CoreConstants.noDataSubtitle,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.blue.shade200),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.refresh, color: Colors.blue.shade600, size: 16),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Text(
                     CoreConstants.refreshHint,
                     style: TextStyle(
                       color: Colors.blue.shade600,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

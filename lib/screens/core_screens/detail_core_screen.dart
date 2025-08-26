@@ -1130,16 +1130,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
 
   Widget _buildBody(CoreDetailProvider provider) {
     if (provider.loading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.blue),
-            SizedBox(height: 16),
-            Text('Loading...', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-      );
+      // Avoid double loaders; rely on provider.showLoadingOverlay with unified overlay
+      return const SizedBox.shrink();
     }
 
     if (provider.itemDetail == null) {

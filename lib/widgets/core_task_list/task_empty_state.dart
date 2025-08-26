@@ -36,17 +36,17 @@ class TaskEmptyState extends StatelessWidget {
             ),
             child: const Icon(
               Icons.task_alt_outlined,
-              size: 64,
+              size: 60,
               color: AppColors.primary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           
           // Title
           const Text(
             'No Tasks Available',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 23,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
@@ -57,13 +57,13 @@ class TaskEmptyState extends StatelessWidget {
           Text(
             'You\'re all caught up! Check back later for new tasks.',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 14,
               color: AppColors.textSecondary,
               height: 1.4,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 25),
           
           // Refresh button với animation và gradient
           _RefreshButton(onRefresh: onRefresh),
@@ -162,11 +162,11 @@ class _RefreshButtonState extends State<_RefreshButton>
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         const Text(
                           'Refresh Tasks',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
