@@ -168,7 +168,10 @@ class _ResponseDialogState extends State<_ResponseDialog>
               backgroundColor: Colors.transparent,
               contentPadding: EdgeInsets.zero,
               content: Container(
-                width: 320,
+                width: MediaQuery.of(context).size.width * 0.95,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -247,17 +250,25 @@ class _ResponseDialogState extends State<_ResponseDialog>
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            widget.message,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade700,
-                              height: 1.4,
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.6,
                             ),
-                            textAlign: TextAlign.center,
+                            child: SingleChildScrollView(
+                              child: Text(
+                                widget.message,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           // Action button
                           SizedBox(
                             width: double.infinity,

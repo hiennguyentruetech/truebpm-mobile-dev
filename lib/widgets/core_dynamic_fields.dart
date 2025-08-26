@@ -217,7 +217,12 @@ class CoreDynamicFields {
         selectType = CoreSelectType.select;
     }
     
+    // Build a stable key that changes when endpoint or field changes to avoid state reuse
+    final String dataKeyForKey = data is String ? data : 'static';
+    final Key widgetKey = ValueKey<String>('select:$fieldName|data:$dataKeyForKey');
+
     return CoreSelect(
+      key: widgetKey,
       dataKey: fieldName,
       itemDetail: itemDetail,
       label: label ?? (getDefaultLabel != null ? getDefaultLabel(fieldName) : CoreDynamicFields.getDefaultLabel(fieldName)),

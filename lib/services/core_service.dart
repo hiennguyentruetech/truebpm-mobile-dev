@@ -65,12 +65,48 @@ class CoreService {
     Duration? duration,
     dynamic requestPayload, // Keep for compatibility but won't use
   }) {
-    // No longer log request payload in response - it's already logged in request
+    // Normalize response to Map for logging while preserving full content
+    Map<String, dynamic>? normalized;
+    try {
+      if (responseData is Map<String, dynamic>) {
+        normalized = responseData;
+      } else if (responseData is List) {
+        normalized = {
+          'type': 'List',
+          'length': responseData.length,
+          'data': responseData,
+        };
+      } else if (responseData is String) {
+        // Try parse JSON string; if not JSON, keep raw
+        try {
+          final parsed = jsonDecode(responseData);
+          if (parsed is Map<String, dynamic>) {
+            normalized = parsed;
+          } else if (parsed is List) {
+            normalized = {
+              'type': 'List',
+              'length': parsed.length,
+              'data': parsed,
+            };
+          } else {
+            normalized = {'raw': responseData};
+          }
+        } catch (_) {
+          normalized = {'raw': responseData};
+        }
+      } else if (responseData != null) {
+        normalized = {'raw': responseData.toString()};
+      }
+    } catch (_) {
+      // Fallback to raw to avoid logging crash
+      normalized = {'raw': responseData.toString()};
+    }
+
     CoreApiLogger.logApiResponse(
       method: 'POST', // Most of our APIs are POST
       endpoint: url,
       statusCode: statusCode ?? 0,
-      responseData: responseData is Map<String, dynamic> ? responseData : null,
+      responseData: normalized,
       duration: duration,
     );
   }
