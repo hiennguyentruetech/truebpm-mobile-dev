@@ -31,7 +31,7 @@ class MenuAppBar extends StatelessWidget {
           
           final bool isExpanded = expandRatio <= 0.35;
           final bool isCollapsed = expandRatio >= 0.55;
-          final double logoSize = isCollapsed ? 40.0 : 80.0;
+          final double logoSize = isCollapsed ? 35.0 : 65.0;
           final double titleSize = isCollapsed ? 16.0 : 24.0;
 
           return Container(
@@ -102,9 +102,9 @@ class MenuAppBar extends StatelessWidget {
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOutCubic,
       left: isCollapsed ? 16 : (MediaQuery.of(context).size.width - logoSize) / 2,
-      top: isCollapsed ? 
-        MediaQuery.of(context).padding.top + 8 : 
-        MediaQuery.of(context).padding.top + 30 - 35,
+      top: isCollapsed
+          ? MediaQuery.of(context).padding.top + 10
+          : MediaQuery.of(context).padding.top + 7,
       child: Hero(
         tag: 'app_logo_hero',
         child: AnimatedContainer(
