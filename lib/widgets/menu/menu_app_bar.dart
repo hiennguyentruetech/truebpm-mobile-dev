@@ -4,6 +4,7 @@ import 'package:truebpm/utils/app_strings.dart';
 import 'package:truebpm/di/service_locator.dart';
 import 'package:truebpm/services/auth_service.dart';
 import 'package:truebpm/navigation/navigation_service.dart';
+import 'package:truebpm/widgets/dialogs/app_themed_dialog.dart';
 
 class MenuAppBar extends StatelessWidget {
   final UserModel? currentUser;
@@ -16,7 +17,7 @@ class MenuAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appStrings = AppStrings();
-    
+
     return SliverAppBar(
       automaticallyImplyLeading: false,
       expandedHeight: 250,
@@ -31,7 +32,7 @@ class MenuAppBar extends StatelessWidget {
           final double expandRatio = constraints.maxHeight > 80
               ? (300 - constraints.maxHeight) / (300 - 80)
               : 1.0;
-          
+
           final bool isExpanded = expandRatio <= 0.35;
           final bool isCollapsed = expandRatio >= 0.55;
           final double logoSize = isCollapsed ? 35.0 : 65.0;
@@ -174,8 +175,8 @@ class MenuAppBar extends StatelessWidget {
       curve: Curves.easeInOutCubic,
       left: isCollapsed ? logoSize + 32 : 0,
       right: isCollapsed ? 16 : 0,
-      top: isCollapsed ? 
-        MediaQuery.of(context).padding.top + 20 : 
+      top: isCollapsed ?
+        MediaQuery.of(context).padding.top + 20 :
         MediaQuery.of(context).padding.top + 120 - 40,
       child: AnimatedDefaultTextStyle(
         duration: const Duration(milliseconds: 400),
@@ -213,79 +214,23 @@ class MenuAppBar extends StatelessWidget {
       right: 12,
       child: GestureDetector(
         onTap: () {
-          showModalBottomSheet(
+          showDialog(
             context: context,
-            backgroundColor: Colors.transparent,
-            builder: (context) {
-              return Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.red.shade400, Colors.red.shade600],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: const Icon(Icons.logout_rounded, color: Colors.white, size: 30),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Đăng xuất', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
-                      style: TextStyle(fontSize: 13.5, color: Colors.grey.shade700),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              side: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            child: const Text('Hủy', style: TextStyle(fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                              await auth.clearSavedCredentials();
-                              // Use global NavigationService to prevent back navigation
-                              NavigationService.replaceAllWith('/login');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              backgroundColor: Colors.red.shade600,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Đăng xuất', style: TextStyle(fontWeight: FontWeight.w700)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+            barrierDismissible: false,
+            builder: (context) => AppThemedDialog(
+              title: 'Đăng xuất',
+              message: 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+              type: AppDialogType.warning,
+              confirmText: 'Đăng xuất',
+              onConfirm: () async {
+                Navigator.of(context).pop();
+                await auth.clearSavedCredentials();
+                NavigationService.replaceAllWith('/login');
+              },
+              cancelText: 'Hủy',
+              onCancel: () => Navigator.of(context).pop(),
+              icon: Icons.logout_rounded,
+            ),
           );
         },
         child: Container(

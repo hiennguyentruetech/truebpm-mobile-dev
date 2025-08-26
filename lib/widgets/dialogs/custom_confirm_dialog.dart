@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truebpm/widgets/dialogs/app_themed_dialog.dart';
 
 /// Custom confirm dialog với thiết kế chuyên nghiệp
 /// Có thể tái sử dụng cho nhiều mục đích khác nhau trong app
@@ -241,21 +242,29 @@ class CustomConfirmDialog extends StatelessWidget {
     Color? iconColor,
     bool isDangerous = false,
   }) {
+    // Map to themed type
+    final type = isDangerous
+        ? AppDialogType.warning
+        : AppDialogType.info;
+
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => CustomConfirmDialog(
+      builder: (context) => AppThemedDialog(
         title: title,
         message: message,
-        cancelText: cancelText,
+        type: type,
         confirmText: confirmText,
-        onConfirm: onConfirm,
-        onCancel: onCancel,
-        confirmButtonColor: confirmButtonColor,
-        cancelButtonColor: cancelButtonColor,
+        onConfirm: () {
+          Navigator.of(context).pop(true);
+          onConfirm?.call();
+        },
+        cancelText: cancelText,
+        onCancel: () {
+          Navigator.of(context).pop(false);
+          onCancel?.call();
+        },
         icon: icon,
-        iconColor: iconColor,
-        isDangerous: isDangerous,
       ),
     );
   }
@@ -273,13 +282,21 @@ class CustomConfirmDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => CustomConfirmDialog.delete(
+      builder: (context) => AppThemedDialog(
         title: title,
         message: message,
+        type: AppDialogType.error,
         confirmText: confirmText,
+        onConfirm: () {
+          Navigator.of(context).pop(true);
+          onConfirm();
+        },
         cancelText: cancelText,
-        onConfirm: onConfirm,
-        onCancel: onCancel,
+        onCancel: () {
+          Navigator.of(context).pop(false);
+          onCancel?.call();
+        },
+        icon: Icons.delete_outline,
       ),
     );
   }
@@ -296,12 +313,20 @@ class CustomConfirmDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => CustomConfirmDialog.sessionExpired(
+      builder: (context) => AppThemedDialog(
         title: title,
         message: message,
+        type: AppDialogType.warning,
         confirmText: confirmText,
+        onConfirm: () {
+          Navigator.of(context).pop(true);
+          onConfirm();
+        },
         cancelText: cancelText,
-        onConfirm: onConfirm,
+        onCancel: () {
+          Navigator.of(context).pop(false);
+        },
+        icon: Icons.lock_clock_outlined,
       ),
     );
   }
@@ -319,13 +344,21 @@ class CustomConfirmDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => CustomConfirmDialog.cancelChanges(
+      builder: (context) => AppThemedDialog(
         title: title,
         message: message,
+        type: AppDialogType.warning,
         confirmText: confirmText,
+        onConfirm: () {
+          Navigator.of(context).pop(true);
+          onConfirm();
+        },
         cancelText: cancelText,
-        onConfirm: onConfirm,
-        onCancel: onCancel,
+        onCancel: () {
+          Navigator.of(context).pop(false);
+          onCancel?.call();
+        },
+        icon: Icons.warning_outlined,
       ),
     );
   }

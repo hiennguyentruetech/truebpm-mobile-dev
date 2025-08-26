@@ -7,6 +7,7 @@ import 'package:truebpm/models/user_model.dart';
 import 'package:truebpm/utils/global_store.dart';
 import 'package:truebpm/di/service_locator.dart';
 import 'package:truebpm/widgets/menu/index.dart';
+import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
 
 class ListMenuScreen extends StatefulWidget {
   const ListMenuScreen({super.key});
@@ -37,7 +38,7 @@ class _ListMenuScreenState extends State<ListMenuScreen> with TickerProviderStat
   Future<void> _loadData() async {
     try {
       setState(() => _isLoading = true);
-      
+
       // Load user info
       _currentUser = await _authService.getSavedUserInfo();
 
@@ -48,7 +49,7 @@ class _ListMenuScreenState extends State<ListMenuScreen> with TickerProviderStat
     } on AuthenticationException catch (e) {
       logger.e('Authentication error loading menu: ${e.message}');
       setState(() => _isLoading = false);
-      
+
       // Show session expired dialog and redirect to login
       if (mounted) {
         _showSessionExpiredDialog();
@@ -60,30 +61,13 @@ class _ListMenuScreenState extends State<ListMenuScreen> with TickerProviderStat
   }
 
   void _showSessionExpiredDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(appStrings.sessionExpired),
-          content: Text(appStrings.sessionExpiredMessage),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                // Clear stored credentials and navigate to login
-                await _authService.clearSavedCredentials();
-                if (mounted) {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/login',
-                    (route) => false,
-                  );
-                }
-              },
-              child: Text(appStrings.ok),
-            ),
-          ],
-        );
+    CustomConfirmDialog.showSessionExpired(
+      context,
+      onConfirm: () async {
+        await _authService.clearSavedCredentials();
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        }
       },
     );
   }

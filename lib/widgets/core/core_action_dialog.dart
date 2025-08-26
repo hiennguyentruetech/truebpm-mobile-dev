@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truebpm/widgets/dialogs/app_themed_dialog.dart';
 
 /// Model for print report options
 class PrintReportOption {
@@ -55,13 +56,16 @@ class CoreActionDialog {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) => _ResponseDialog(
+      builder: (BuildContext context) => AppThemedDialog(
         title: title ?? (success ? 'Success' : 'Error'),
         message: message,
-        primaryColor: primaryColor,
-        backgroundColor: backgroundColor,
-        icon: icon,
-        isSuccess: success,
+        type: switch (messageType) {
+          'success' => AppDialogType.success,
+          'warning' => AppDialogType.warning,
+          'error' => AppDialogType.error,
+          _ => success ? AppDialogType.success : AppDialogType.info,
+        },
+        confirmText: 'OK',
         onConfirm: () {
           Navigator.of(context).pop();
           if (success && onSuccess != null) {
