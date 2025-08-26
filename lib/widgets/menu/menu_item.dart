@@ -85,14 +85,14 @@ class _MenuItemState extends State<MenuItem> {
           child: Row(
             children: [
               _buildMenuIcon(menuColor),
-              const SizedBox(width: 8),
+              const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   widget.menu.displayName,
                   style: TextStyle(
-                    fontSize: widget.level == 0 ? 15 : 13,
-                    fontWeight: widget.level == 0 ? FontWeight.bold : FontWeight.w600,
-                    color: Colors.grey[800],
+                    fontSize: widget.level == 0 ? 14 : 13,
+                    fontWeight: widget.level == 0 ? FontWeight.w700 : FontWeight.w600,
+                    color: const Color.fromARGB(255, 20, 77, 143),
                     letterSpacing: 0.2,
                   ),
                 ),

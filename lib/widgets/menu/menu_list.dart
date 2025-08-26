@@ -22,18 +22,23 @@ class _MenuListState extends State<MenuList> {
 
   @override
   Widget build(BuildContext context) {
+    // Ẩn các item có token 'task-list' (đã có ở bottom tab)
+    final visibleMenus = widget.menuData
+        .where((m) => m.applicationPageId?.token != 'task-list')
+        .toList();
+
     return SliverPadding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(3),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             return MenuItem(
-              menu: widget.menuData[index],
+              menu: visibleMenus[index],
               level: 0,
               onMenuUpdated: _onMenuUpdated,
             );
           },
-          childCount: widget.menuData.length,
+          childCount: visibleMenus.length,
         ),
       ),
     );

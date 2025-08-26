@@ -43,11 +43,11 @@ class MenuConstants {
   static const List<double> gradientStops = [0.0, 0.5, 1.0];
   
   // Spacing and Padding
-  static const EdgeInsets defaultPadding = EdgeInsets.all(16);
-  static const EdgeInsets menuItemPadding = EdgeInsets.all(10);
+  static const EdgeInsets defaultPadding = EdgeInsets.all(10);
+  static const EdgeInsets menuItemPadding = EdgeInsets.all(8);
   static const EdgeInsets childMenuItemPadding = EdgeInsets.all(7);
-  static const double menuItemMarginBottom = 4.0;
-  static const double menuLevelIndentation = 10.0;
+  static const double menuItemMarginBottom = 3.0;
+  static const double menuLevelIndentation = 7.0;
   
   // Border Radius
   static const double defaultBorderRadius = 10.0;

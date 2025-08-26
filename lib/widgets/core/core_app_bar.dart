@@ -65,7 +65,7 @@ class CoreAppBar extends StatelessWidget implements PreferredSizeWidget {
                 CoreSearchInput(
                   controller: searchController,
                   onSearch: onSearch,
-                  hintText: 'Tìm kiếm...',
+                  hintText: 'Search data...',
                 ),
               ],
             ],
