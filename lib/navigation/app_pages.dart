@@ -23,6 +23,9 @@ import 'package:truebpm/screens/task_screens/detail_task_screen.dart';
 // Travel Request module
 import 'package:truebpm/screens/travel_request_screens/travel_request_page_screen.dart';
 
+// Travel Claim module
+import 'package:truebpm/screens/travel_claim_screens/travel_claim_page_screen.dart';
+
 // All pages imported below are in menu_screens stack
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
 import 'package:truebpm/screens/menu_screens/detail_menu_screen.dart';
@@ -40,7 +43,7 @@ import 'package:truebpm/screens/car_booking_screens/car_booking_page_screen.dart
 
 // Product screens
 import 'package:truebpm/screens/product_screens/product_page_screen.dart';
-// Project Management screens  
+// Project Management screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
 
 // Project CMDR screens
@@ -70,6 +73,10 @@ class AppPages {
     // Travel Request module route
     AppRoutes.travelRequest: (context) => const TravelRequestPageScreen(),
 
+    // Travel Claim module route
+    AppRoutes.travelClaim: (context) => const TravelClaimPageScreen(),
+
+
     // Menu module routes
     AppRoutes.menu: (context) => const ListMenuScreen(),
     AppRoutes.detailMenu: (context) => const DetailMenuScreen(),
@@ -90,7 +97,7 @@ class AppPages {
     // Product route
     AppRoutes.product: (context) => const ProductPageScreen(),
 
-    // Project Management route  
+    // Project Management route
     AppRoutes.projectManagement: (context) => const ProjectManagementPageScreen(),
 
     // Project CMDR route

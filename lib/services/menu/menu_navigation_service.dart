@@ -43,6 +43,9 @@ class MenuNavigationService {
         case 'travel-request-page':
           routeName = AppRoutes.travelRequest;
           break;
+        case 'travel-claim-page':
+          routeName = AppRoutes.travelClaim;
+          break;
         default:
           routeName = AppRoutes.detailMenu;
       }

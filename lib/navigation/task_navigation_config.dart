@@ -12,6 +12,7 @@ enum TaskModuleType {
   product('PRD'),
   cmdrmd('CMDRMD'),
   travelRequest('TRAREQ'),
+  travelClaim('TRACLA'),
   generic('GENERIC');
 
   const TaskModuleType(this.code);
@@ -30,6 +31,8 @@ enum TaskModuleType {
         return TaskModuleType.cmdrmd;
       case 'TRAREQ':
         return TaskModuleType.travelRequest;
+      case 'TRACLA':
+        return TaskModuleType.travelClaim;
       default:
         return TaskModuleType.generic;
     }
@@ -118,6 +121,15 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.travelClaim:
+        return GenericDetailCoreScreen(
+          moduleCode: 'TRACLA',
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.generic:
         return GenericDetailCoreScreen(
           moduleCode: config.moduleCode,
@@ -142,6 +154,8 @@ class TaskScreenFactory {
         return 'Project Management';
       case TaskModuleType.travelRequest:
         return 'Travel Request';
+      case TaskModuleType.travelClaim:
+        return 'Travel Claim';
       case TaskModuleType.generic:
         return 'Task Detail';
     }
@@ -163,6 +177,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Project Management';
       case TaskModuleType.travelRequest:
         return 'Travel Request';
+      case TaskModuleType.travelClaim:
+        return 'Travel Claim';
       case TaskModuleType.generic:
         return 'General Task';
     }
@@ -181,6 +197,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.person;
       case TaskModuleType.travelRequest:
         return Icons.flight_takeoff;
+      case TaskModuleType.travelClaim:
+        return Icons.receipt_long;
       case TaskModuleType.generic:
         return Icons.task_alt;
     }

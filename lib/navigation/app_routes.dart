@@ -20,6 +20,11 @@ class AppRoutes {
   travelRequest =     '/travelRequest',
   detailTravelRequest = '/detailTravelRequest',
 
+
+  // Travel Claim module routes
+  travelClaim =     '/travelClaim',
+  detailTravelClaim = '/detailTravelClaim',
+
   // Menu module routes
   menu =              '/menu',
   detailMenu =        '/detailMenu',
