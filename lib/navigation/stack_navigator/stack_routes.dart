@@ -15,8 +15,7 @@ import 'package:truebpm/screens/task_screens/list_task_screen.dart';
 import 'package:truebpm/screens/task_screens/detail_task_screen.dart';
 
 // Travel Request Screens
-import 'package:truebpm/screens/travel_request_screens/list_travel_request_screen.dart';
-import 'package:truebpm/screens/travel_request_screens/detail_travel_request_screen.dart';
+import 'package:truebpm/screens/travel_request_screens/travel_request_page_screen.dart';
 
 // Menu Screens
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
@@ -56,9 +55,8 @@ class StackRoutes {
     AppRoutes.detailTask: () => const DetailTaskScreen(),
     
     // Travel Request Stack Routes
-    AppRoutes.travelRequest: () => const ListTravelRequestScreen(),
-    AppRoutes.detailTravelRequest: () => const DetailTravelRequestScreen(),
-    
+    AppRoutes.travelRequest: () => const TravelRequestPageScreen(),
+
     // Menu Stack Routes
     AppRoutes.menu: () => const ListMenuScreen(),
     AppRoutes.detailMenu: () => const DetailMenuScreen(),

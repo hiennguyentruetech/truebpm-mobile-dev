@@ -40,6 +40,9 @@ class MenuNavigationService {
         case 'project-cmdr':
           routeName = AppRoutes.projectCmdr;
           break;
+        case 'travel-request-page':
+          routeName = AppRoutes.travelRequest;
+          break;
         default:
           routeName = AppRoutes.detailMenu;
       }

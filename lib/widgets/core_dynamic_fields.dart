@@ -148,9 +148,9 @@ class CoreDynamicFields {
       decimalPlaces: decimalPlaces,
       minValue: minValue,
       maxValue: maxValue,
-      disabled: config['disabled'] ?? (fieldName.contains('.') ? true : null),
+      disabled: config['disabled'],
       hidden: config['hidden'],
-      onlyView: config['onlyView'] ?? (fieldName.contains('.')),
+      onlyView: config['onlyView'] ?? false,
       onChanged: (value) {
         // Ensure numeric type for number inputs
         if (inputType == CoreInputType.number) {

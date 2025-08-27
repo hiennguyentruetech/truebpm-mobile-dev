@@ -1,49 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:truebpm/models/core_detail_model.dart';
+import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
+import 'package:truebpm/screens/travel_request_screens/travel_request_page_screen.dart';
 
-class DetailTravelRequestScreen extends StatefulWidget {
-  const DetailTravelRequestScreen({super.key});
+/// Detail screen for Travel Request (TRAREQ)
+class DetailTravelRequestScreen extends DetailCoreScreen {
+  const DetailTravelRequestScreen({
+    super.key,
+    required super.listItem,
+    super.initialTabCode,
+    super.fromTaskScreen = false,
+    super.taskId,
+  });
 
   @override
-  State<DetailTravelRequestScreen> createState() => _DetailTravelRequestScreenState();
-}
+  String get moduleCode => TravelRequestPageScreen.moduleCode;
 
-class _DetailTravelRequestScreenState extends State<DetailTravelRequestScreen> {
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết Yêu cầu đi công tác'),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.flight_land,
-              size: 80,
-              color: Colors.purple,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Chi tiết Yêu cầu đi công tác',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Giao diện này sẽ được thiết kế sau',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  String get moduleName => TravelRequestPageScreen.moduleName;
+
+  @override
+  List<TabConfig> get availableTabs => TravelRequestPageScreen.availableTabs;
 }

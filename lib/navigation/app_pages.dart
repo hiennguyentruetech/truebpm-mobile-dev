@@ -20,9 +20,8 @@ import 'package:truebpm/screens/e_leave_screens/detail_e_leave_screen.dart';
 import 'package:truebpm/screens/task_screens/list_task_screen.dart';
 import 'package:truebpm/screens/task_screens/detail_task_screen.dart';
 
-// All pages imported below are in travel_request_screens stack
-import 'package:truebpm/screens/travel_request_screens/list_travel_request_screen.dart';
-import 'package:truebpm/screens/travel_request_screens/detail_travel_request_screen.dart';
+// Travel Request module
+import 'package:truebpm/screens/travel_request_screens/travel_request_page_screen.dart';
 
 // All pages imported below are in menu_screens stack
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
@@ -68,9 +67,8 @@ class AppPages {
     AppRoutes.task: (context) => const ListTaskScreen(),
     AppRoutes.detailTask: (context) => const DetailTaskScreen(),
 
-    // Travel Request module routes
-    AppRoutes.travelRequest: (context) => const ListTravelRequestScreen(),
-    AppRoutes.detailTravelRequest: (context) => const DetailTravelRequestScreen(),
+    // Travel Request module route
+    AppRoutes.travelRequest: (context) => const TravelRequestPageScreen(),
 
     // Menu module routes
     AppRoutes.menu: (context) => const ListMenuScreen(),

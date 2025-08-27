@@ -11,6 +11,7 @@ enum TaskModuleType {
   carBooking('CARBKG'),
   product('PRD'),
   cmdrmd('CMDRMD'),
+  travelRequest('TRAREQ'),
   generic('GENERIC');
 
   const TaskModuleType(this.code);
@@ -27,6 +28,8 @@ enum TaskModuleType {
         return TaskModuleType.product;
       case 'CMDRMD':
         return TaskModuleType.cmdrmd;
+      case 'TRAREQ':
+        return TaskModuleType.travelRequest;
       default:
         return TaskModuleType.generic;
     }
@@ -106,6 +109,15 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.travelRequest:
+        return GenericDetailCoreScreen(
+          moduleCode: 'TRAREQ',
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.generic:
         return GenericDetailCoreScreen(
           moduleCode: config.moduleCode,
@@ -128,6 +140,8 @@ class TaskScreenFactory {
         return 'Product Management';
       case TaskModuleType.cmdrmd:
         return 'Project Management';
+      case TaskModuleType.travelRequest:
+        return 'Travel Request';
       case TaskModuleType.generic:
         return 'Task Detail';
     }
@@ -147,6 +161,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Product';
       case TaskModuleType.cmdrmd:
         return 'Project Management';
+      case TaskModuleType.travelRequest:
+        return 'Travel Request';
       case TaskModuleType.generic:
         return 'General Task';
     }
@@ -163,6 +179,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.inventory_2;
       case TaskModuleType.cmdrmd:
         return Icons.person;
+      case TaskModuleType.travelRequest:
+        return Icons.flight_takeoff;
       case TaskModuleType.generic:
         return Icons.task_alt;
     }
