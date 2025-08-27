@@ -46,7 +46,7 @@ class TaskErrorState extends StatelessWidget {
                     ),
                     child: const Icon(
                       Icons.error_outline_rounded,
-                      size: 64,
+                      size: 60,
                       color: AppColors.error,
                     ),
                   ),
@@ -59,17 +59,17 @@ class TaskErrorState extends StatelessWidget {
             const Text(
               'Oops! Something went wrong',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 23,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             
             // Error message
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppColors.error.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
@@ -81,14 +81,14 @@ class TaskErrorState extends StatelessWidget {
               child: Text(
                 errorMessage,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: AppColors.textSecondary,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 25),
             
             // Retry button
             _RetryButton(onRetry: onRetry),
@@ -170,8 +170,8 @@ class _RetryButtonState extends State<_RetryButton>
                   onTap: widget.onRetry,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                      horizontal: 20,
+                      vertical: 10,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -188,11 +188,11 @@ class _RetryButtonState extends State<_RetryButton>
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         const Text(
                           'Try Again',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
