@@ -74,7 +74,7 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
 
   Widget _buildBasicInformationSection() {
     return CardSection(
-      title: 'Basic Information',
+      title: 'General Opportunity Information',
       headerIcon: Icons.article_outlined,
       headerColor: Colors.indigo,
       children: [

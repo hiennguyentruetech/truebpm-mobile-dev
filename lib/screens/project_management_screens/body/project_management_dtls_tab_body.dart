@@ -85,7 +85,7 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
 
   Widget _buildBasicInformationSection() {
     return CardSection(
-      title: 'Basic Information',
+      title: 'General Project Information',
       headerIcon: Icons.article_outlined,
       headerColor: Colors.indigo,
       children: [

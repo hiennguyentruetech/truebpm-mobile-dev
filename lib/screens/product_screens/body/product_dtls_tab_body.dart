@@ -74,7 +74,7 @@ class _ProductDetailsTabBodyState extends CoreTabBodyState<ProductDetailsTabBody
 
   Widget _buildBasicInfoSection() {
     return CardSection(
-      title: 'Basic Information',
+      title: 'General Information',
       headerIcon: Icons.info_outline,
       headerColor: Colors.indigo,
       children: [

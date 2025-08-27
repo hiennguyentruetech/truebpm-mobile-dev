@@ -151,7 +151,7 @@ class _OTDetailsTabBodyState extends CoreTabBodyState<OTDetailsTabBody> {
 
   Widget _buildRequestInfoSection() {
     return CardSection(
-      title: 'Basic Information',
+      title: 'General Information',
       headerIcon: Icons.article_outlined,
       headerColor: Colors.indigo,
       children: [
