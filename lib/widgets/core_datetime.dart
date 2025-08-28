@@ -163,6 +163,47 @@ class _CoreDateTimeState extends State<CoreDateTime> {
     return widget.label ?? _formatLabel(widget.dataKey);
   }
   
+  Widget get _buildLabel {
+    final labelText = _displayLabel;
+    if (_isRequired) {
+      return RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: labelText,
+              style: TextStyle(
+                color: _isDisabled
+                    ? const Color.fromARGB(255, 180, 180, 180)
+                    : const Color.fromARGB(255, 91, 91, 91),
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            TextSpan(
+              text: ' *',
+              style: TextStyle(
+                color: Colors.red.shade600,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Text(
+        labelText,
+        style: TextStyle(
+          color: _isDisabled
+              ? const Color.fromARGB(255, 180, 180, 180)
+              : const Color.fromARGB(255, 91, 91, 91),
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+  }
+  
   String _formatLabel(String key) {
     return key.replaceAllMapped(
       RegExp(r'([A-Z])'),
@@ -465,14 +506,8 @@ class _CoreDateTimeState extends State<CoreDateTime> {
         onChanged: null, // Disable onChanged vì tất cả đều popup-only
         style: widget.textStyle ?? const TextStyle(fontSize: 14),
         decoration: widget.decoration ?? InputDecoration(
-          labelText: _displayLabel + (_isRequired ? ' *' : ''),
-          labelStyle: TextStyle(
-            fontSize: 15, // Match CoreInput
-            fontWeight: FontWeight.w500, // Match CoreInput
-            color: _isDisabled 
-              ? const Color.fromARGB(255, 180, 180, 180) // Disabled color like CoreInput
-              : const Color.fromARGB(255, 91, 91, 91), // Normal grey color like CoreInput
-          ),
+          // Dùng RichText để hiển thị dấu * màu đỏ khi required (đồng bộ với CoreInput)
+          label: _buildLabel,
           floatingLabelStyle: TextStyle(
             fontSize: 17, // Match CoreInput
             fontWeight: FontWeight.w500, // Match CoreInput

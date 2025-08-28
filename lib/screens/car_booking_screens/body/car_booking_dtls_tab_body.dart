@@ -80,10 +80,10 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            { 'key': 'status', 'widget': 'status', 'showIcon': true },
+            { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
             { 'key': 'code', 'label': 'Code', 'widget': 'input', 'type': 'text', 'disabled': true },
             { 'key': 'purpose', 'label': 'Purpose', 'widget': 'input', 'type': 'text', 'required': true },
-            {'key': 'fromDate', 'widget': 'datetime', 'label': 'From Date - To Date', 'datetimeType': 'daterange', 'startDateKey': 'fromDate', 'endDateKey': 'toDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select duration...'},
+            { 'key': 'fromDate', 'widget': 'datetime', 'label': 'From Date - To Date', 'datetimeType': 'daterange', 'startDateKey': 'fromDate', 'endDateKey': 'toDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select duration...', 'required': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -133,7 +133,7 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
           fieldConfigs: [
             { 'key': 'createdBy', 'label': 'Created By', 'widget': 'input', 'type': 'text', 'disabled': true },
             { 'key': 'createdDate', 'label': 'Created Date', 'widget': 'datetime', 'datetimeType': 'datetime', 'disabled': true },
-            { 'key': 'updatedDate', 'label': 'Last Updated Date', 'widget': 'datetime', 'datetimeType': 'datetime', 'disabled': true },
+            // { 'key': 'updatedDate', 'label': 'Last Updated Date', 'widget': 'datetime', 'datetimeType': 'datetime', 'disabled': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
