@@ -244,7 +244,7 @@ class _MultipleSelectionDialogState extends State<MultipleSelectionDialog> {
               
               // Action buttons
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   border: Border(
@@ -260,15 +260,15 @@ class _MultipleSelectionDialogState extends State<MultipleSelectionDialog> {
                         constraints: const BoxConstraints(minWidth: 80),
                         child: ElevatedButton.icon(
                           onPressed: _selectAll,
-                          icon: const Icon(Icons.select_all, size: 16),
+                          icon: const Icon(Icons.select_all, size: 14),
                           label: const Text(
                             'Select All',
-                            style: TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.shade600,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 7),
                           ),
                         ),
                       ),
@@ -280,15 +280,15 @@ class _MultipleSelectionDialogState extends State<MultipleSelectionDialog> {
                         constraints: const BoxConstraints(minWidth: 80),
                         child: ElevatedButton.icon(
                           onPressed: _clearAll,
-                          icon: const Icon(Icons.close_rounded, size: 16),
+                          icon: const Icon(Icons.close_rounded, size: 14),
                           label: const Text(
                             'Clear All',
-                            style: TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade600,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 7),
                           ),
                         ),
                       ),
@@ -303,15 +303,15 @@ class _MultipleSelectionDialogState extends State<MultipleSelectionDialog> {
                             widget.onValuesSelected(_currentSelection);
                             Navigator.of(context).pop();
                           },
-                          icon: const Icon(Icons.check, size: 16),
+                          icon: const Icon(Icons.check, size: 14),
                           label: const Text(
                             'Done',
-                            style: TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
+                            backgroundColor: Colors.green.shade600,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 7),
                           ),
                         ),
                       ),
