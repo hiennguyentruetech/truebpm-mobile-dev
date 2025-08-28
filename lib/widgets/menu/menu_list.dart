@@ -22,9 +22,11 @@ class _MenuListState extends State<MenuList> {
 
   @override
   Widget build(BuildContext context) {
-    // Ẩn các item có token 'task-list' (đã có ở bottom tab)
     final visibleMenus = widget.menuData
-        .where((m) => m.applicationPageId?.token != 'task-list')
+        .where((m) {
+          final token = m.applicationPageId?.token;
+          return token != 'task-list' && token != 'weekly-report-page';
+        })
         .toList();
 
     return SliverPadding(

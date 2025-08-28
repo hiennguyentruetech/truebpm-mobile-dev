@@ -176,6 +176,10 @@ class _MenuItemState extends State<MenuItem> {
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         child: Column(
           children: widget.menu.children
+              .where((child) {
+                final token = child.applicationPageId?.token;
+                return token != 'task-list' && token != 'weekly-report-page';
+              })
               .map((child) => MenuItem(
                     menu: child,
                     level: widget.level + 1,

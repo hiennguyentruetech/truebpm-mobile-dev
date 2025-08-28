@@ -83,7 +83,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
             // {'key': 'code', 'label': 'Code'},
             {'key': 'itemNo', 'label': 'No'},
             {'key': 'name', 'label': 'Name'},
-            {'key': 'completeness', 'label': 'Completeness (%)', 'type': 'number'},
+            {'key': 'completeness', 'label': 'Completeness', 'type': 'number', 'suffix': '%', 'minValue': 0, 'maxValue': 100},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -103,7 +103,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
           fieldConfigs: [
             {'key': 'projectName', 'label': 'Project Name'},
             {'key': 'projectCode', 'label': 'Project Code'},
-            {'key': 'projectCompletedPercent', 'label': 'Percentage of Completeness (%)', 'type': 'number'},
+            {'key': 'projectCompletedPercent', 'label': 'Percentage of Completeness', 'type': 'number', 'suffix': '%', 'decimalPlaces': 2},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
