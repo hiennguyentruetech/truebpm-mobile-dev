@@ -10,6 +10,7 @@ import 'package:truebpm/screens/project_management_screens/body/project_manageme
 import 'package:truebpm/screens/project_management_screens/body/project_management_folderexplorer_tab_body.dart';
 import 'package:truebpm/screens/project_management_screens/body/project_management_addcostdoc_tab_body.dart';
 import 'package:truebpm/screens/project_management_screens/body/project_management_estcosts_tab_body.dart';
+import 'package:truebpm/widgets/core/core_action_dialog.dart';
 
 /// Project Management Page
 /// Mirrors the structure of menu_screens/management_screens/module_screens
@@ -56,6 +57,18 @@ class ProjectManagementPageScreen extends StatelessWidget {
     TabConfig(code: 'ESTCOSTS', name: 'Estimated Costs', tabBodyBuilder: ProjectManagementEstCostsTabBody.new),
   ];
 
+  // // Example print reports for this module
+  static final List<PrintReportOption> printReports = [
+    const PrintReportOption(
+      reportName: 'Project Management CMDR Structure',
+      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCMDRUser&id=4EDCE3A5-898E-46E1-9812-11FE5B8A16BC&fileName=Project%20Management%20CMDR%20Structure',
+    ),
+    const PrintReportOption(
+      reportName: 'Summary of Project Expenses',
+      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCost&id=5DB0B683-FDBA-624C-8AEE-FEBE91FC1DE1&fileName=Summary%20of%20Project%20Expenses%20ICV25041_Li%C3%AAn%20doanh%20Vi%E1%BB%87t%20Nga%20VietsovPetro_HxGN%20EAM',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return ListCoreScreen(
@@ -63,6 +76,7 @@ class ProjectManagementPageScreen extends StatelessWidget {
       moduleName: moduleName,
       tabModuleCode: defaultTabCode,
       availableTabs: availableTabs,
+      printReports: printReports,
       detailScreenBuilder: _createDetailScreen,
     );
   }
@@ -71,6 +85,7 @@ class ProjectManagementPageScreen extends StatelessWidget {
     return DetailProjectManagementScreen(
       listItem: listItem,
       initialTabCode: defaultTabCode,
+      printReports: printReports,
     );
   }
 }

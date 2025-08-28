@@ -19,6 +19,7 @@ class ListCoreScreen extends StatefulWidget {
   final String? tabModuleCode;
   final List<TabConfig>? availableTabs;
   final Widget? Function(BuildContext context, Map<String, dynamic> listItem)? detailScreenBuilder;
+  final List<PrintReportOption>? printReports;
 
   const ListCoreScreen({
     super.key,
@@ -27,6 +28,7 @@ class ListCoreScreen extends StatefulWidget {
     this.tabModuleCode,
     this.availableTabs,
     this.detailScreenBuilder,
+    this.printReports,
   });
 
   @override
@@ -128,7 +130,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
             initialTabCode: 'DTLS', // Always default to DTLS for new records
             dataSpy: provider.dataSpy,
             availableTabs: widget.availableTabs ?? _getDefaultTabs(),
-            printReports: _getExamplePrintReports(),
+            printReports: widget.printReports ?? _getExamplePrintReports(),
             onOperationSuccess: () async {
               // Refresh data spy and keep scroll position after successful save
               await _refreshListKeepingScroll(provider);
@@ -526,7 +528,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                           initialTabCode: widget.tabModuleCode ?? 'DTLS',
                           dataSpy: provider.dataSpy,
                           availableTabs: widget.availableTabs ?? _getDefaultTabs(),
-                          printReports: _getExamplePrintReports(),
+                          printReports: widget.printReports ?? _getExamplePrintReports(),
                           onOperationSuccess: () async {
                             // Refresh list and keep scroll for copy/delete, etc.
                             await _refreshListKeepingScroll(provider);

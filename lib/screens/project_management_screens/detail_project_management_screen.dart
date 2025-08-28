@@ -11,6 +11,7 @@ class DetailProjectManagementScreen extends DetailCoreScreen {
     super.initialTabCode,
     super.fromTaskScreen = false,
     super.taskId,
+    super.printReports,
   });
 
   @override
