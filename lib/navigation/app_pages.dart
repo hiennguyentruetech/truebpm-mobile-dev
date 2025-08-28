@@ -48,6 +48,8 @@ import 'package:truebpm/screens/project_management_screens/project_management_pa
 
 // Project CMDR screens
 import 'package:truebpm/screens/project_cmdr_screens/project_cmdr_page_screen.dart';
+// Weekly Report screens
+import 'package:truebpm/screens/weekly_report_screens/weekly_report_page_screen.dart';
 
 class AppPages {
   static Map<String, WidgetBuilder> routes = {
@@ -96,6 +98,9 @@ class AppPages {
 
     // Product route
     AppRoutes.product: (context) => const ProductPageScreen(),
+
+    // Weekly Report route
+    AppRoutes.weeklyReport: (context) => const WeeklyReportPageScreen(),
 
     // Project Management route
     AppRoutes.projectManagement: (context) => const ProjectManagementPageScreen(),

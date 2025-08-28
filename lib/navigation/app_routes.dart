@@ -50,6 +50,10 @@ class AppRoutes {
   product =           '/product',
   detailProduct =     '/detailProduct',
 
+  // Weekly Report routes
+  weeklyReport =      '/weeklyReport',
+  detailWeeklyReport = '/detailWeeklyReport',
+
   // Project Management routes
   projectManagement = '/projectManagement',
   detailProjectManagement = '/detailProjectManagement',

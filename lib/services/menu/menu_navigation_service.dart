@@ -22,6 +22,9 @@ class MenuNavigationService {
         case 'tab-module':
           routeName = AppRoutes.tabModule;
           break;
+        case 'weekly-report-page':
+          routeName = AppRoutes.weeklyReport;
+          break;
         case 'ot-page':
           routeName = AppRoutes.otRegistration;
           break;

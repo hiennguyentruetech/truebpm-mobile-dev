@@ -40,6 +40,8 @@ import 'package:truebpm/screens/car_booking_screens/car_booking_page_screen.dart
 import 'package:truebpm/screens/product_screens/product_page_screen.dart';
 // Project Management Screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
+// Weekly Report Screens
+import 'package:truebpm/screens/weekly_report_screens/weekly_report_page_screen.dart';
 
 /// Stack Routes Configuration
 class StackRoutes {
@@ -83,6 +85,9 @@ class StackRoutes {
 
     // Product Stack Routes
     AppRoutes.product: () => const ProductPageScreen(),
+
+    // Weekly Report Stack Routes
+    AppRoutes.weeklyReport: () => const WeeklyReportPageScreen(),
 
     // Project Management Stack Routes
     AppRoutes.projectManagement: () => const ProjectManagementPageScreen(),
