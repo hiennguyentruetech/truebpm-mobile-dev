@@ -134,7 +134,7 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
           fieldConfigs: [
             {'key': 'adminUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Admin', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER', 'display': 'fullName'},
             {'key': 'pmUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=ACCOUNT_MANAGER', 'display': 'fullName'},
-            {'key': 'accountId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Account Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=ACCOUNT_MANAGER', 'display': 'fullName'},
+            {'key': 'accountId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Account Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=ACCOUNT_MANAGER', 'display': 'fullName', 'disabled': _moduleData['opportunityId'] != null},
             {'key': 'authorizedToId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Authorized To', 'data': 'DROPDOWN.PRJMGT/USER', 'display': 'fullName'},
             {'key': 'accountantUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Accountant', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=PROJECT_ACCOUNTANT', 'display': 'fullName'},
             {'key': 'projectSecretaryId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Secretary', 'data': 'DROPDOWN.PRJMGT/USER', 'display': 'fullName'},

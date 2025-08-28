@@ -153,8 +153,8 @@ class _DropdownDialogState extends State<DropdownDialog> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+                    topLeft: Radius.circular(7),
+                    topRight: Radius.circular(7),
                   ),
                 ),
                 child: Row(
@@ -289,7 +289,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
                               size: 48,
                               color: Colors.grey.shade400,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             Text(
                               'No options found',
                               style: TextStyle(
@@ -310,7 +310,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(10),
                         itemCount: _filteredOptions.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {

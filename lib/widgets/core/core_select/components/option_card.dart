@@ -61,14 +61,14 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(7),
               splashColor: Colors.blue.shade100.withOpacity(0.3),
               highlightColor: Colors.blue.shade50.withOpacity(0.5),
               onTap: widget.onTap,
               child: Container(
                 decoration: BoxDecoration(
                   color: widget.isSelected ? Colors.blue.shade50 : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(7),
                   border: Border.all(
                     color: widget.isSelected ? Colors.blue.shade200 : Colors.grey.shade200,
                     width: widget.isSelected ? 2 : 1,
@@ -91,7 +91,7 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   child: widget.hasMoreDisplay ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -128,7 +128,7 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 7),
                           // Code container
                           Expanded(
                             child: Container(
@@ -150,12 +150,6 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.code_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       widget.codeValue,
@@ -175,7 +169,7 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                       
                       // Additional fields as label: value pairs (like core_list_item)
                       if (widget.additionalFields.isNotEmpty) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 7),
                         ...widget.additionalFields.map((field) => 
                           widget.buildInfoRow(field.key, field.value)),
                       ],
@@ -203,7 +197,7 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                               )
                             : null,
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           widget.codeValue,

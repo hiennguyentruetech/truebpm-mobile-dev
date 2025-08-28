@@ -14,10 +14,10 @@ class InfoRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(0),
         border: Border.all(color: Colors.blue.shade200, width: 1),
         boxShadow: [
           BoxShadow(
@@ -34,7 +34,7 @@ class InfoRowWidget extends StatelessWidget {
           children: [
             // Label - 35% width, align right
             Expanded(
-              flex: 35,
+              flex: 37,
               child: Text(
                 label,
                 style: TextStyle(
@@ -47,7 +47,7 @@ class InfoRowWidget extends StatelessWidget {
             ),
             // Colon separator
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Text(
                 ':',
                 style: TextStyle(
@@ -59,7 +59,7 @@ class InfoRowWidget extends StatelessWidget {
             ),
             // Value - 65% width, align left
             Expanded(
-              flex: 65,
+              flex: 63,
               child: Text(
                 value,
                 style: TextStyle(
