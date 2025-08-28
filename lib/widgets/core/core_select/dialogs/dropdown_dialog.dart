@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core_select_utils.dart';
+
 import '../components/option_card.dart';
 
 /// Dropdown Popup Dialog
@@ -57,15 +59,15 @@ class _DropdownDialogState extends State<DropdownDialog> {
       } else {
         final searchLower = searchText.toLowerCase();
         final hasMoreDisplay = widget.moreDisplay != null && widget.moreDisplay!.isNotEmpty;
-        
+
         _filteredOptions = widget.options.where((option) {
           final displayText = widget.getDisplayText(option).toLowerCase();
-          
+
           // Search in main display text
           if (displayText.contains(searchLower)) {
             return true;
           }
-          
+
           // Also search in moreDisplay fields
           if (hasMoreDisplay && option is Map) {
             for (final field in widget.moreDisplay!) {
@@ -76,7 +78,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
               }
             }
           }
-          
+
           return false;
         }).toList();
       }
@@ -86,15 +88,16 @@ class _DropdownDialogState extends State<DropdownDialog> {
   Widget _buildOptionCard(dynamic option, int index, bool isSelected, VoidCallback onTap, bool hasMoreDisplay) {
     // Get the main display value (code)
     String codeValue = widget.getDisplayText(option);
-    
+
     // Build additional fields from moreDisplay
     List<MapEntry<String, String>> additionalFields = [];
-    
+
     if (hasMoreDisplay && option is Map) {
       for (final field in widget.moreDisplay!) {
         final key = field['key'] ?? '';
         final label = field['label'] ?? key;
-        final value = option[key]?.toString() ?? '-';
+        final raw = CoreSelectUtils.getByPath(option, key);
+        final value = (raw == null || raw.toString().isEmpty) ? '-' : raw.toString();
         additionalFields.add(MapEntry(label, value));
       }
     }
@@ -114,7 +117,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
   @override
   Widget build(BuildContext context) {
     final bool hasMoreDisplay = widget.moreDisplay != null && widget.moreDisplay!.isNotEmpty;
-    
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(20),
@@ -211,7 +214,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
                   ],
                 ),
               ),
-              
+
               // Search field with elegant design
               Container(
                 padding: const EdgeInsets.all(5),
@@ -273,7 +276,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
                   ),
                 ),
               ),
-              
+
               // Options list with core_list_item style
               Expanded(
                 child: _filteredOptions.isEmpty
@@ -314,7 +317,7 @@ class _DropdownDialogState extends State<DropdownDialog> {
                           final option = _filteredOptions[index];
                           final optionValue = widget.getOptionValue(option);
                           final isSelected = widget.compareValues(widget.selectedValue, optionValue);
-                          
+
                           return _buildOptionCard(option, index + 1, isSelected, () {
                             // Unfocus search input when selecting an option
                             _searchFocusNode.unfocus();

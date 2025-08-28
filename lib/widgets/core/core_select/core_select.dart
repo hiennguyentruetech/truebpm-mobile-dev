@@ -105,13 +105,12 @@ class _CoreSelectState extends State<CoreSelect> {
   @override
   void didUpdateWidget(CoreSelect oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.itemDetail != widget.itemDetail || oldWidget.dataKey != widget.dataKey) {
-      final newValue = _getValueFromItemDetail();
-      if (_selectedValue != newValue) {
-        setState(() {
-          _selectedValue = newValue;
-        });
-      }
+    // Always re-read value from itemDetail; its reference may be same even when inner value changed
+    final newValue = _getValueFromItemDetail();
+    if (!_compareValues(_selectedValue, newValue)) {
+      setState(() {
+        _selectedValue = newValue;
+      });
     }
   }
 

@@ -142,26 +142,44 @@ class CoreSelectUtils {
     } else {
       final searchLower = searchText.toLowerCase();
       final hasMoreDisplay = moreDisplay != null && moreDisplay.isNotEmpty;
-      
+
       return options.where((option) {
         final displayText = getDisplayText(option).toLowerCase();
-        
+
         if (displayText.contains(searchLower)) {
           return true;
         }
-        
+
         if (hasMoreDisplay && option is Map) {
           for (final field in moreDisplay) {
             final key = field['key'] ?? '';
-            final value = option[key]?.toString().toLowerCase() ?? '';
+            final raw = getByPath(option, key);
+            final value = raw?.toString().toLowerCase() ?? '';
             if (value.contains(searchLower)) {
               return true;
             }
           }
         }
-        
+
         return false;
       }).toList();
+    }
+  }
+
+  /// Safely get nested value by dot-notation path (e.g., 'customerId.name')
+  static dynamic getByPath(Map obj, String path) {
+    try {
+      dynamic curr = obj;
+      for (final part in path.split('.')) {
+        if (curr is Map && curr.containsKey(part)) {
+          curr = curr[part];
+        } else {
+          return null;
+        }
+      }
+      return curr;
+    } catch (_) {
+      return null;
     }
   }
 }

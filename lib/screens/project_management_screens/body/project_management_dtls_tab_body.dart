@@ -46,11 +46,26 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
 
   void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      // Handle dependent updates when opportunity changes
+      if (key == 'opportunityId') {
+        _moduleData[key] = value;
+        if (value is Map<String, dynamic>) {
+          // Auto-fill and lock dependent fields
+          _moduleData['customerId'] = value['customerId'];
+          _moduleData['accountId'] = value['accountId'];
+        } else if (value == null) {
+          // Clear and unlock dependent fields
+          _moduleData['customerId'] = null;
+          _moduleData['accountId'] = null;
+        }
+      } else {
+        _moduleData[key] = value;
+      }
+
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
-    
+
     if (widget.onDataChanged != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         widget.onDataChanged!(_response);
@@ -94,7 +109,7 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
             { 'key': 'code', 'label': 'Code' },
             { 'key': 'projectCode', 'label': 'Project Code' },
             { 'key': 'name', 'label': 'Project Name', 'required': true },
-            { 'key': 'solutionName', 'label': 'Solution Name', 'required': true },
+            {'key': 'listProducts', 'widget': 'select', 'selectType': 'multiple', 'label': 'List Products', 'required': true, 'data': 'DROPDOWN.PRJMGT/PRODUCT', 'display': 'name'},
             { 'key': 'location', 'label': 'Location' },
             { 'key': 'implementation', 'label': 'Implementation' },
             {'key': 'projectTypeId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Type', 'required': true, 'data': 'DROPDOWN.PRJMGT/PROJECTTYPE', 'display': 'name'},
@@ -141,10 +156,10 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'opportunityId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'required': true, 'data': 'DROPDOWN.PRJMGT/OPPORTUNITIES', 'display': 'name'},
+            {'key': 'opportunityId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'required': true, 'data': 'DROPDOWN.PRJMGT/OPPORTUNITIES', 'display': 'name', 'moreDisplay': [{'label': 'Customer', 'key': 'customerId.name'}, {'label': 'Owner', 'key': 'accountId.fullName'}]},
             {'key': 'icv', 'label': 'ICV'},
             {'key': 'contractNumber', 'label': 'Contract Number'},
-            {'key': 'customerName', 'label': 'Customer Name'},
+            {'key': 'customerId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Customer', 'data': 'DROPDOWN.PRJMGT/CUSTOMER', 'display': 'name', 'disabled': _moduleData['opportunityId'] != null},
             {'key': 'contractStartDate', 'widget': 'datetime', 'label': 'Contract Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'contractStartDate', 'endDateKey': 'contractEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select contract duration...'},
             {'key': 'maintStartDate', 'widget': 'datetime', 'label': 'Maintenance Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'maintStartDate', 'endDateKey': 'maintEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select maintenance duration...'},
             {'key': 'isEndProjectByMaint', 'widget': 'checkbox', 'checkboxStyle': 'switch', 'label': 'End Project By Maintenance'},
