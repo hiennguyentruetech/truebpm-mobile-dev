@@ -157,8 +157,8 @@ class _OTDetailsTabBodyState extends CoreTabBodyState<OTDetailsTabBody> {
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            { 'key': 'status', 'widget': 'status', 'showIcon': true },
-            { 'key': 'code', 'label': 'OT Code' },
+            { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
+            { 'key': 'code', 'label': 'OT Code', 'disabled': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -182,7 +182,7 @@ class _OTDetailsTabBodyState extends CoreTabBodyState<OTDetailsTabBody> {
             {'key': 'amToHours', 'widget': 'datetime', 'label': 'AM: To', 'datetimeType': 'time', 'defaultTime': '11:30'},
             {'key': 'pmFromHours', 'widget': 'datetime', 'label': 'PM: From', 'datetimeType': 'time', 'defaultTime': '13:30'},
             {'key': 'pmToHours', 'widget': 'datetime', 'label': 'PM: To', 'datetimeType': 'time', 'defaultTime': '17:30'},
-            {'key': 'totalHour', 'label': 'Total hours applied', 'type': 'number'},
+            {'key': 'totalHour', 'label': 'Total hours applied', 'type': 'number', 'disabled': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -239,6 +239,9 @@ class _OTDetailsTabBodyState extends CoreTabBodyState<OTDetailsTabBody> {
                   'label': 'Percentage',
                   'type': 'number',
                   'suffix': '%',
+                  'decimalPlaces': 0,
+                  'minValue': 0,
+                  'maxValue': 100,
                   'hintText': 'Enter percentage (0-100)',
                 },
                 {
@@ -347,8 +350,8 @@ class _OTDetailsTabBodyState extends CoreTabBodyState<OTDetailsTabBody> {
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'createdBy', 'label': 'Created By', 'hintText': 'Created by user', 'type': 'text'},
-            {'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'hintText': 'Record creation date'},
+            {'key': 'createdBy', 'label': 'Created By', 'hintText': 'Created by user', 'type': 'text', 'disabled': true},
+            {'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'hintText': 'Record creation date', 'disabled': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
