@@ -57,15 +57,26 @@ class ProjectManagementPageScreen extends StatelessWidget {
     TabConfig(code: 'ESTCOSTS', name: 'Estimated Costs', tabBodyBuilder: ProjectManagementEstCostsTabBody.new),
   ];
 
-  // // Example print reports for this module
+  // Dynamic print reports for this module with URL templates
   static final List<PrintReportOption> printReports = [
     const PrintReportOption(
-      reportName: 'Project Management CMDR Structure',
-      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCMDRUser&id=4EDCE3A5-898E-46E1-9812-11FE5B8A16BC&fileName=Project%20Management%20CMDR%20Structure',
+      reportName: 'Project CMDR Structure Report',
+      // reportDescription: 'Generate comprehensive CMDR structure report for the current project',
+      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCMDRUser&id={id}&fileName=Project%20Management%20CMDR%20Structure',
+      reportIcon: Icons.account_tree_rounded,
+      urlParams: {
+        'id': 'value.id',
+      },
     ),
     const PrintReportOption(
-      reportName: 'Summary of Project Expenses',
-      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCost&id=5DB0B683-FDBA-624C-8AEE-FEBE91FC1DE1&fileName=Summary%20of%20Project%20Expenses%20ICV25041_Li%C3%AAn%20doanh%20Vi%E1%BB%87t%20Nga%20VietsovPetro_HxGN%20EAM',
+      reportName: 'Project Summary Report',
+      // reportDescription: 'Generate detailed project summary and overview report',
+      reportUrl: 'https://solomon.truetech.com.vn/report/?context=projectCost&id={id}&fileName=Project%20Summary%20Report%20{projectCode}',
+      reportIcon: Icons.summarize_rounded,
+      urlParams: {
+        'id': 'value.id',
+        'projectCode': 'value.projectCode',
+      },
     ),
   ];
 

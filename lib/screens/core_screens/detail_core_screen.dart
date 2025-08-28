@@ -626,6 +626,7 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     CoreActionDialog.showPrintDialog(
       context,
       reports: reports,
+      itemDetail: _getItemDetail(provider),
       onReportSelected: (url) async {
         try {
           final uri = Uri.parse(url);
