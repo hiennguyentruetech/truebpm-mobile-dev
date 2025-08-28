@@ -64,89 +64,24 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusSection(),
-          _buildBasicInfoSection(),
           _buildProjectInfoSection(),
+          _buildBasicInfoSection(),
           _buildInChargeSection(),
         ],
       ),
     ).dismissKeyboardOnTap();
   }
 
-  Widget _buildStatusSection() {
-    final status = _moduleData['status'] as Map<String, dynamic>?;
-    if (status == null) return const SizedBox.shrink();
-    
-    return CardSection(
-      title: 'Status Information',
-      headerIcon: Icons.flag_outlined,
-      headerColor: Colors.blue,
-      children: [
-        // Status display
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue.shade200),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.flag, color: Colors.blue.shade700, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Status',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    Text(
-                      status['name'] ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (status['statusType'] != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    status['statusType']['value'] ?? '',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildBasicInfoSection() {
     return CardSection(
-      title: 'Basic Information',
+      title: 'General Information',
       headerIcon: Icons.info_outline,
       headerColor: Colors.indigo,
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'code', 'label': 'Code'},
+            // {'key': 'code', 'label': 'Code'},
+            {'key': 'itemNo', 'label': 'No'},
             {'key': 'name', 'label': 'Name'},
             {'key': 'completeness', 'label': 'Completeness (%)', 'type': 'number'},
           ],
@@ -168,12 +103,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
           fieldConfigs: [
             {'key': 'projectName', 'label': 'Project Name'},
             {'key': 'projectCode', 'label': 'Project Code'},
-            {'key': 'projectIcv', 'label': 'Project ICV'},
-            {'key': 'projectCompletedPercent', 'label': 'Project Completed (%)', 'type': 'number'},
-            {'key': 'projectCreatedBy', 'label': 'Created By'},
-            {'key': 'projectCreatedDate', 'label': 'Created Date', 'widget': 'datetime', 'datetimeType': 'date', 'displayFormat': 'yyyy-MM-dd'},
-            {'key': 'projectUpdatedBy', 'label': 'Updated By'},
-            {'key': 'projectUpdatedDate', 'label': 'Updated Date', 'widget': 'datetime', 'datetimeType': 'date', 'displayFormat': 'yyyy-MM-dd'},
+            {'key': 'projectCompletedPercent', 'label': 'Percentage of Completeness (%)', 'type': 'number'},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -201,7 +131,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
           
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: isOwner ? Colors.amber.shade50 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -221,7 +151,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 7),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +162,7 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
                             child: Text(
                               personData?['fullName'] ?? 'Unknown',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

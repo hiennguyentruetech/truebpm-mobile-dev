@@ -109,12 +109,12 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
             { 'key': 'code', 'label': 'Code' },
             { 'key': 'projectCode', 'label': 'Project Code' },
             { 'key': 'name', 'label': 'Project Name', 'required': true },
-            {'key': 'listProducts', 'widget': 'select', 'selectType': 'multiple', 'label': 'List Products', 'required': true, 'data': 'DROPDOWN.PRJMGT/PRODUCT', 'display': 'name'},
+            { 'key': 'listProducts', 'widget': 'select', 'selectType': 'multiple', 'label': 'Solution Name', 'required': true, 'data': 'DROPDOWN.PRJMGT/PRODUCT', 'display': 'name'},
             { 'key': 'location', 'label': 'Location' },
             { 'key': 'implementation', 'label': 'Implementation' },
-            {'key': 'projectTypeId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Type', 'required': true, 'data': 'DROPDOWN.PRJMGT/PROJECTTYPE', 'display': 'name'},
-            {'key': 'departmentId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Department', 'required': true, 'data': 'DROPDOWN.PRJMGT/DEPARTMENT', 'display': 'name'},
-            { 'key': 'completedPercent', 'label': 'Completed Percent', 'type': 'number', 'suffix': '%', 'disabled': true },
+            { 'key': 'projectTypeId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Type', 'required': true, 'data': 'DROPDOWN.PRJMGT/PROJECTTYPE', 'display': 'name'},
+            { 'key': 'departmentId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Department', 'required': true, 'data': 'DROPDOWN.PRJMGT/DEPARTMENT', 'display': 'name'},
+            { 'key': 'completedPercent', 'label': 'Percentage of Completeness', 'type': 'number', 'suffix': '%', 'disabled': true, 'decimalPlaces': 2 },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -133,7 +133,7 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             {'key': 'adminUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Admin', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER', 'display': 'fullName'},
-            {'key': 'pmUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=ACCOUNT_MANAGER', 'display': 'fullName'},
+            {'key': 'pmUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=PROJECT_MANAGER', 'display': 'fullName'},
             {'key': 'accountId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Account Manager', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=ACCOUNT_MANAGER', 'display': 'fullName', 'disabled': _moduleData['opportunityId'] != null},
             {'key': 'authorizedToId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Authorized To', 'data': 'DROPDOWN.PRJMGT/USER', 'display': 'fullName'},
             {'key': 'accountantUserId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project Accountant', 'required': true, 'data': 'DROPDOWN.PRJMGT/USER?PERMISSION=PROJECT_ACCOUNTANT', 'display': 'fullName'},
@@ -156,10 +156,10 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'opportunityId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'required': true, 'data': 'DROPDOWN.PRJMGT/OPPORTUNITIES', 'display': 'name', 'moreDisplay': [{'label': 'Customer', 'key': 'customerId.name'}, {'label': 'Owner', 'key': 'accountId.fullName'}]},
+            {'key': 'opportunityId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'data': 'DROPDOWN.PRJMGT/OPPORTUNITIES', 'display': 'name', 'moreDisplay': [{'label': 'Customer', 'key': 'customerId.name'}, {'label': 'Owner', 'key': 'accountId.fullName'}]},
             {'key': 'icv', 'label': 'ICV'},
-            {'key': 'contractNumber', 'label': 'Contract Number'},
-            {'key': 'customerId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Customer', 'data': 'DROPDOWN.PRJMGT/CUSTOMER', 'display': 'name', 'disabled': _moduleData['opportunityId'] != null},
+            {'key': 'contractNumber', 'label': 'Contract Number', 'required': true},
+            {'key': 'customerId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Customer', 'data': 'DROPDOWN.PRJMGT/CUSTOMER', 'display': 'name', 'disabled': _moduleData['opportunityId'] != null, 'required': true},
             {'key': 'contractStartDate', 'widget': 'datetime', 'label': 'Contract Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'contractStartDate', 'endDateKey': 'contractEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select contract duration...'},
             {'key': 'maintStartDate', 'widget': 'datetime', 'label': 'Maintenance Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'maintStartDate', 'endDateKey': 'maintEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select maintenance duration...'},
             {'key': 'isEndProjectByMaint', 'widget': 'checkbox', 'checkboxStyle': 'switch', 'label': 'End Project By Maintenance'},
