@@ -70,8 +70,8 @@ class _OptionCardWithAnimationState extends State<OptionCardWithAnimation> {
                   color: widget.isSelected ? Colors.blue.shade50 : Colors.white,
                   borderRadius: BorderRadius.circular(7),
                   border: Border.all(
-                    color: widget.isSelected ? Colors.blue.shade200 : Colors.grey.shade200,
-                    width: widget.isSelected ? 2 : 1,
+                    color: widget.isSelected ? Colors.blue.shade200 : Colors.grey.shade300,
+                    width: widget.isSelected ? 2 : 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(

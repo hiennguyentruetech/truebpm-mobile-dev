@@ -70,8 +70,8 @@ class _MultipleOptionCardState extends State<MultipleOptionCard> {
                   color: widget.isSelected ? Colors.blue.shade50 : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: widget.isSelected ? Colors.blue.shade200 : Colors.grey.shade200,
-                    width: widget.isSelected ? 2 : 1,
+                    color: widget.isSelected ? Colors.blue.shade300 : const Color(0xFFBDBDBD),
+                    width: widget.isSelected ? 2 : 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(

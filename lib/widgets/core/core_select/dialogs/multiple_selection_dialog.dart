@@ -156,6 +156,7 @@ class _MultipleSelectionDialogState extends State<MultipleSelectionDialog> {
         child: Container(
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height * 0.8,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
