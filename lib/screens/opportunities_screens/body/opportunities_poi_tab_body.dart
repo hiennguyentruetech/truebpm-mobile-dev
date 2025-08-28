@@ -86,7 +86,7 @@ class _OpportunitiesPOITabBodyState extends CoreTabBodyState<OpportunitiesPOITab
         'summary': {
           'fields': [
             { 'key': 'product.name', 'label': 'Product', 'layout': 'row', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
-            { 'key': 'quantity', 'label': 'Quantity', 'layout': 'row', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+            { 'key': 'quantity', 'label': 'Quantity', 'layout': 'row', 'type': 'number', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
             { 'key': 'unit', 'label': 'Unit', 'layout': 'row', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
           ],
         },

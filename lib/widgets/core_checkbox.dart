@@ -47,6 +47,12 @@ class CoreCheckbox extends StatefulWidget {
   
   /// Custom icon when unchecked (for custom style)
   final IconData? customUncheckedIcon;
+  
+  /// Force-disable override. When set, takes precedence over attribute.disabled.
+  final bool? disabled;
+  
+  /// Force-hidden override. When set, takes precedence over attribute.hidden.
+  final bool? hidden;
 
   const CoreCheckbox({
     super.key,
@@ -65,6 +71,8 @@ class CoreCheckbox extends StatefulWidget {
     this.style = CheckboxStyle.material,
     this.customCheckedIcon,
     this.customUncheckedIcon,
+    this.disabled,
+    this.hidden,
   });
 
   @override
@@ -146,11 +154,13 @@ class _CoreCheckboxState extends State<CoreCheckbox> with TickerProviderStateMix
 
   // Helper methods for field attributes
   bool get _isDisabled {
+    if (widget.disabled != null) return widget.disabled!;
     final attributes = widget.itemDetail['attribute'] ?? {};
     return attributes['disabled']?[widget.dataKey] == true;
   }
 
   bool get _isHidden {
+    if (widget.hidden != null) return widget.hidden!;
     final attributes = widget.itemDetail['attribute'] ?? {};
     return attributes['hidden']?[widget.dataKey] == true;
   }

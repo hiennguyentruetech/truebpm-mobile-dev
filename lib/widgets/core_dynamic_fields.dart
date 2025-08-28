@@ -382,6 +382,8 @@ class CoreDynamicFields {
       checkboxColor: checkboxColor,
       customCheckedIcon: customCheckedIcon,
       customUncheckedIcon: customUncheckedIcon,
+      disabled: config['disabled'],
+      hidden: config['hidden'],
       onChanged: (value) => onChanged(fieldName, value),
       required: isRequired,
     );

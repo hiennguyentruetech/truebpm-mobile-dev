@@ -112,8 +112,8 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
             },
             // Display nested asset fields as view-only inputs
             { 'key': 'assetId.name', 'label': 'Asset Name', 'widget': 'input', 'type': 'text', 'onlyView': true },
-            { 'key': 'beforeKM', 'label': 'Before KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0 },
-            { 'key': 'afterKM', 'label': 'After KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0 },
+            { 'key': 'beforeKM', 'label': 'Before KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0, 'suffix': 'KM' },
+            { 'key': 'afterKM', 'label': 'After KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0, 'suffix': 'KM' },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,

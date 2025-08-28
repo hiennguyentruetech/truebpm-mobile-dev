@@ -81,9 +81,15 @@ class _CmdrDetailsTabBodyState extends CoreTabBodyState<CmdrDetailsTabBody> {
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             // {'key': 'code', 'label': 'Code'},
-            {'key': 'itemNo', 'label': 'No'},
-            {'key': 'name', 'label': 'Name'},
-            {'key': 'completeness', 'label': 'Completeness', 'type': 'number', 'suffix': '%', 'minValue': 0, 'maxValue': 100},
+            { 'key': 'itemNo', 'label': 'No', 'disabled': true},
+            { 'key': 'name', 'label': 'Name', 'disabled': true},
+            { 'key': 'completeness', 'label': 'Completeness', 'type': 'number', 'suffix': '%', 'minValue': 0, 'maxValue': 100},
+            { 'key': 'finishDate', 'widget': 'datetime', 'label': 'Finish Date', 'datetimeType': 'date', 'displayFormat': 'ddMMyyyy'},
+            { 'key': 'statusMap', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Work Status', 'data': 'DROPDOWN.PRJMGT/WORKSTATUS', 'display': 'name'},
+            { 'key': 'completeness', 'widget': 'input', 'label': 'Completeness', 'type': 'number', 'suffix': '%', 'decimalPlaces': 2, 'minValue': 0, 'maxValue': 100},
+            { 'key': 'isPaymentMilestone', 'widget': 'checkbox', 'label': 'Payment Milestone', 'checkboxStyle': 'switch'},
+            { 'key': 'paymentStatusMap', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Payment Status', 'data': 'DROPDOWN.PRJMGT/PAYMENTSTATUS', 'display': 'name'},
+            { 'key': 'paymentGroup', 'widget': 'input', 'label': 'Payment Group', 'type': 'number'},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
