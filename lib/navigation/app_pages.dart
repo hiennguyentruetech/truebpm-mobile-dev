@@ -13,8 +13,6 @@ import 'package:truebpm/screens/home_screens/list_home_screen.dart';
 import 'package:truebpm/screens/home_screens/detail_home_screen.dart';
 
 // All pages imported below are in e_leave_screens stack
-import 'package:truebpm/screens/e_leave_screens/list_e_leave_screen.dart';
-import 'package:truebpm/screens/e_leave_screens/detail_e_leave_screen.dart';
 
 // All pages imported below are in task_screens stack
 import 'package:truebpm/screens/task_screens/list_task_screen.dart';
@@ -34,6 +32,9 @@ import 'package:truebpm/screens/menu_screens/management_screens/tab_module_scree
 
 // OT Registration screens
 import 'package:truebpm/screens/ot_registration_screens/ot_page_screen.dart';
+
+// E-Leave screens
+import 'package:truebpm/screens/e_leave_screens/e_leave_page_screen.dart';
 
 // Opportunities screens
 import 'package:truebpm/screens/opportunities_screens/opportunities_page_screen.dart';
@@ -65,8 +66,7 @@ class AppPages {
     AppRoutes.detailHome: (context) => const DetailHomeScreen(),
 
     // E-Leave module routes
-    AppRoutes.eLeave: (context) => const ListELeaveScreen(),
-    AppRoutes.detailELeave: (context) => const DetailELeaveScreen(),
+    AppRoutes.eLeave: (context) => const ELeavePageScreen(),
 
     // Task module routes
     AppRoutes.task: (context) => const ListTaskScreen(),

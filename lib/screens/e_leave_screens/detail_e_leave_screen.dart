@@ -1,49 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:truebpm/models/core_detail_model.dart';
+import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
+import 'package:truebpm/screens/e_leave_screens/e_leave_page_screen.dart';
 
-class DetailELeaveScreen extends StatefulWidget {
-  const DetailELeaveScreen({super.key});
+/// Detail screen for E-Leave (ELEAVE)
+class DetailELeaveScreen extends DetailCoreScreen {
+  const DetailELeaveScreen({
+    super.key,
+    required super.listItem,
+    super.initialTabCode,
+    super.fromTaskScreen = false,
+    super.taskId,
+  });
 
   @override
-  State<DetailELeaveScreen> createState() => _DetailELeaveScreenState();
-}
+  String get moduleCode => ELeavePageScreen.moduleCode;
 
-class _DetailELeaveScreenState extends State<DetailELeaveScreen> {
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết Đơn xin nghỉ'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.description,
-              size: 80,
-              color: Colors.green,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Chi tiết Đơn xin nghỉ',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Giao diện này sẽ được thiết kế sau',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  String get moduleName => ELeavePageScreen.moduleName;
+
+  @override
+  List<TabConfig> get availableTabs => ELeavePageScreen.availableTabs;
 }

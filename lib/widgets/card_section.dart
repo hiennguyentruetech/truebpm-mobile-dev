@@ -117,7 +117,7 @@ class _CardSectionState extends State<CardSection>
       child: Card(
         elevation: widget.elevation,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(7),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -141,8 +141,8 @@ class _CardSectionState extends State<CardSection>
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
+                      horizontal: 13,
+                      vertical: 12,
                     ),
                     child: Row(
                       children: [
@@ -157,10 +157,10 @@ class _CardSectionState extends State<CardSection>
                             child: Icon(
                               widget.headerIcon,
                               color: Colors.white,
-                              size: 20,
+                              size: 15,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                         ],
                         
                         // Title
@@ -171,6 +171,7 @@ class _CardSectionState extends State<CardSection>
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
+                              fontSize: 15,
                             ),
                           ),
                         ),

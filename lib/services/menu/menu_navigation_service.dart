@@ -49,6 +49,9 @@ class MenuNavigationService {
         case 'travel-claim-page':
           routeName = AppRoutes.travelClaim;
           break;
+        case 'e-leave-page':
+          routeName = AppRoutes.eLeave;
+          break;
         default:
           routeName = AppRoutes.detailMenu;
       }

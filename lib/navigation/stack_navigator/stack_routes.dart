@@ -7,8 +7,7 @@ import 'package:truebpm/screens/home_screens/list_home_screen.dart';
 import 'package:truebpm/screens/home_screens/detail_home_screen.dart';
 
 // E-Leave Screens
-import 'package:truebpm/screens/e_leave_screens/list_e_leave_screen.dart';
-import 'package:truebpm/screens/e_leave_screens/detail_e_leave_screen.dart';
+import 'package:truebpm/screens/e_leave_screens/e_leave_page_screen.dart';
 
 // Task Screens
 import 'package:truebpm/screens/task_screens/list_task_screen.dart';
@@ -52,8 +51,7 @@ class StackRoutes {
     AppRoutes.detailHome: () => const DetailHomeScreen(),
 
     // E-Leave Stack Routes
-    AppRoutes.eLeave: () => const ListELeaveScreen(),
-    AppRoutes.detailELeave: () => const DetailELeaveScreen(),
+    AppRoutes.eLeave: () => const ELeavePageScreen(),
 
     // Task Stack Routes
     AppRoutes.task: () => const ListTaskScreen(),
