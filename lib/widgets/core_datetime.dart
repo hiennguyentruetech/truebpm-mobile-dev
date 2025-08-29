@@ -72,13 +72,13 @@ class CoreDateTime extends StatefulWidget {
   final DateTime? defaultDate;
   
   /// Callback when value changes
-  final ValueChanged<String>? onChanged;
+  final ValueChanged<String?>? onChanged;
   
   /// For daterange: callback when start date changes
-  final ValueChanged<String>? onStartDateChanged;
+  final ValueChanged<String?>? onStartDateChanged;
   
   /// For daterange: callback when end date changes
-  final ValueChanged<String>? onEndDateChanged;
+  final ValueChanged<String?>? onEndDateChanged;
   
   /// Hint text for the input
   final String? hintText;
@@ -578,14 +578,14 @@ class _CoreDateTimeState extends State<CoreDateTime> {
     
     if (widget.type == CoreDateTimeType.daterange) {
       if (widget.onStartDateChanged != null) {
-        widget.onStartDateChanged!('');
+        widget.onStartDateChanged!(null);
       }
       if (widget.onEndDateChanged != null) {
-        widget.onEndDateChanged!('');
+        widget.onEndDateChanged!(null);
       }
     } else {
       if (widget.onChanged != null) {
-        widget.onChanged!('');
+        widget.onChanged!(null);
       }
     }
   }

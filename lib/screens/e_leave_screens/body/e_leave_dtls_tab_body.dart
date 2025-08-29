@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'dart:convert';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/services/core_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Tab body for ELEAVE DTLS (Details)
 class ELeaveDetailsTabBody extends CoreTabBody {
@@ -22,11 +25,15 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
   Map<String, dynamic> _response = {};
   Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
+  Map<String, dynamic> _leaveBalance = {};
+  bool _isLoadingBalance = false;
+  bool _hasLoadedBalance = false;
 
   @override
   void initState() {
     super.initState();
     _updateDataFromInitialData();
+    _checkAndLoadLeaveBalance();
   }
 
   @override
@@ -41,7 +48,13 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     _response = Map<String, dynamic>.from(widget.initialData ?? {});
     _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
     _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      // Only check and load leave balance once when data is first loaded
+      if (!_hasLoadedBalance) {
+        _checkAndLoadLeaveBalance();
+      }
+    }
   }
 
   void _onChanged(String key, dynamic value) {
@@ -108,6 +121,116 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     }
   }
 
+  /// Check if should load leave balance and load if needed
+  void _checkAndLoadLeaveBalance() {
+    // Check if this is NEW action from list screen
+    final isNewAction = widget.initialData?['action'] == 'NEW' || 
+                       _response['action'] == 'NEW' ||
+                       widget.itemId == null;
+    
+    // Determine id/code primarily from itemDetail.value (moduleData), fallback to itemDetail root
+    final idValue = _moduleData['id']?.toString().trim().isNotEmpty == true
+        ? _moduleData['id'].toString()
+        : _itemDetail['id']?.toString();
+    final codeValue = _moduleData['code']?.toString().trim().isNotEmpty == true
+        ? _moduleData['code'].toString()
+        : _itemDetail['code']?.toString();
+
+    final hasId = idValue != null && idValue.isNotEmpty;
+    final hasCode = codeValue != null && codeValue.isNotEmpty;
+
+    if (isNewAction || (!hasId && !hasCode)) {
+      // This is NEW action or new record (no id/code), load leave balance from API
+      _loadLeaveBalance();
+    } else {
+      // This is existing record (has both id and code), use data from itemDetail.value
+      _updateLeaveBalanceFromItemDetail();
+    }
+    
+    // Mark as loaded to prevent future calls
+    _hasLoadedBalance = true;
+  }
+
+  /// Update leave balance from itemDetail.value data
+  void _updateLeaveBalanceFromItemDetail() {
+    final value = _itemDetail['value'];
+    if (value != null && value is Map<String, dynamic>) {
+      setState(() {
+        _leaveBalance = {
+          'TotalRemainLeave': value['totalRemainLeave'] ?? value['TotalRemainLeave'] ?? 0.0,
+          'TotalLeaveApplied': value['totalLeaveApplied'] ?? value['TotalLeaveApplied'] ?? 0.0,
+        };
+      });
+    } else {
+      // Fallback to default values if no data available
+      setState(() {
+        _leaveBalance = {
+          'TotalRemainLeave': 0.0,
+          'TotalLeaveApplied': 0.0,
+        };
+      });
+    }
+  }
+
+  /// Format decimal number to maximum 2 decimal places
+  String? _formatDecimal(dynamic value) {
+    if (value == null) return null;
+    
+    try {
+      final numValue = double.tryParse(value.toString());
+      if (numValue == null) return null;
+      
+      // Format to maximum 2 decimal places
+      return numValue.toStringAsFixed(2);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Load leave balance from API
+  Future<void> _loadLeaveBalance() async {
+    if (_isLoadingBalance) return;
+    
+    setState(() {
+      _isLoadingBalance = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJsonStr = prefs.getString('user_info');
+      if (userJsonStr == null) {
+        return;
+      }
+
+      final userInfo = jsonDecode(userJsonStr);
+      final employeeId = userInfo['id']?.toString();
+      
+      if (employeeId == null || employeeId.isEmpty) {
+        return;
+      }
+
+      final endpoint = 'ELEAVE.LEAVESTATEBYEMPLOYEEID?employeeId=$employeeId';
+      final result = await CoreService.instance.getDropdownData(endpoint);
+      
+      if (result['success'] == true && result['data'] != null) {
+        final data = result['data'];
+        if (data is List && data.isNotEmpty) {
+          // Lấy phần tử đầu tiên
+          final firstItem = data[0];
+          setState(() {
+            _leaveBalance = Map<String, dynamic>.from(firstItem);
+          });
+        }
+      }
+    } catch (e) {
+      // Error loading leave balance
+    } finally {
+      setState(() {
+        _isLoadingBalance = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -139,8 +262,11 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
   }
 
   Widget _buildLeaveBalanceCards() {
-    final totalRemain = _moduleData['totalRemainLeave']?.toString() ?? '0';
-    final totalApplied = _moduleData['totalLeaveApplied']?.toString() ?? '0';
+    // Priority: _leaveBalance (from API or itemDetail) > _moduleData > default
+    final totalRemain = _formatDecimal(_leaveBalance['TotalRemainLeave']) ?? 
+                        _formatDecimal(_moduleData['totalRemainLeave']) ?? '0.00';
+    final totalApplied = _formatDecimal(_leaveBalance['TotalLeaveApplied']) ?? 
+                         _formatDecimal(_moduleData['totalLeaveApplied']) ?? '0.00';
     
     return Row(
       children: [
@@ -325,9 +451,13 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
 
   Future<void> saveTabData(Map<String, dynamic> data) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    // Update leave balance from updated itemDetail after save
+    _updateLeaveBalanceFromItemDetail();
   }
 
   Future<void> submitTabData(Map<String, dynamic> data) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    // Update leave balance from updated itemDetail after submit
+    _updateLeaveBalanceFromItemDetail();
   }
 }
