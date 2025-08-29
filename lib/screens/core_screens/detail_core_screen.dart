@@ -300,8 +300,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     // Build popup menu items based on toolbar states
     List<PopupMenuEntry<String>> menuItems = [];
     
-    // Submit action - disabled for new records and hidden when from task screen
-    if (provider.isToolbarVisible(ToolbarAction.submit) && !isNewRecord && !widget.fromTaskScreen) {
+    // Submit action - follow toolbar visibility; do not hard-hide for new records
+    if (provider.isToolbarVisible(ToolbarAction.submit) && !widget.fromTaskScreen) {
       final isSubmitDisabled = !provider.isToolbarEnabled(ToolbarAction.submit);
       menuItems.add(
         PopupMenuItem(

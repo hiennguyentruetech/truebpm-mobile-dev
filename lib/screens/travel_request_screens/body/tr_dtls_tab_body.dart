@@ -49,11 +49,38 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
       _moduleData[key] = value;
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      // Auto-calc totalDays when date range changes
+      if (key == 'startDate' || key == 'endDate') {
+        final total = _calculateTotalDays(_moduleData);
+        _moduleData['totalDays'] = total;
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
     });
     if (widget.onDataChanged != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         widget.onDataChanged!(_response);
       });
+    }
+  }
+
+  int? _calculateTotalDays(Map<String, dynamic> data) {
+    final startIso = data['startDate']?.toString();
+    final endIso = data['endDate']?.toString();
+    final start = _parseIsoDateOnly(startIso);
+    final end = _parseIsoDateOnly(endIso);
+    if (start == null || end == null) return null;
+    final diff = end.difference(start).inDays;
+    return (diff >= 0) ? diff + 1 : null; // inclusive
+  }
+
+  DateTime? _parseIsoDateOnly(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
+    try {
+      final dt = DateTime.parse(iso);
+      return DateTime.utc(dt.year, dt.month, dt.day);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -65,7 +92,6 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildGeneralInfoSection(),
-          _buildScheduleSection(),
           _buildReasonsSection(),
           _buildSystemInfoSection(),
         ],
@@ -81,46 +107,19 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'status', 'widget': 'status', 'showIcon': true},
-            {'key': 'code', 'label': 'Travel Request Code'},
-            // Object keys should be select dropdowns (placeholder API endpoints)
-            {'key': 'country', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Country', 'hintText': 'Select country', 'data': 'DROPDOWN.TRAREQ/COUNTRY', 'display': 'name', 'clearOnChange': ['locations']},
-          ],
-          itemDetail: _itemDetail,
-          moduleData: _moduleData,
-          onChanged: _onChanged,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScheduleSection() {
-    return CardSection(
-      title: 'Travel Schedule',
-      headerIcon: Icons.calendar_today,
-      headerColor: Colors.deepPurple,
-      children: [
-        ...CoreDynamicFields.buildFields(
-          fieldConfigs: [
-            {'key': 'startDate', 'widget': 'datetime', 'label': 'From - To', 'datetimeType': 'daterange', 'startDateKey': 'startDate', 'endDateKey': 'endDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select duration'},
-            {'key': 'startToEnd', 'label': 'Start To End', 'hintText': 'e.g., 14/08/2025-14/09/2025', 'disabled': true},
-            {'key': 'totalDays', 'type': 'number', 'label': 'Total Days', 'suffix': ' days', 'disabled': true},
-            {'key': 'location', 'label': 'Location'},
-            // locations collection (objects)
+            { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
+            { 'key': 'code', 'label': 'Code', 'disabled': true },
+            { 'key': 'startDate', 'widget': 'datetime', 'label': 'Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'startDate', 'endDateKey': 'endDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select duration' },
+            { 'key': 'totalDays', 'type': 'number', 'label': 'Total Days', 'suffix': ' days', 'disabled': true},
+            { 'key': 'country', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Country', 'hintText': 'Select country', 'data': 'DROPDOWN.TRAREQ/COUNTRY', 'display': 'name', 'clearOnChange': ['locations'] },
             {
               'key': 'locations',
-              'widget': 'collection',
+              'widget': 'select',
+              'selectType': 'multiple',
               'label': 'Locations',
-              'itemLabel': 'Location',
-              'addButtonText': 'Add Location',
-              'allowAdd': true,
-              'allowRemove': true,
-              'editMode': 'modal',
-              'children': [
-                {'key': 'name', 'label': 'Name'},
-                {'key': 'description', 'label': 'Description'},
-                {'key': 'perDiemAmount', 'label': 'Per Diem Amount', 'type': 'currency', 'suffix': ' VND'},
-              ],
+              'hintText': 'Select locations',
+              'data': 'DROPDOWN.TRAREQ/LOCATION?countryId={{country.id}}',
+              'display': 'name',
             },
           ],
           itemDetail: _itemDetail,
@@ -149,15 +148,92 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
               'allowAdd': true,
               'allowRemove': true,
               'editMode': 'modal',
+              'summary': {
+                'fields': [
+                  { 'key': 'reasonType', 'display': 'name', 'label': 'Type', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
+                  { 'key': 'percentage', 'label': 'Percent', 'suffix': '%', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                  { 'key': 'salesperson', 'display': 'fullName', 'label': 'Salesperson', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12', 'layout': 'row' },
+                  { 'key': 'opportunity', 'display': 'displayName', 'label': 'Opportunity', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12', 'layout': 'row', 'visibleWhen': { 'key': 'reasonType.id', 'operator': 'eq', 'value': 'A965F4BE-F911-4B5A-A9CC-98C60590DA5D' } },
+                  { 'key': 'project', 'display': 'projectCode', 'label': 'Project', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12', 'layout': 'row', 'visibleWhen': { 'key': 'reasonType.id', 'operator': 'eq', 'value': 'F9BD509B-E5CE-4B5C-91F0-7D4097BF9906' } },
+                  { 'key': 'details', 'label': 'Details', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12', 'layout': 'row' },
+                ]
+              },
               'children': [
-                {'key': 'details', 'label': 'Details', 'type': 'textarea', 'maxLines': 3},
-                {'key': 'percentage', 'label': 'Percentage', 'type': 'number', 'suffix': '%'},
-                // Object keys as dropdowns with sample endpoints
-                {'key': 'reasonType', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Reason Type', 'data': 'DROPDOWN.TRAREQ/REASON_TYPES', 'display': 'name', 'clearOnChange': ['project', 'opportunity', 'solution']},
-                {'key': 'project', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Project', 'data': 'DROPDOWN.TRAREQ/PROJECTS', 'display': 'name'},
-                {'key': 'opportunity', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'data': 'DROPDOWN.TRAREQ/OPPORTUNITIES', 'display': 'name'},
-                {'key': 'solution', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Solution', 'data': 'DROPDOWN.TRAREQ/SOLUTIONS', 'display': 'name'},
-                {'key': 'salesperson', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Salesperson', 'data': 'DROPDOWN.TRAREQ/SALESPERSONS', 'display': 'fullName'},
+                {
+                  'key': 'reasonType',
+                  'widget': 'select',
+                  'selectType': 'dropdown',
+                  'label': 'Reason Type',
+                  'hintText': 'Select reason type',
+                  'data': 'DROPDOWN.TRAREQ/TRAVELREASONTYPE',
+                  'display': 'name',
+                  'required': true,
+                  'clearOnChange': ['accountManager', 'opportunity', 'project', 'product']
+                },
+                {
+                  'key': 'percentage',
+                  'label': 'Percentage',
+                  'type': 'number',
+                  'suffix': '%',
+                  'decimalPlaces': 0,
+                  'minValue': 0,
+                  'maxValue': 100,
+                  'hintText': 'Enter percentage (0-100)'
+                },
+                {
+                  'key': 'details',
+                  'label': 'Details',
+                  'type': 'textarea',
+                  'required': true,
+                  'maxLines': 3,
+                  'hintText': 'Enter reason details...'
+                },
+                {
+                  'key': 'salesperson',
+                  'widget': 'select',
+                  'selectType': 'dropdown',
+                  'label': 'Request from salesperson',
+                  'hintText': 'Select salesperson',
+                  'data': 'DROPDOWN.TRAREQ/SALEPERSON',
+                  'display': 'fullName',
+                  'required': true,
+                  'visibleWhen': {
+                    'key': 'reasonType.id',
+                    'operator': 'eq',
+                    'value': 'A965F4BE-F911-4B5A-A9CC-98C60590DA5D'
+                  },
+                  'clearOnChange': ['opportunity']
+                },
+                {
+                  'key': 'opportunity',
+                  'widget': 'select',
+                  'selectType': 'dropdown',
+                  'label': 'Opportunity',
+                  'hintText': 'Select opportunity',
+                  'data': 'DROPDOWN.TRAREQ/OPPORTUNITY?salespersonId={{salesperson.id}}',
+                  'display': 'displayName',
+                  'required': true,
+                  'visibleWhen': {
+                    'key': 'reasonType.id',
+                    'operator': 'eq',
+                    'value': 'A965F4BE-F911-4B5A-A9CC-98C60590DA5D'
+                  }
+                },
+                {
+                  'key': 'project',
+                  'widget': 'select',
+                  'selectType': 'dropdown',
+                  'label': 'Project',
+                  'hintText': 'Select project',
+                  'data': 'DROPDOWN.TRAREQ/PROJECTS',
+                  'display': 'projectCode',
+                  'required': true,
+                  'visibleWhen': {
+                    'key': 'reasonType.id',
+                    'operator': 'eq',
+                    'value': 'F9BD509B-E5CE-4B5C-91F0-7D4097BF9906'
+                  }
+                }
               ],
             },
           ],
@@ -177,9 +253,8 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'createdBy', 'label': 'Created By', 'type': 'text'},
-            {'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy'},
-            {'key': 'updatedDate', 'widget': 'datetime', 'label': 'Updated Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy'},
+            {'key': 'createdBy', 'label': 'Created By', 'type': 'text', 'disabled': true},
+            {'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'disabled': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
