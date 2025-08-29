@@ -28,6 +28,10 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
   Map<String, dynamic> _leaveBalance = {};
   bool _isLoadingBalance = false;
   bool _hasLoadedBalance = false;
+  // NEW: Stats for selected leaveType (only for NEW records)
+  num? _usedLeaveDays; // from ELEAVE.USEDLEAVEDAYS
+  num? _totalDayPerYear; // from ELEAVE.LEAVETYPEBYID
+  bool _isLoadingLeaveTypeStats = false;
 
   @override
   void initState() {
@@ -54,6 +58,16 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
       if (!_hasLoadedBalance) {
         _checkAndLoadLeaveBalance();
       }
+      // NEW: if NEW and leaveType already selected, load stats immediately
+      final bool isNew = (_moduleData['id'] == null || _moduleData['id'].toString().isEmpty) &&
+                         (_moduleData['code'] == null || _moduleData['code'].toString().isEmpty);
+      final dynamic _lt = _moduleData['leaveType'];
+      final String? leaveTypeId = (_lt is Map && _lt['id'] != null)
+          ? _lt['id'].toString()
+          : null;
+      if (isNew && leaveTypeId != null && leaveTypeId.isNotEmpty) {
+        _loadLeaveTypeStats(leaveTypeId);
+      }
     }
   }
 
@@ -70,6 +84,20 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
         _moduleData['totalDays'] = total;
         _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
         _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
+
+      // NEW: When leaveType changes and this is a NEW record, load stats
+      if (key == 'leaveType') {
+        // Clear previous stats
+        _usedLeaveDays = null;
+        _totalDayPerYear = null;
+        // Only load when creating new (no id and no code)
+        final isNew = (_moduleData['id'] == null || _moduleData['id'].toString().isEmpty) &&
+                      (_moduleData['code'] == null || _moduleData['code'].toString().isEmpty);
+        final leaveTypeId = value is Map ? value['id']?.toString() : null;
+        if (isNew && leaveTypeId != null && leaveTypeId.isNotEmpty) {
+          _loadLeaveTypeStats(leaveTypeId);
+        }
       }
     });
     
@@ -90,9 +118,10 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     final end = _parseIsoDateOnly(endIso);
     
     if (start == null || end == null) return null;
-    
-    final diff = end.difference(start).inDays;
-    final totalDays = diff >= 0 ? diff + 1.0 : 1.0; // Inclusive days
+
+    // Count working days (Mon-Fri), exclude Saturday and Sunday, inclusive range
+    final int workingDays = _countWorkingDays(start, end);
+    final double totalDays = workingDays.toDouble();
     
     // Calculate based on leaveTime type
     final leaveTimeId = leaveTime['id']?.toString();
@@ -108,6 +137,18 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
       default:
         return totalDays;
     }
+  }
+
+  // NEW: Count working days between start and end inclusive, excluding Saturday/Sunday
+  int _countWorkingDays(DateTime start, DateTime end) {
+    if (end.isBefore(start)) return 0;
+    int count = 0;
+    for (DateTime d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
+      if (d.weekday >= DateTime.monday && d.weekday <= DateTime.friday) {
+        count++;
+      }
+    }
+    return count;
   }
 
   DateTime? _parseIsoDateOnly(String? iso) {
@@ -231,6 +272,70 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     }
   }
 
+  // NEW: Load leave type stats (UsedDay and TotalDayPerYear) for selected leaveType (only when NEW)
+  Future<void> _loadLeaveTypeStats(String leaveTypeId) async {
+    if (_isLoadingLeaveTypeStats) return;
+    setState(() { _isLoadingLeaveTypeStats = true; });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJsonStr = prefs.getString('user_info');
+      if (userJsonStr == null) {
+        setState(() { _isLoadingLeaveTypeStats = false; });
+        return;
+      }
+      final userInfo = jsonDecode(userJsonStr);
+      final employeeId = userInfo['id']?.toString();
+      if (employeeId == null || employeeId.isEmpty) {
+        setState(() { _isLoadingLeaveTypeStats = false; });
+        return;
+      }
+
+      final int currentYear = DateTime.now().year;
+
+      // Prepare locals then commit once to avoid intermediate UI states
+      num? nextUsedLeaveDays;
+      num? nextTotalDayPerYear;
+
+      // API 1: Used leave days in current year
+      final endpoint1 = 'ELEAVE.USEDLEAVEDAYS?leaveTypeId=$leaveTypeId&currentYear=$currentYear&employeeId=$employeeId';
+      final res1 = await CoreService.instance.getDropdownData(endpoint1);
+      if (res1['success'] == true && res1['data'] != null) {
+        final data = res1['data'];
+        if (data is List && data.isNotEmpty) {
+          final first = data[0];
+          nextUsedLeaveDays = first is Map && first['UsedDay'] != null ? num.tryParse(first['UsedDay'].toString()) : null;
+        } else if (data is Map && data['data'] is List && (data['data'] as List).isNotEmpty) {
+          final first = (data['data'] as List).first;
+          nextUsedLeaveDays = first is Map && first['UsedDay'] != null ? num.tryParse(first['UsedDay'].toString()) : null;
+        }
+      }
+
+      // API 2: Total days per year for this leave type
+      final endpoint2 = 'ELEAVE.LEAVETYPEBYID?leaveTypeId=$leaveTypeId';
+      final res2 = await CoreService.instance.getDropdownData(endpoint2);
+      if (res2['success'] == true && res2['data'] != null) {
+        final data = res2['data'];
+        if (data is List && data.isNotEmpty) {
+          final first = data[0];
+          nextTotalDayPerYear = first is Map && first['TotalDayPerYear'] != null ? num.tryParse(first['TotalDayPerYear'].toString()) : null;
+        } else if (data is Map && data['data'] is List && (data['data'] as List).isNotEmpty) {
+          final first = (data['data'] as List).first;
+          nextTotalDayPerYear = first is Map && first['TotalDayPerYear'] != null ? num.tryParse(first['TotalDayPerYear'].toString()) : null;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _usedLeaveDays = nextUsedLeaveDays;
+          _totalDayPerYear = nextTotalDayPerYear;
+        });
+      }
+    } catch (_) {
+      // ignore errors, keep values null
+    } finally {
+      if (mounted) setState(() { _isLoadingLeaveTypeStats = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -254,6 +359,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildLeaveBalanceCards(),
+          if (_shouldShowLeaveTypeInfoCards()) _buildLeaveTypeInfoCards(),
           _buildLeaveDetailsSection(),
           _buildSystemInfoSection(),
         ],
@@ -298,6 +404,141 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
           ),
         ),
       ],
+    );
+  }
+
+  // NEW: Cards to show UsedDay and TotalDayPerYear: show when NEW and leaveType selected
+  bool _shouldShowLeaveTypeInfoCards() {
+    final bool isNew = (_moduleData['id'] == null || _moduleData['id'].toString().isEmpty) &&
+                       (_moduleData['code'] == null || _moduleData['code'].toString().isEmpty);
+    final dynamic lt = _moduleData['leaveType'];
+    final bool hasLeaveType = lt != null;
+    // Hide cards for Annual type
+    final String? ltId = (lt is Map && lt['id'] != null) ? lt['id'].toString() : null;
+    final String ltName = (lt is Map && lt['name'] != null) ? lt['name'].toString() : '';
+    final bool isAnnual = (ltId == 'FFFFD914-6057-4286-A321-773680D400A9') || (ltName.toLowerCase() == 'annual');
+    return isNew && hasLeaveType && !isAnnual;
+  }
+
+  Widget _buildLeaveTypeInfoCards() {
+    final String used = _formatNumValue(_usedLeaveDays);
+    final String total = _formatNumValue(_totalDayPerYear);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildLeaveTypeStatCard(
+              title: 'Used Days',
+              value: used,
+              icon: Icons.event_busy,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildLeaveTypeStatCard(
+              title: 'Total Days',
+              value: total,
+              icon: Icons.event_available,
+              gradient: const LinearGradient(
+                colors: [Color(0xFFAB47BC), Color(0xFF6A1B9A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  String _formatNumValue(num? value) {
+    if (value == null) return '';
+    // Trim trailing .0 for whole numbers, keep up to 2 decimals otherwise
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+    String s = value.toStringAsFixed(2);
+    // remove trailing zeros then possible trailing dot
+    s = s.replaceAll(RegExp(r'0+$'), '');
+    s = s.replaceAll(RegExp(r'\.$'), '');
+    return s;
+  }
+
+  // NEW: Dedicated card for leaveType stats with wrapping text and optional loader
+  Widget _buildLeaveTypeStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Gradient gradient,
+  }) {
+    return Container(
+      // height: 70,
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(7),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    softWrap: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (_isLoadingLeaveTypeStats && value.isEmpty)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else
+              Text(
+                value.isEmpty ? '0' : value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -368,6 +609,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
       headerIcon: Icons.calendar_today,
       headerColor: const Color.fromARGB(255, 26, 32, 159),
       children: [
+        // Part 1: fields up to and including leaveType
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
@@ -394,6 +636,16 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
               'display': 'name',
               'required': true,
             },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+        // Inline cards right under leaveType
+        if (_shouldShowLeaveTypeInfoCards()) _buildLeaveTypeInfoCards(),
+        // Part 2: remaining fields after leaveType
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
             {
               'key': 'leaveReason',
               'label': 'Reason',
