@@ -383,7 +383,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
               'display': 'name',
               'required': true,
             },      
-            { 'key': 'totalDays', 'label': 'Total Days', 'type': 'number', 'disabled': true},      
+            { 'key': 'totalDays', 'label': 'Total Days', 'type': 'number', 'disabled': true},
             {
               'key': 'leaveType',
               'widget': 'select',
