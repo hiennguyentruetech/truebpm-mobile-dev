@@ -106,8 +106,8 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            { 'key': 'code', 'label': 'Code' },
-            { 'key': 'projectCode', 'label': 'Project Code' },
+            { 'key': 'code', 'label': 'Code', 'disabled': true},
+            { 'key': 'projectCode', 'label': 'Project Code', 'disabled': true },
             { 'key': 'name', 'label': 'Project Name', 'required': true },
             { 'key': 'listProducts', 'widget': 'select', 'selectType': 'multiple', 'label': 'Solution Name', 'required': true, 'data': 'DROPDOWN.PRJMGT/PRODUCT', 'display': 'name'},
             { 'key': 'location', 'label': 'Location' },
@@ -160,7 +160,7 @@ class _ProjectManagementDetailsTabBodyState extends CoreTabBodyState<ProjectMana
             {'key': 'icv', 'label': 'ICV'},
             {'key': 'contractNumber', 'label': 'Contract Number', 'required': true},
             {'key': 'customerId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Customer', 'data': 'DROPDOWN.PRJMGT/CUSTOMER', 'display': 'name', 'disabled': _moduleData['opportunityId'] != null, 'required': true},
-            {'key': 'contractStartDate', 'widget': 'datetime', 'label': 'Contract Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'contractStartDate', 'endDateKey': 'contractEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select contract duration...'},
+            {'key': 'contractStartDate', 'widget': 'datetime', 'label': 'Contract Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'contractStartDate', 'endDateKey': 'contractEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select contract duration...', 'required': true},
             {'key': 'maintStartDate', 'widget': 'datetime', 'label': 'Maintenance Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'maintStartDate', 'endDateKey': 'maintEndDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select maintenance duration...'},
             {'key': 'isEndProjectByMaint', 'widget': 'checkbox', 'checkboxStyle': 'switch', 'label': 'End Project By Maintenance'},
           ],

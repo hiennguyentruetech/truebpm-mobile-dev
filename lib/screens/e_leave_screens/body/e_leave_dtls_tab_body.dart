@@ -50,8 +50,8 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
 
-      // Auto-calc totalDays when date range changes
-      const relatedKeys = {'startDate', 'endDate'};
+      // Auto-calc totalDays when date range or leaveTime changes
+      const relatedKeys = {'startDate', 'endDate', 'leaveTime'};
       if (relatedKeys.contains(key)) {
         final total = _calculateTotalDays(_moduleData);
         _moduleData['totalDays'] = total;
@@ -69,8 +69,9 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
   double? _calculateTotalDays(Map<String, dynamic> data) {
     final startIso = data['startDate']?.toString();
     final endIso = data['endDate']?.toString();
+    final leaveTime = data['leaveTime'];
     
-    if (startIso == null || endIso == null) return null;
+    if (startIso == null || endIso == null || leaveTime == null) return null;
     
     final start = _parseIsoDateOnly(startIso);
     final end = _parseIsoDateOnly(endIso);
@@ -78,7 +79,22 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     if (start == null || end == null) return null;
     
     final diff = end.difference(start).inDays;
-    return diff >= 0 ? diff + 1.0 : 1.0; // Inclusive days
+    final totalDays = diff >= 0 ? diff + 1.0 : 1.0; // Inclusive days
+    
+    // Calculate based on leaveTime type
+    final leaveTimeId = leaveTime['id']?.toString();
+    if (leaveTimeId == null) return totalDays;
+    
+    switch (leaveTimeId) {
+      case 'D95FC623-A1D4-4E05-A93C-07BEE433C679': // Full day
+        return totalDays;
+      case '76022664-7E76-497B-A4DF-22CC5EAB7CA6': // AM
+        return totalDays * 0.5;
+      case 'AFB9171B-D653-4576-9C37-A5C01188400B': // PM
+        return totalDays * 0.5;
+      default:
+        return totalDays;
+    }
   }
 
   DateTime? _parseIsoDateOnly(String? iso) {
@@ -170,7 +186,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
       height: 100,
       decoration: BoxDecoration(
         gradient: gradient,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(7),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.3),
@@ -180,7 +196,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -198,8 +214,8 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
                     title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -229,7 +245,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
-            { 'key': 'code', 'label': 'Leave Code', 'type': 'text', 'disabled': true},
+            { 'key': 'code', 'label': 'Code', 'type': 'text', 'disabled': true},
             { 'key': 'startDate', 'widget': 'datetime', 'label': 'Start Date - End Date', 'datetimeType': 'daterange', 'startDateKey': 'startDate', 'endDateKey': 'endDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select leave duration...', 'required': true},
             {
               'key': 'leaveTime',
