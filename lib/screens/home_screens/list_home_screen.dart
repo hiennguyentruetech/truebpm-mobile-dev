@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/widgets/loading_overlay.dart';
 
 class ListHomeScreen extends StatefulWidget {
   const ListHomeScreen({super.key});
@@ -70,6 +71,9 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
     });
 
     try {
+      if (mounted) {
+        context.showLoading(message: 'Đang tải dữ liệu, vui lòng chờ...');
+      }
       // Build endpoints
       final eleaveEndpoint = 'DASHBOARD/ELEAVE?userId=$_userId&year=$_selectedYear';
       final overtimeEndpoint = 'DASHBOARD/OVERTIME?userId=$_userId&year=$_selectedYear';
@@ -114,7 +118,10 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
         _errorMessage = 'Lỗi tải dữ liệu dashboard: $e';
       });
     } finally {
-      if (mounted) setState(() { _loading = false; });
+      if (mounted) {
+        context.hideLoading();
+        setState(() { _loading = false; });
+      }
     }
   }
 
@@ -212,7 +219,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
     IconData? icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(12),
@@ -221,18 +228,25 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null) ...[
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(height: 6),
-          ],
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
@@ -270,12 +284,67 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                       children: [
                         _buildYearSelector(),
 
+                        // TRAVEL REQUEST (đưa Ticket lên trước)
+                        _buildSectionTitle('Travel Request', Icons.airplanemode_active_rounded, Colors.indigo),
+                        GridView.count(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1.9,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            _metricCard(
+                              label: 'Approved Tickets',
+                              value: _fmtNum(_travelRequest?['approvedTicketCountInYear'], fraction: 0),
+                              icon: Icons.assignment_turned_in_rounded,
+                              gradient: const [Color(0xFF5C6BC0), Color(0xFF283593)],
+                            ),
+                            _metricCard(
+                              label: 'Approved Travel Days',
+                              value: _fmtNum(_travelRequest?['totalApprovedTravelDaysInYear']),
+                              icon: Icons.flight_takeoff_rounded,
+                              gradient: const [Color(0xFF5C6BC0), Color(0xFF3949AB)],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // TRAVEL CLAIM (đưa Claim Count lên trước)
+                        _buildSectionTitle('Travel Claim', Icons.receipt_long_rounded, Colors.orange),
+                        GridView.count(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1.9,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            _metricCard(
+                              label: 'Approved Claims',
+                              value: _fmtNum(_travelClaim?['approvedClaimCountInYear'], fraction: 0),
+                              icon: Icons.done_all_rounded,
+                              gradient: const [Color(0xFFFFA726), Color(0xFFEF6C00)],
+                            ),
+                            _metricCard(
+                              label: 'Approved Expense',
+                              value: _fmtNum(_travelClaim?['totalApprovedClaimExpenseInYear']),
+                              icon: Icons.payments_rounded,
+                              gradient: const [Color(0xFFFFA726), Color(0xFFF57C00)],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
+
                         // E-LEAVE
                         _buildSectionTitle('E-Leave', Icons.beach_access_rounded, Colors.teal),
                         GridView.count(
                           crossAxisCount: 2,
                           mainAxisSpacing: 10,
                           crossAxisSpacing: 10,
+                          childAspectRatio: 1.9,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
@@ -314,6 +383,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                           crossAxisCount: 2,
                           mainAxisSpacing: 10,
                           crossAxisSpacing: 10,
+                          childAspectRatio: 1.9,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
@@ -331,81 +401,8 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                             ),
                           ],
                         ),
-
-                        const SizedBox(height: 14),
-
-                        // TRAVEL REQUEST (đưa Ticket lên trước)
-                        _buildSectionTitle('Travel Request', Icons.airplanemode_active_rounded, Colors.indigo),
-                        GridView.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          children: [
-                            _metricCard(
-                              label: 'Approved Tickets',
-                              value: _fmtNum(_travelRequest?['approvedTicketCountInYear'], fraction: 0),
-                              icon: Icons.assignment_turned_in_rounded,
-                              gradient: const [Color(0xFF5C6BC0), Color(0xFF283593)],
-                            ),
-                            _metricCard(
-                              label: 'Approved Travel Days',
-                              value: _fmtNum(_travelRequest?['totalApprovedTravelDaysInYear']),
-                              icon: Icons.flight_takeoff_rounded,
-                              gradient: const [Color(0xFF5C6BC0), Color(0xFF3949AB)],
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        // TRAVEL CLAIM (đưa Claim Count lên trước)
-                        _buildSectionTitle('Travel Claim', Icons.receipt_long_rounded, Colors.orange),
-                        GridView.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          children: [
-                            _metricCard(
-                              label: 'Approved Claims',
-                              value: _fmtNum(_travelClaim?['approvedClaimCountInYear'], fraction: 0),
-                              icon: Icons.done_all_rounded,
-                              gradient: const [Color(0xFFFFA726), Color(0xFFEF6C00)],
-                            ),
-                            _metricCard(
-                              label: 'Approved Expense',
-                              value: _fmtNum(_travelClaim?['totalApprovedClaimExpenseInYear']),
-                              icon: Icons.payments_rounded,
-                              gradient: const [Color(0xFFFFA726), Color(0xFFF57C00)],
-                            ),
-                          ],
-                        ),
                         const SizedBox(height: 8),
-
-                        if (_loading)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Text('Đang tải dữ liệu...'),
-                                ],
-                              ),
-                            ),
-                          ),
+                        // Loading inline indicator đã được thay bằng LoadingOverlay
                       ],
                     ),
                   ),
