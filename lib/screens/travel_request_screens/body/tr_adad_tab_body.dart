@@ -193,6 +193,7 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
           _buildAdvanceSummarySection(),
           const SizedBox(height: 10),
           _buildAdditionalAdvanceListSection(),
+          const SizedBox(height: 20),
         ],
       ),
     );
