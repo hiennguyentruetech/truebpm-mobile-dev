@@ -87,6 +87,11 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
   // DOC sub-tab state managed at screen level so body rebuilds won't reset it
   String? _currentDocSubTabCode;
 
+  // Track changes for unsaved changes warning
+  bool _hasUnsavedChanges = false;
+  Map<String, dynamic> _originalData = {};
+  Map<String, dynamic> _currentData = {};
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +130,9 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
         onSessionExpired: _handleSessionExpired,
         initialDocSubTabCode: initialDocSubTabCode,
       );
+
+      // Initialize original data for change tracking
+      _initializeChangeTracking();
     });
   }
 
@@ -135,11 +143,116 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     super.dispose();
   }
 
+  /// Initialize change tracking with current data
+  void _initializeChangeTracking() {
+    if (_provider.rawResponse != null) {
+      _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
+      _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
+      _hasUnsavedChanges = false;
+    }
+  }
+
+  /// Check if there are unsaved changes by comparing current data with original data
+  bool _checkForUnsavedChanges() {
+    if (_provider.rawResponse == null) return false;
+    
+    _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
+    
+    // Deep comparison of data
+    return _deepCompareData(_originalData, _currentData);
+  }
+
+  /// Deep comparison of two data maps
+  bool _deepCompareData(dynamic data1, dynamic data2) {
+    if (data1.runtimeType != data2.runtimeType) return true;
+    
+    if (data1 is Map) {
+      if (data2 is! Map) return true;
+      if (data1.length != data2.length) return true;
+      
+      for (final key in data1.keys) {
+        if (!data2.containsKey(key)) return true;
+        if (_deepCompareData(data1[key], data2[key])) return true;
+      }
+      return false;
+    } else if (data1 is List) {
+      if (data2 is! List) return true;
+      if (data1.length != data2.length) return true;
+      
+      for (int i = 0; i < data1.length; i++) {
+        if (_deepCompareData(data1[i], data2[i])) return true;
+      }
+      return false;
+    } else {
+      return data1 != data2;
+    }
+  }
+
+  /// Show discard changes confirmation dialog
+  Future<bool> _showDiscardChangesDialog() async {
+    if (!_hasUnsavedChanges) return true;
+    
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _DiscardChangesDialog(),
+    );
+    
+    return result ?? false;
+  }
+
+  /// Handle data changes from widgets
+  void _handleDataChanged(CoreDetailProvider provider, Map<String, dynamic> updatedData) {
+    provider.updateRawResponse(updatedData);
+    
+    // Check for unsaved changes
+    _hasUnsavedChanges = _checkForUnsavedChanges();
+  }
+
+  /// Reset change tracking after successful save
+  void _resetChangeTracking() {
+    if (_provider.rawResponse != null) {
+      _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
+      _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
+      _hasUnsavedChanges = false;
+    }
+  }
+
+  /// Override back button behavior to check for unsaved changes
+  Future<bool> _onWillPop() async {
+    if (_hasUnsavedChanges) {
+      final shouldDiscard = await _showDiscardChangesDialog();
+      if (shouldDiscard) {
+        return true; // Allow back navigation
+      } else {
+        return false; // Prevent back navigation
+      }
+    }
+    return true; // Allow back navigation if no changes
+  }
+
   void _handleSessionExpired() {
     SessionHandler.handleSessionExpired(context);
   }
 
-  void _changeTab(String tabCode) {
+  Future<void> _changeTab(String tabCode) async {
+    // Check for unsaved changes before switching tabs
+    if (_hasUnsavedChanges) {
+      final shouldDiscard = await _showDiscardChangesDialog();
+      if (!shouldDiscard) {
+        // User chose Cancel - revert tab selection to current tab
+        if (_tabController != null) {
+          final currentIndex = widget.availableTabs.indexWhere((tab) => tab.code == _currentTabCode);
+          if (currentIndex >= 0) {
+            _tabController!.index = currentIndex;
+          }
+        }
+        return; // Stay on current tab
+      }
+      // Reset change tracking if discarding
+      _resetChangeTracking();
+    }
+    
     setState(() {
       _currentTabCode = tabCode;
     });
@@ -161,6 +274,11 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
       onSessionExpired: _handleSessionExpired,
       docSubTabCode: docSubTabCode,
     );
+
+    // Re-initialize change tracking for new tab
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeChangeTracking();
+    });
   }
 
   /// Check if the current record is new (no ID)
@@ -221,15 +339,18 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
             provider.clearLastError();
             _showGenericErrorAndBack(msg);
           }
-          return Scaffold(
-            appBar: _buildAppBar(provider),
-            body: Stack(
-              children: [
-                _buildBody(provider),
-                if (provider.showLoadingOverlay) const LoadingOverlayWidget(),
-              ],
+          return WillPopScope(
+            onWillPop: _onWillPop,
+            child: Scaffold(
+              appBar: _buildAppBar(provider),
+              body: Stack(
+                children: [
+                  _buildBody(provider),
+                  if (provider.showLoadingOverlay) const LoadingOverlayWidget(),
+                ],
+              ),
+              bottomNavigationBar: widget.fromTaskScreen ? _buildTaskFooter(provider) : null,
             ),
-            bottomNavigationBar: widget.fromTaskScreen ? _buildTaskFooter(provider) : null,
           );
         },
       ),
@@ -564,6 +685,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
         if (response['success'] == true) {
           // Update provider state from response
           provider.updateDataAfterCopy(response);
+          // Reset change tracking after successful copy
+          _resetChangeTracking();
           // Do NOT mutate widget.listItem here. We keep list screen data intact.
         }
 
@@ -694,6 +817,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
           // Update data directly from cancel response without additional API call
           if (response['success'] == true) {
             provider.updateDataAfterSave(response);
+            // Reset change tracking after successful cancel
+            _resetChangeTracking();
           }
           
           CoreActionDialog.showResponseDialog(
@@ -775,6 +900,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
           // Update data directly from delete response without additional API call
           if (response['success'] == true) {
             provider.updateDataAfterSave(response);
+            // Reset change tracking after successful delete
+            _resetChangeTracking();
           }
           
           CoreActionDialog.showResponseDialog(
@@ -908,12 +1035,12 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
               indicatorPadding: const EdgeInsets.all(4),
               splashFactory: NoSplash.splashFactory,
               overlayColor: MaterialStateProperty.all(Colors.transparent),
-              onTap: (index) {
+              onTap: (index) async {
                 final selectedTab = visibleTabs[index];
                 final isTabDisabled = provider.isTabDisabled(selectedTab.code);
                 // Chỉ cho phép chuyển tab khi tab không bị disabled
                 if (!isTabDisabled) {
-                  _changeTab(selectedTab.code);
+                  await _changeTab(selectedTab.code);
                 }
                 // Nếu tab bị disabled, không làm gì cả (chỉ view)
               },
@@ -1247,6 +1374,9 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
         if (response['success'] == true) {
           provider.updateDataAfterSave(response);
 
+          // Reset change tracking after successful save
+          _resetChangeTracking();
+
           if (_isFromNewAction()) {
             try {
               final newItemDetail = response['itemDetail'];
@@ -1334,6 +1464,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
         // Update data directly from submit response without additional API call
         if (response['success'] == true) {
           provider.updateDataAfterSave(response);
+          // Reset change tracking after successful submit
+          _resetChangeTracking();
         }
         
         CoreActionDialog.showResponseDialog(
@@ -1384,6 +1516,9 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
       
       // Re-fetch data for current tab
       await provider.fetchDetailData(onSessionExpired: _handleSessionExpired, forceRefresh: false);
+      
+      // Reset change tracking after refresh
+      _resetChangeTracking();
       
       if (mounted) {
         CoreActionDialog.showResponseDialog(
@@ -1447,10 +1582,6 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
       return itemDetail as Map<String, dynamic>? ?? {};
     }
     return rawResponse;
-  }
-
-  void _handleDataChanged(CoreDetailProvider provider, Map<String, dynamic> updatedData) {
-    provider.updateRawResponse(updatedData);
   }
 
   /// Build task approval footer for screens opened from task list
@@ -1730,5 +1861,230 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     } finally {
       provider.setLoadingOverlay(false);
     }
+  }
+}
+
+/// Custom discard changes dialog widget with beautiful design
+class _DiscardChangesDialog extends StatefulWidget {
+  const _DiscardChangesDialog();
+
+  @override
+  State<_DiscardChangesDialog> createState() => _DiscardChangesDialogState();
+}
+
+class _DiscardChangesDialogState extends State<_DiscardChangesDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+    
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Colors.orange.shade600;
+    final backgroundColor = Colors.orange.shade50;
+    
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _opacityAnimation.value,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: AlertDialog(
+              backgroundColor: Colors.transparent,
+              contentPadding: EdgeInsets.zero,
+              content: Container(
+                width: MediaQuery.of(context).size.width * 0.95,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient background
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            backgroundColor,
+                            backgroundColor.withOpacity(0.5),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          // Icon with animation
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Title
+                          const Text(
+                            'Discard Changes?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.6,
+                            ),
+                            child: const SingleChildScrollView(
+                              child: Text(
+                                'You have unsaved changes. Are you sure you want to discard them? This action cannot be undone.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.grey.shade600,
+                                    side: BorderSide(color: Colors.grey.shade400),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade600,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: const Text(
+                                    'Discard',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
