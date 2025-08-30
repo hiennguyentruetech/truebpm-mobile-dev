@@ -38,9 +38,11 @@ class ListCoreScreen extends StatefulWidget {
 class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _searchFocusNode = FocusNode();
   late CoreListProvider _provider;
   AnimationController? _fabAnimationController;
   Animation<double>? _fabScaleAnimation;
+  bool _isSearchFocused = false;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       onSessionExpired: _handleSessionExpired,
     );
     _scrollController.addListener(_onScroll);
+    _searchFocusNode.addListener(_onSearchFocusChanged);
 
     // Initialize FAB animation
     _fabAnimationController = AnimationController(
@@ -71,15 +74,49 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _searchFocusNode.dispose();
     _provider.dispose();
     _fabAnimationController?.dispose();
     super.dispose();
+  }
+
+  void _onSearchFocusChanged() {
+    setState(() {
+      _isSearchFocused = _searchFocusNode.hasFocus;
+    });
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - CoreConstants.scrollThreshold) {
       _provider.loadMoreData(widget.moduleCode, widget.tabModuleCode);
+    }
+    
+    // Dismiss keyboard when scrolling if search is focused
+    if (_isSearchFocused) {
+      _dismissKeyboard();
+    }
+  }
+
+  void _dismissKeyboard() {
+    if (_searchFocusNode.hasFocus) {
+      _searchFocusNode.unfocus();
+    }
+    FocusScope.of(context).unfocus();
+  }
+
+  void _handleSearchSubmit(String value) {
+    _dismissKeyboard();
+    if (value.trim().isNotEmpty) {
+      _provider.performSearch(widget.moduleCode, widget.tabModuleCode, value.trim());
+    }
+  }
+
+  void _handleSearchClear() {
+    _searchController.clear();
+    _dismissKeyboard();
+    if (_provider.currentFilterInput.isNotEmpty) {
+      _provider.performSearch(widget.moduleCode, widget.tabModuleCode, "");
     }
   }
 
@@ -107,6 +144,9 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   }
 
   void _navigateToNewRecord(CoreListProvider provider) {
+    // Dismiss keyboard before navigation
+    _dismissKeyboard();
+    
     // Create a new item structure for the NEW action
     final Map<String, dynamic> newItem = {
       'id': null, // No ID for new records
@@ -333,7 +373,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                     if (!provider.isSearchVisible) {
                       _searchController.clear();
                       if (provider.currentFilterInput.isNotEmpty) {
-                        provider.performSearch(widget.moduleCode, widget.tabModuleCode, "");
+                        _handleSearchClear();
                       }
                     }
                   },
@@ -344,13 +384,11 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                   },
                   searchController: _searchController,
                   onSearch: () {
-                    provider.performSearch(
-                      widget.moduleCode,
-                      widget.tabModuleCode,
-                      _searchController.text
-                    );
+                    _handleSearchSubmit(_searchController.text);
                   },
                   moduleCode: widget.moduleCode,
+                  searchFocusNode: _searchFocusNode,
+                  onSearchClear: _handleSearchClear,
                 ),
                 body: _buildBody(provider),
                 floatingActionButton: provider.shouldShowNewButton
@@ -391,18 +429,21 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       return const Center(child: Text('No data available'));
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blue.shade50,
-            Colors.white,
-          ],
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade50,
+              Colors.white,
+            ],
+          ),
         ),
+        child: _buildDataList(provider),
       ),
-      child: _buildDataList(provider),
     );
   }
 
@@ -511,6 +552,9 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                 contents: provider.contents,
                 statusStyle: statusStyle,
                 onTap: () {
+                  // Dismiss keyboard before navigation
+                  _dismissKeyboard();
+                  
                   // Navigate to detail screen
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -568,4 +612,5 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       ),
     ];
   }
+
 }

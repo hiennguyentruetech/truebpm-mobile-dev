@@ -13,6 +13,8 @@ class CoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchController;
   final VoidCallback onSearch;
   final String moduleCode;
+  final FocusNode? searchFocusNode;
+  final VoidCallback? onSearchClear;
 
   const CoreAppBar({
     super.key,
@@ -25,6 +27,8 @@ class CoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.searchController,
     required this.onSearch,
     required this.moduleCode,
+    this.searchFocusNode,
+    this.onSearchClear,
   });
 
   @override
@@ -66,6 +70,8 @@ class CoreAppBar extends StatelessWidget implements PreferredSizeWidget {
                   controller: searchController,
                   onSearch: onSearch,
                   hintText: 'Search data...',
+                  focusNode: searchFocusNode,
+                  onClear: onSearchClear,
                 ),
               ],
             ],
