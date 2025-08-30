@@ -79,6 +79,14 @@ class CoreDetailProvider extends ChangeNotifier {
     _cachedResponseTabCode = null;
   }
 
+  /// Clear cached responses when switching tabs to ensure fresh data
+  void _clearCachedResponses() {
+    _cachedNewResponse = null;
+    _cachedCopyResponse = null;
+    _cachedResponseTabCode = null;
+    // Note: Don't clear _currentCachedAction as it's needed for list refresh logic
+  }
+
   /// Update data after successful COPY operation
   void updateDataAfterCopy(Map<String, dynamic> copyResponse) {
     if (copyResponse['success'] == true) {
@@ -206,6 +214,18 @@ class CoreDetailProvider extends ChangeNotifier {
     // Also update formData if itemDetail.value exists
     if (updatedData['itemDetail']?['value'] != null) {
       _formData = Map<String, dynamic>.from(updatedData['itemDetail']['value']);
+    }
+    
+    // Update detailResponse to ensure status and other fields are updated
+    try {
+      _detailResponse = CoreDetailResponse.fromJson(updatedData);
+    } catch (_) {
+      // Fallback: Update only the value part if parsing fails
+      if (_detailResponse?.itemDetail != null && updatedData['itemDetail']?['value'] != null) {
+        _detailResponse!.itemDetail!.value
+          ..clear()
+          ..addAll(Map<String, dynamic>.from(updatedData['itemDetail']['value']));
+      }
     }
     
     // Trigger rebuild
@@ -508,6 +528,10 @@ class CoreDetailProvider extends ChangeNotifier {
     }
     
     _currentTabCode = tabCode;
+    
+    // Clear cached responses when switching tabs to ensure fresh data
+    // This prevents using stale cached data (e.g., SAVE response when status has changed via SUBMIT)
+    _clearCachedResponses();
     
     // If switching to DOC tab with sub-tab code, fetch with sub-tab
     if (tabCode.toUpperCase() == 'DOC' && docSubTabCode != null) {

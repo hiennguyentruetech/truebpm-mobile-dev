@@ -910,9 +910,11 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
               onTap: (index) {
                 final selectedTab = visibleTabs[index];
                 final isTabDisabled = provider.isTabDisabled(selectedTab.code);
+                // Chỉ cho phép chuyển tab khi tab không bị disabled
                 if (!isTabDisabled) {
                   _changeTab(selectedTab.code);
                 }
+                // Nếu tab bị disabled, không làm gì cả (chỉ view)
               },
               tabs: visibleTabs.asMap().entries.map((entry) {
                 final index = entry.key;
