@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/utils/keyboard_utils.dart';
 
 /// Tab body for TRAREQ DTLS (Details)
 class TRDetailsTabBody extends CoreTabBody {
@@ -121,19 +122,21 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
     final hasId = _moduleData['id'] != null;
     final hasCode = _moduleData['code'] != null;
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(7),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildGeneralInfoSection(),
-          if (hasId && hasCode) _buildAdvanceSummarySection(),
-          if (!hasId && !hasCode) _buildAdvanceInfoSection(),
-          _buildReasonsSection(),
-          _buildSystemInfoSection(),
-        ],
+    return KeyboardUtils.withKeyboardDismissal(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(7),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGeneralInfoSection(),
+            if (hasId && hasCode) _buildAdvanceSummarySection(),
+            if (!hasId && !hasCode) _buildAdvanceInfoSection(),
+            _buildReasonsSection(),
+            _buildSystemInfoSection(),
+          ],
+        ),
       ),
-    ).dismissKeyboardOnTap();
+    );
   }
 
   Widget _buildGeneralInfoSection() {

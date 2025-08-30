@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:truebpm/utils/keyboard_utils.dart';
 
 /// Input types enum for CoreInput
 enum CoreInputType {
@@ -533,24 +534,30 @@ class _CoreInputState extends State<CoreInput> {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: TextFormField(
-        controller: _controller,
-        focusNode: _focusNode,
-        enabled: !_isDisabled,
-        keyboardType: _keyboardType,
-        inputFormatters: _inputFormatters,
-        maxLines: _maxLines,
-        maxLength: widget.maxLength,
-        obscureText: _obscureText,
-        style: widget.textStyle ?? TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: _isDisabled ? Colors.grey.shade400 : Colors.grey.shade800,
+    return KeyboardUtils.withKeyboardDismissal(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: TextFormField(
+          controller: _controller,
+          focusNode: _focusNode,
+          enabled: !_isDisabled,
+          keyboardType: _keyboardType,
+          inputFormatters: _inputFormatters,
+          maxLines: _maxLines,
+          maxLength: widget.maxLength,
+          obscureText: _obscureText,
+          style: widget.textStyle ?? TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: _isDisabled ? Colors.grey.shade400 : Colors.grey.shade800,
+          ),
+          validator: widget.validator ?? _buildValidator(),
+          decoration: _buildInputDecoration(),
+          // Add onTapOutside callback for better keyboard dismissal
+          onTapOutside: (event) {
+            _focusNode.unfocus();
+          },
         ),
-        validator: widget.validator ?? _buildValidator(),
-        decoration: _buildInputDecoration(),
       ),
     );
   }

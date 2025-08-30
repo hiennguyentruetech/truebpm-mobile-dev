@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/utils/keyboard_utils.dart';
 
 /// Tab body for TRAREQ ADAD (Additional Advance)
 /// Show entire body as a collection similar to project_management_addcostdoc_tab_body.dart
@@ -184,17 +185,19 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
 
   @override
   Widget buildTabContent(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(7),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAdvanceInfoSection(),
-          _buildAdvanceSummarySection(),
-          const SizedBox(height: 10),
-          _buildAdditionalAdvanceListSection(),
-          const SizedBox(height: 20),
-        ],
+    return KeyboardUtils.withKeyboardDismissal(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(7),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildAdvanceInfoSection(),
+            _buildAdvanceSummarySection(),
+            const SizedBox(height: 10),
+            _buildAdditionalAdvanceListSection(),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

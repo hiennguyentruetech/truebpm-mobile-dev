@@ -6,6 +6,7 @@ import 'package:truebpm/providers/core_detail_provider.dart';
 import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/services/auth_service.dart';
 import 'package:truebpm/utils/session_handler.dart';
+import 'package:truebpm/utils/keyboard_utils.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1137,25 +1138,26 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
       return const SizedBox.shrink();
     }
 
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blue.shade50,
-            Colors.white,
-          ],
+    return KeyboardUtils.withKeyboardDismissal(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade50,
+              Colors.white,
+            ],
+          ),
         ),
-      ),
-      child: _createTabBody(
-        _currentTabCode,
-        moduleCode: widget.moduleCode,
-        currentTabCode: _currentTabCode,
-        itemId: provider.itemDetail?.value['id']?.toString(),
-        initialData: provider.rawResponse, // Truyền toàn bộ raw response động
-        onDataChanged: (updatedData) => _handleDataChanged(provider, updatedData),
+        child: _createTabBody(
+          _currentTabCode,
+          moduleCode: widget.moduleCode,
+          currentTabCode: _currentTabCode,
+          itemId: provider.itemDetail?.value['id']?.toString(),
+          initialData: provider.rawResponse, // Truyền toàn bộ raw response động
+          onDataChanged: (updatedData) => _handleDataChanged(provider, updatedData),
+        ),
       ),
     );
   }
