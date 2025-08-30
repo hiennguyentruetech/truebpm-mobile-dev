@@ -96,7 +96,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
       // Check for 401 errors in any response
       for (int i = 0; i < results.length; i++) {
         final result = results[i];
-        if (result is Map<String, dynamic> && result['statusCode'] == 401) {
+        if (result['statusCode'] == 401) {
           if (mounted) {
             _showSessionExpiredDialog();
           }
@@ -153,13 +153,63 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
     );
   }
 
-  String _fmtNum(dynamic v, {int fraction = 2}) {
+  String _fmtNum(dynamic v, {int fraction = 0}) {
     if (v == null) return '0';
     final num? n = num.tryParse(v.toString());
     if (n == null) return '0';
-    if (n % 1 == 0) return n.toInt().toString();
-    final s = n.toStringAsFixed(fraction);
-    return s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    
+    // Format to EU style (thousand '.' and decimal ',')
+    if (n % 1 == 0) {
+      // Integer: add thousand separators with dots
+      return _groupThousands(n.toInt().toString());
+    } else {
+      // Decimal: format with comma and limit decimal places
+      final s = n.toStringAsFixed(fraction);
+      final parts = s.split('.');
+      final intPart = _groupThousands(parts[0]);
+      final decPart = parts.length > 1 ? parts[1] : '';
+      return decPart.isNotEmpty ? '$intPart,$decPart' : intPart;
+    }
+  }
+
+  String _groupThousands(String digits) {
+    if (digits.isEmpty) return '';
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i != 0 && (digits.length - i) % 3 == 0) buf.write('.');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
+
+  String _formatValueWithDecimals(String value, int decimalPlaces) {
+    if (decimalPlaces == 0) return value;
+    
+    // Parse the value to check if it needs decimal formatting
+    final cleanValue = value.replaceAll('.', '').replaceAll(',', '.');
+    final num? numValue = num.tryParse(cleanValue);
+    
+    if (numValue == null) return value;
+    
+    // Format with specified decimal places
+    if (numValue % 1 == 0) {
+      // Integer value, add decimal places if needed
+      if (decimalPlaces > 0) {
+        final formatted = numValue.toStringAsFixed(decimalPlaces);
+        final parts = formatted.split('.');
+        final intPart = _groupThousands(parts[0]);
+        final decPart = parts[1];
+        return '$intPart,$decPart';
+      }
+      return _groupThousands(numValue.toInt().toString());
+    } else {
+      // Decimal value, format with specified places
+      final formatted = numValue.toStringAsFixed(decimalPlaces);
+      final parts = formatted.split('.');
+      final intPart = _groupThousands(parts[0]);
+      final decPart = parts[1];
+      return '$intPart,$decPart';
+    }
   }
 
   Widget _buildYearSelector() {
@@ -243,7 +293,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  'Dashboard Period',
+                  'Reporting Period',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.grey.shade600,
@@ -258,21 +308,11 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
           // Modern dropdown with gradient border
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white,
-                  Colors.blue.shade50,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
             child: DropdownButton<int>(
               value: _selectedYear,
               underline: const SizedBox.shrink(),
               icon: Container(
+                margin: const EdgeInsets.only(left: 8),
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade600,
@@ -396,6 +436,8 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
     required String value,
     required List<Color> gradient,
     IconData? icon,
+    String? suffix,
+    int decimalPlaces = 0,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -406,30 +448,51 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
           BoxShadow(color: gradient.last.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
-                Icon(icon, color: Colors.white, size: 18),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
+              Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: Colors.white, size: 18),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Flexible(
                 child: Text(
-                  label,
+                  _formatValueWithDecimals(value, decimalPlaces),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
-          ),
+          if (suffix != null)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  suffix,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -499,16 +562,18 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
                             _metricCard(
-                              label: 'Approved Tickets',
-                              value: _fmtNum(_travelRequest?['approvedTicketCountInYear'], fraction: 0),
+                              label: 'Approved',
+                              value: _fmtNum(_travelRequest?['approvedTicketCountInYear']),
                               icon: Icons.assignment_turned_in_rounded,
                               gradient: const [Color(0xFF5C6BC0), Color(0xFF283593)],
+                              suffix: 'records',
                             ),
                             _metricCard(
-                              label: 'Approved Travel Days',
+                              label: 'Total Days',
                               value: _fmtNum(_travelRequest?['totalApprovedTravelDaysInYear']),
                               icon: Icons.flight_takeoff_rounded,
                               gradient: const [Color(0xFF5C6BC0), Color(0xFF3949AB)],
+                              suffix: 'days',
                             ),
                           ],
                         ),
@@ -526,16 +591,19 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
                             _metricCard(
-                              label: 'Approved Claims',
-                              value: _fmtNum(_travelClaim?['approvedClaimCountInYear'], fraction: 0),
+                              label: 'Approved',
+                              value: _fmtNum(_travelClaim?['approvedClaimCountInYear']),
                               icon: Icons.done_all_rounded,
                               gradient: const [Color(0xFFFFA726), Color(0xFFEF6C00)],
+                              suffix: 'records',
                             ),
                             _metricCard(
-                              label: 'Approved Expense',
+                              label: 'Expense Total',
                               value: _fmtNum(_travelClaim?['totalApprovedClaimExpenseInYear']),
                               icon: Icons.payments_rounded,
                               gradient: const [Color(0xFFFFA726), Color(0xFFF57C00)],
+                              suffix: 'VND',
+                              decimalPlaces: 0,
                             ),
                           ],
                         ),
@@ -557,24 +625,32 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                               value: _fmtNum(_eleave?['totalAnnualLeave']),
                               icon: Icons.event_available,
                               gradient: const [Color(0xFF26A69A), Color(0xFF00796B)],
+                              suffix: 'days',
+                              decimalPlaces: 2,
                             ),
                             _metricCard(
-                              label: 'Leave Applied',
+                              label: 'Applied',
                               value: _fmtNum(_eleave?['totalLeaveApplied']),
                               icon: Icons.edit_calendar_rounded,
                               gradient: const [Color(0xFF26A69A), Color(0xFF00897B)],
+                              suffix: 'days',
+                              decimalPlaces: 2,
                             ),
                             _metricCard(
-                              label: 'Remain Leave',
+                              label: 'Remaining',
                               value: _fmtNum(_eleave?['totalRemainLeave']),
                               icon: Icons.account_balance_wallet_rounded,
                               gradient: const [Color(0xFF26C6DA), Color(0xFF0097A7)],
+                              suffix: 'days',
+                              decimalPlaces: 2,
                             ),
                             _metricCard(
-                              label: 'Total Leave Days (Year)',
+                              label: 'Total Days',
                               value: _fmtNum(_eleave?['totalLeaveDaysInYear']),
                               icon: Icons.calendar_month_rounded,
                               gradient: const [Color(0xFF26C6DA), Color(0xFF00838F)],
+                              suffix: 'days',
+                              decimalPlaces: 2,
                             ),
                           ],
                         ),
@@ -592,16 +668,19 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
                             _metricCard(
-                              label: 'Approved Tickets',
-                              value: _fmtNum(_overtime?['approvedTicketCountInYear'], fraction: 0),
+                              label: 'Approved',
+                              value: _fmtNum(_overtime?['approvedTicketCountInYear']),
                               icon: Icons.verified_rounded,
                               gradient: const [Color(0xFF7E57C2), Color(0xFF512DA8)],
+                              suffix: 'records',
                             ),
                             _metricCard(
-                              label: 'Approved OT Hours',
+                              label: 'Total Hours',
                               value: _fmtNum(_overtime?['totalApprovedOTHoursInYear']),
                               icon: Icons.timelapse_rounded,
                               gradient: const [Color(0xFF7E57C2), Color(0xFF5E35B1)],
+                              suffix: 'hours',
+                              decimalPlaces: 2,
                             ),
                           ],
                         ),
