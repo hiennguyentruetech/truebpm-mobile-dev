@@ -46,7 +46,12 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
 
   void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      // Support nested path updates like 'advance.reasons'
+      if (key.contains('.')) {
+        _setByPath(_moduleData, key, value);
+      } else {
+        _moduleData[key] = value;
+      }
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
       // Auto-calc totalDays when date range changes
@@ -56,11 +61,38 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
         _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
         _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
       }
+      
+      // Auto-calc perDiemTotal when advance amounts change
+      if (key == 'advance.perDiemAdvance' || key == 'advance.perDiemOthers') {
+        final perDiemAdvance = _moduleData['advance']?['perDiemAdvance'] ?? 0;
+        final perDiemOthers = _moduleData['advance']?['perDiemOthers'] ?? 0;
+        final total = (perDiemAdvance ?? 0) + (perDiemOthers ?? 0);
+        _setByPath(_moduleData, 'advance.perDiemTotal', total);
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
     });
     if (widget.onDataChanged != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         widget.onDataChanged!(_response);
       });
+    }
+  }
+
+  void _setByPath(Map<String, dynamic> map, String path, dynamic value) {
+    final parts = path.split('.');
+    Map<String, dynamic> curr = map;
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final bool isLast = i == parts.length - 1;
+      if (isLast) {
+        curr[part] = value;
+      } else {
+        if (curr[part] is! Map<String, dynamic>) {
+          curr[part] = <String, dynamic>{};
+        }
+        curr = curr[part] as Map<String, dynamic>;
+      }
     }
   }
 
@@ -86,12 +118,17 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
 
   @override
   Widget buildTabContent(BuildContext context) {
+    final hasId = _moduleData['id'] != null;
+    final hasCode = _moduleData['code'] != null;
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildGeneralInfoSection(),
+          if (hasId && hasCode) _buildAdvanceSummarySection(),
+          if (!hasId && !hasCode) _buildAdvanceInfoSection(),
           _buildReasonsSection(),
           _buildSystemInfoSection(),
         ],
@@ -123,6 +160,46 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
             },
           ],
           itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdvanceSummarySection() {
+    return CardSection(
+      title: 'Advance Summary',
+      headerIcon: Icons.summarize_outlined,
+      headerColor: Colors.blue,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {'key': 'perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
+            {'key': 'perDiemOthers', 'label': 'Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
+            {'key': 'perDiemTotal', 'label': 'Total', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
+          ],
+          itemDetail: {'value': _moduleData},
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdvanceInfoSection() {
+    return CardSection(
+      title: 'Advance Payment',
+      headerIcon: Icons.payments_outlined,
+      headerColor: Colors.green,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {'key': 'advance.perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
+            {'key': 'advance.perDiemOthers', 'label': 'Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
+            {'key': 'advance.reasons', 'label': 'Advance Payment Reasons', 'type': 'textarea', 'maxLines': 3, 'onlyView': false},
+          ],
+          itemDetail: {'value': _moduleData},
           moduleData: _moduleData,
           onChanged: _onChanged,
         ),
