@@ -82,7 +82,8 @@ class _TRCDetailsTabBodyState extends CoreTabBodyState<TRCDetailsTabBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildGeneralInfoSection(),
-          _buildClaimInfoSection(),
+          _buildTravelRequestsSection(),
+          _buildSystemInfoSection(),
         ],
       ),
     ).dismissKeyboardOnTap();
@@ -92,13 +93,13 @@ class _TRCDetailsTabBodyState extends CoreTabBodyState<TRCDetailsTabBody> {
     return CardSection(
       title: 'General Information',
       headerIcon: Icons.info_outline,
-      headerColor: Colors.indigo,
+      headerColor: const Color.fromARGB(255, 26, 26, 163),
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'status', 'widget': 'status', 'showIcon': true},
-            {'key': 'code', 'label': 'Claim Code'},
-            {'key': 'totalExpense', 'label': 'Total Expense', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0},
+            { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
+            { 'key': 'code', 'label': 'Claim Code', 'disabled': true},
+            { 'key': 'totalRemained', 'label': 'Total Remained', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -108,30 +109,49 @@ class _TRCDetailsTabBodyState extends CoreTabBodyState<TRCDetailsTabBody> {
     );
   }
 
-  Widget _buildClaimInfoSection() {
+
+
+  Widget _buildTravelRequestsSection() {
     return CardSection(
-      title: 'Claim Information',
-      headerIcon: Icons.assignment_outlined,
-      headerColor: Colors.teal,
+      title: 'Travel Request Selection',
+      headerIcon: Icons.flight_takeoff,
+      headerColor: const Color.fromARGB(255, 17, 130, 73),
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            // createdBy is object -> dropdown (placeholder endpoint)
-            {'key': 'createdBy', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Created By', 'hintText': 'Select user', 'data': 'DROPDOWN.TRACLA/USERS', 'display': 'fullName'},
-            // travelRequests is collection of objects
             {
               'key': 'travelRequests',
               'widget': 'collection',
               'label': 'Travel Requests',
               'itemLabel': 'Travel Request',
               'addButtonText': 'Add Travel Request',
+              'hintText': 'Select travel requests to include in this claim',
               'allowAdd': true,
               'allowRemove': true,
               'editMode': 'modal',
               'children': [
-                {'key': 'travelRequest', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Travel Request', 'data': 'DROPDOWN.TRACLA/TRAVELREQUESTS', 'display': 'code'},
+                {'key': 'travelRequest', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Travel Request', 'data': 'DROPDOWN.TRACLA.TR?username={{username}}', 'display': 'code'},
               ],
             },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSystemInfoSection() {
+    return CardSection(
+      title: 'System Information',
+      headerIcon: Icons.info_outline,
+      headerColor: const Color.fromARGB(255, 71, 102, 21),
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {'key': 'createdBy', 'label': 'Created By', 'type': 'text', 'disabled': true},
+            {'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'disabled': true},
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,

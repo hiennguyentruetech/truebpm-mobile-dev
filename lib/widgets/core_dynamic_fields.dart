@@ -4,6 +4,7 @@ import 'package:truebpm/widgets/core_datetime.dart';
 import 'package:truebpm/widgets/core_collection.dart';
 import 'package:truebpm/widgets/core_status_chip.dart';
 import 'package:truebpm/widgets/core_tree.dart';
+import 'package:truebpm/services/storage_service.dart';
 
 /// Core Dynamic Fields Builder
 /// A reusable widget for building dynamic form fields based on configuration
@@ -585,9 +586,23 @@ class CoreDynamicFields {
   }
 
   /// Resolve string template with {{path.to.value}} placeholders from context
+  /// Special handling for {{username}} to get current logged-in username
   static String _resolveTemplate(String template, Map<String, dynamic> context) {
     return template.replaceAllMapped(RegExp(r'{{\s*([^}]+)\s*}}'), (match) {
       final path = match.group(1)!.trim();
+      
+      // Special handling for username
+      if (path == 'username') {
+        // Get username from StorageService synchronously
+        try {
+          final username = StorageService.prefs.getString('saved_username') ?? '';
+          return username.isNotEmpty ? Uri.encodeComponent(username) : '';
+        } catch (e) {
+          return '';
+        }
+      }
+      
+      // Regular path resolution
       final value = _getByPath(context, path);
       return (value == null || value.toString().isEmpty) ? '' : Uri.encodeComponent(value.toString());
     });
