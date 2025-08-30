@@ -231,6 +231,19 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     return true; // Allow back navigation if no changes
   }
 
+  /// Handle swipe back gesture with custom behavior
+  Future<bool> _onSwipeBack() async {
+    if (_hasUnsavedChanges) {
+      final shouldDiscard = await _showDiscardChangesDialog();
+      if (shouldDiscard) {
+        return true; // Allow swipe back
+      } else {
+        return false; // Prevent swipe back
+      }
+    }
+    return true; // Allow swipe back if no changes
+  }
+
   void _handleSessionExpired() {
     SessionHandler.handleSessionExpired(context);
   }
@@ -341,15 +354,18 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
           }
           return WillPopScope(
             onWillPop: _onWillPop,
-            child: Scaffold(
-              appBar: _buildAppBar(provider),
-              body: Stack(
-                children: [
-                  _buildBody(provider),
-                  if (provider.showLoadingOverlay) const LoadingOverlayWidget(),
-                ],
+            child: _SwipeBackHandler(
+              onSwipeBack: _onSwipeBack,
+              child: Scaffold(
+                appBar: _buildAppBar(provider),
+                body: Stack(
+                  children: [
+                    _buildBody(provider),
+                    if (provider.showLoadingOverlay) const LoadingOverlayWidget(),
+                  ],
+                ),
+                bottomNavigationBar: widget.fromTaskScreen ? _buildTaskFooter(provider) : null,
               ),
-              bottomNavigationBar: widget.fromTaskScreen ? _buildTaskFooter(provider) : null,
             ),
           );
         },
@@ -2086,5 +2102,62 @@ class _DiscardChangesDialogState extends State<_DiscardChangesDialog>
         );
       },
     );
+  }
+}
+
+/// Custom swipe back handler widget
+class _SwipeBackHandler extends StatefulWidget {
+  final Widget child;
+  final Future<bool> Function() onSwipeBack;
+
+  const _SwipeBackHandler({
+    required this.child,
+    required this.onSwipeBack,
+  });
+
+  @override
+  State<_SwipeBackHandler> createState() => _SwipeBackHandlerState();
+}
+
+class _SwipeBackHandlerState extends State<_SwipeBackHandler> {
+  double _startX = 0.0;
+  double _currentX = 0.0;
+  bool _isSwiping = false;
+  static const double _swipeThreshold = 100.0; // Minimum distance to trigger swipe back
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragStart: (details) {
+        _startX = details.globalPosition.dx;
+        _currentX = _startX;
+        _isSwiping = false;
+      },
+      onHorizontalDragUpdate: (details) {
+        _currentX = details.globalPosition.dx;
+        final deltaX = _currentX - _startX;
+        
+        // Only detect right-to-left swipe (swipe back gesture)
+        if (deltaX > 0 && deltaX > _swipeThreshold && !_isSwiping) {
+          _isSwiping = true;
+          _handleSwipeBack();
+        }
+      },
+      onHorizontalDragEnd: (details) {
+        _isSwiping = false;
+      },
+      child: widget.child,
+    );
+  }
+
+  Future<void> _handleSwipeBack() async {
+    final shouldAllow = await widget.onSwipeBack();
+    if (shouldAllow && mounted) {
+      // Allow swipe back by calling Navigator.pop
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    }
+    // If not allowing, stay on current screen
   }
 }
