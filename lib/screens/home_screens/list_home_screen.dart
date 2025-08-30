@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/widgets/loading_overlay.dart';
+import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
+import 'package:truebpm/di/service_locator.dart';
+import 'package:truebpm/services/auth_service.dart';
 
 class ListHomeScreen extends StatefulWidget {
   const ListHomeScreen({super.key});
@@ -29,6 +32,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
 
   // User IDs (can differ per module in your samples; we'll use logged-in id for all)
   String? _userId;
+  late final AuthService _authService;
 
   @override
   void initState() {
@@ -36,6 +40,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
     final now = DateTime.now();
     _selectedYear = now.year;
     _years = List<int>.generate(6, (i) => now.year - i);
+    _authService = get<AuthService>();
     _initializeAndLoad();
   }
 
@@ -60,7 +65,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
   Future<void> _loadDashboardData() async {
     if (_userId == null || _userId!.isEmpty) {
       setState(() {
-        _errorMessage = 'Không tìm thấy thông tin người dùng.';
+        _errorMessage = 'User information not found.';
       });
       return;
     }
@@ -72,7 +77,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
 
     try {
       if (mounted) {
-        context.showLoading(message: 'Đang tải dữ liệu, vui lòng chờ...');
+        context.showLoading(message: 'Loading data, please wait...');
       }
       // Build endpoints
       final eleaveEndpoint = 'DASHBOARD/ELEAVE?userId=$_userId&year=$_selectedYear';
@@ -87,6 +92,17 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
         CoreService.instance.getDropdownData(trEndpoint),
         CoreService.instance.getDropdownData(tcEndpoint),
       ]);
+
+      // Check for 401 errors in any response
+      for (int i = 0; i < results.length; i++) {
+        final result = results[i];
+        if (result is Map<String, dynamic> && result['statusCode'] == 401) {
+          if (mounted) {
+            _showSessionExpiredDialog();
+          }
+          return;
+        }
+      }
 
       Map<String, dynamic>? parseFirstMap(dynamic res) {
         if (res is Map && res['success'] == true) {
@@ -115,7 +131,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Lỗi tải dữ liệu dashboard: $e';
+        _errorMessage = 'Error loading dashboard data: $e';
       });
     } finally {
       if (mounted) {
@@ -123,6 +139,18 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
         setState(() { _loading = false; });
       }
     }
+  }
+
+  void _showSessionExpiredDialog() {
+    CustomConfirmDialog.showSessionExpired(
+      context,
+      onConfirm: () async {
+        await _authService.clearSavedCredentials();
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      },
+    );
   }
 
   String _fmtNum(dynamic v, {int fraction = 2}) {
@@ -136,49 +164,200 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
 
   Widget _buildYearSelector() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white,
+            Colors.blue.shade50,
+            Colors.white,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(
+          color: Colors.blue.shade200.withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.blue.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.white,
+            blurRadius: 0,
+            offset: const Offset(0, 1),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Row(
         children: [
-          Icon(Icons.calendar_today_rounded, color: Colors.blue.shade600, size: 18),
-          const SizedBox(width: 8),
-          const Text(
-            'Chọn năm:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          // Calendar Icon with gradient background
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue.shade400,
+                  Colors.blue.shade600,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade400.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.calendar_today_rounded,
+              color: Colors.white,
+              size: 15,
+            ),
           ),
+          const SizedBox(width: 5),
+          
+          // Text section with better typography
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Year',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.blue.shade800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'Dashboard Period',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.3,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Modern dropdown with gradient border
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white,
+                  Colors.blue.shade50,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButton<int>(
+              value: _selectedYear,
+              underline: const SizedBox.shrink(),
+              icon: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade600,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.blue.shade800,
+              ),
+              items: _years
+                  .map((y) => DropdownMenuItem<int>(
+                        value: y,
+                        child: Text(
+                          y.toString(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: y == _selectedYear ? Colors.blue.shade800 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (val) async {
+                if (val == null) return;
+                setState(() { _selectedYear = val; });
+                await _loadDashboardData();
+              },
+            ),
+          ),
+          
           const SizedBox(width: 10),
-          DropdownButton<int>(
-            value: _selectedYear,
-            underline: const SizedBox.shrink(),
-            items: _years
-                .map((y) => DropdownMenuItem<int>(
-                      value: y,
-                      child: Text(y.toString()),
-                    ))
-                .toList(),
-            onChanged: (val) async {
-              if (val == null) return;
-              setState(() { _selectedYear = val; });
-              await _loadDashboardData();
-            },
+          
+          // Refresh button with gradient and animation
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _loading 
+                  ? [Colors.grey.shade300, Colors.grey.shade400]
+                  : [Colors.blue.shade500, Colors.blue.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: _loading 
+                    ? Colors.grey.shade400.withOpacity(0.3)
+                    : Colors.blue.shade500.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _loading ? null : _loadDashboardData,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: _loading
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey.shade600),
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                ),
+              ),
+            ),
           ),
-          const Spacer(),
-          IconButton(
-            tooltip: 'Làm mới',
-            onPressed: _loading ? null : _loadDashboardData,
-            icon: Icon(Icons.refresh_rounded, color: _loading ? Colors.grey : Colors.blue.shade600),
-          )
         ],
       ),
     );
@@ -259,7 +438,34 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Bỏ AppBar theo yêu cầu
+      appBar: AppBar(
+        title: const Text(
+          'Home',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: 0.5,
+          ),
+        ),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+              ),
+            ),
+            child: _buildYearSelector(),
+          ),
+        ),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -282,8 +488,6 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildYearSelector(),
-
                         // TRAVEL REQUEST (đưa Ticket lên trước)
                         _buildSectionTitle('Travel Request', Icons.airplanemode_active_rounded, Colors.indigo),
                         GridView.count(
