@@ -67,6 +67,14 @@ class CoreSelect extends StatefulWidget {
   final dynamic data; // Can be List<String>, List<Map>, or String (API endpoint)
   final Function(dynamic)? onChanged;
   final dynamic initialValue;
+  
+  // Special configuration for grantPermission and similar fields
+  final String? specialDisplay; // For special display format like 'userPermission.name'
+  final bool useUserPermissionWrapper; // Whether to wrap selected items in userPermission object
+  
+  // Split key functionality for different display in input vs dropdown
+  final bool splitKey; // Whether to use different display keys for input and dropdown
+  final String? dropdownDisplay; // Display key for dropdown options (when splitKey is true)
 
   const CoreSelect({
     super.key,
@@ -83,6 +91,10 @@ class CoreSelect extends StatefulWidget {
     this.data,
     this.onChanged,
     this.initialValue,
+    this.specialDisplay,
+    this.useUserPermissionWrapper = false,
+    this.splitKey = false,
+    this.dropdownDisplay,
   });
 
   @override
@@ -117,7 +129,12 @@ class _CoreSelectState extends State<CoreSelect> {
   /// Get current value from itemDetail
   dynamic _getValueFromItemDetail() {
     final value = widget.itemDetail['value']?[widget.dataKey];
-    if (value is Map && widget.display != null) {
+    // For splitKey, we need to handle the nested structure properly
+    if (widget.splitKey && value is List) {
+      // Return the list as-is for splitKey cases (e.g., grantPermission with userPermission wrapper)
+      // The list contains items with userPermission wrapper structure
+      return value;
+    } else if (value is Map && widget.display != null) {
       final displayValue = value[widget.display];
       if (displayValue == null) {
         return null;
@@ -174,25 +191,162 @@ class _CoreSelectState extends State<CoreSelect> {
     }
   }
 
-  /// Get display text for an option
+  /// Get display text for an option (for dropdown/popup)
   String _getDisplayText(dynamic option) {
-    return CoreSelectUtils.getDisplayText(option, widget.display);
+    // Use dropdownDisplay when splitKey is true, otherwise use display
+    // This ensures that in dropdown/popup, we show the dropdownDisplay key (e.g., 'name')
+    // The option here is the raw option from API/data source
+    final String? displayKey = widget.splitKey ? widget.dropdownDisplay : widget.display;
+    return CoreSelectUtils.getDisplayText(option, displayKey);
   }
 
   /// Get the actual value from an option
   dynamic _getOptionValue(dynamic option) {
-    return CoreSelectUtils.getOptionValue(option, widget.display);
+    // For splitKey, we need to return the raw option as-is for comparison
+    // This ensures that when comparing, we can extract the ID correctly
+    if (widget.splitKey) {
+      return option; // Return raw option for splitKey cases
+    }
+    
+    // For non-splitKey cases, use normal logic
+    final String? displayKey = widget.dropdownDisplay ?? widget.display;
+    return CoreSelectUtils.getOptionValue(option, displayKey);
   }
 
   /// Compare two values for equality (handles objects and primitives)
   bool _compareValues(dynamic value1, dynamic value2) {
-    return CoreSelectUtils.compareValues(value1, value2, widget.display);
+    if (widget.splitKey) {
+      // For splitKey, we need special comparison logic
+      // value1 is the selected item (with userPermission wrapper)
+      // value2 is the raw option from API/data source
+      if (value1 is Map && value2 is Map) {
+        // Extract the actual ID from userPermission wrapper
+        final selectedId = value1['userPermission']?['id'] ?? value1['id'];
+        final optionId = value2['id'];
+        return selectedId == optionId;
+      }
+      
+      // Handle case where value1 is not a Map (e.g., string ID)
+      if (value1 is String && value2 is Map) {
+        return value1 == value2['id'];
+      }
+      
+      // Handle case where value2 is not a Map (e.g., string ID)
+      if (value1 is Map && value2 is String) {
+        final selectedId = value1['userPermission']?['id'] ?? value1['id'];
+        return selectedId == value2;
+      }
+      
+      // Handle case where both are strings
+      if (value1 is String && value2 is String) {
+        return value1 == value2;
+      }
+    }
+    
+    // For non-splitKey cases, use normal comparison
+    final String? displayKey = widget.splitKey ? widget.dropdownDisplay : widget.display;
+    return CoreSelectUtils.compareValues(value1, value2, displayKey);
   }
 
   /// Get default label from dataKey
   String _getDefaultLabel() {
     return CoreSelectUtils.getDefaultLabel(widget.dataKey);
   }
+
+  /// Get display text for input field (when splitKey is true, use display instead of dropdownDisplay)
+  String _getInputDisplayText(dynamic option) {
+    // Always use display for input field, even when splitKey is true
+    // This ensures that for grantPermission, we show userPermission.name in the input
+    // The option here is the item with userPermission wrapper structure
+    if (widget.splitKey && option is Map) {
+      // For splitKey, extract the name from userPermission wrapper
+      final userPermission = option['userPermission'];
+      if (userPermission is Map) {
+        final displayText = userPermission['name']?.toString() ?? '';
+        // Debug: print('🔄 Input display (userPermission): $option -> $displayText');
+        return displayText;
+      }
+      
+      // Fallback: if no userPermission wrapper, try to get name directly
+      if (option.containsKey('name')) {
+        final displayText = option['name']?.toString() ?? '';
+        // Debug: print('🔄 Input display (direct name): $option -> $displayText');
+        return displayText;
+      }
+    }
+    
+    final displayText = CoreSelectUtils.getDisplayText(option, widget.display);
+    // Debug: print('🔄 Input display (fallback): $option -> $displayText');
+    return displayText;
+  }
+
+  /// Format selected values for splitKey cases
+  dynamic _formatSelectedValues(dynamic selectedValues) {
+    if (!widget.splitKey) {
+      return selectedValues;
+    }
+
+    if (selectedValues is List) {
+      final formatted = selectedValues.map((item) => _formatSingleValue(item)).toList();
+      // Debug: print('🔄 CoreSelect formatted list: $formatted');
+      return formatted;
+    } else if (selectedValues != null) {
+      final formatted = _formatSingleValue(selectedValues);
+      // Debug: print('🔄 CoreSelect formatted single: $formatted');
+      return formatted;
+    }
+
+    return selectedValues;
+  }
+
+  /// Format a single value for splitKey cases
+  dynamic _formatSingleValue(dynamic value) {
+    if (!widget.splitKey) {
+      return value;
+    }
+
+    if (value is Map) {
+      // Check if already formatted (has userPermission wrapper)
+      if (value.containsKey('userPermission')) {
+        // Debug: print('🔄 Already formatted: $value');
+        return value; // Already formatted, return as-is
+      }
+
+      // Format raw option to userPermission wrapper
+      final formatted = {
+        'userPermission': {
+          'id': value['id'] ?? value['userPermissionId'] ?? '',
+          'name': value['name'] ?? value['permissionName'] ?? '',
+          // Copy all other fields
+          ...value.entries.where((entry) => 
+            entry.key != 'id' && 
+            entry.key != 'name' && 
+            entry.key != 'userPermissionId' && 
+            entry.key != 'permissionName'
+          ).fold<Map<String, dynamic>>({}, (map, entry) {
+            map[entry.key] = entry.value;
+            return map;
+          }),
+        }
+      };
+      // Debug: print('🔄 Formatted raw option: $value -> $formatted');
+      return formatted;
+    } else if (value is String) {
+      // If value is string (ID), create userPermission object with ID
+      final formatted = {
+        'userPermission': {
+          'id': value,
+          'name': value, // Fallback name
+        }
+      };
+      // Debug: print('🔄 Formatted string: $value -> $formatted');
+      return formatted;
+    }
+
+    return value;
+  }
+
+
 
   /// Build the floating label with required indicator
   Widget? _buildFloatingLabel() {
@@ -234,12 +388,13 @@ class _CoreSelectState extends State<CoreSelect> {
           label: widget.label,
           moreDisplay: widget.moreDisplay,
           onValuesSelected: (selectedValues) {
+            final formattedValues = _formatSelectedValues(selectedValues);
             setState(() {
-              _selectedValue = selectedValues;
+              _selectedValue = formattedValues;
             });
-            widget.onChanged?.call(selectedValues);
+            widget.onChanged?.call(formattedValues);
           },
-          getDisplayText: _getDisplayText,
+          getDisplayText: _getDisplayText, // Use dropdownDisplay for popup options
           getOptionValue: _getOptionValue,
           compareValues: _compareValues,
           buildInfoRow: _buildInfoRow,
@@ -260,12 +415,13 @@ class _CoreSelectState extends State<CoreSelect> {
           label: widget.label,
           moreDisplay: widget.moreDisplay,
           onValueSelected: (value) {
+            final formattedValue = _formatSelectedValues(value);
             setState(() {
-              _selectedValue = value;
+              _selectedValue = formattedValue;
             });
-            widget.onChanged?.call(value);
+            widget.onChanged?.call(formattedValue);
           },
-          getDisplayText: _getDisplayText,
+          getDisplayText: _getDisplayText, // Use dropdownDisplay for popup options
           getOptionValue: _getOptionValue,
           compareValues: _compareValues,
           buildInfoRow: _buildInfoRow,
@@ -276,10 +432,11 @@ class _CoreSelectState extends State<CoreSelect> {
   }
 
   void _handleValueChange(dynamic value) {
+    final formattedValue = _formatSelectedValues(value);
     setState(() {
-      _selectedValue = value;
+      _selectedValue = formattedValue;
     });
-    widget.onChanged?.call(value);
+    widget.onChanged?.call(formattedValue);
   }
 
   void _handleClear() {
@@ -317,7 +474,7 @@ class _CoreSelectState extends State<CoreSelect> {
                 isDisabled: _isDisabled,
                 hintText: widget.hintText,
                 floatingLabel: _buildFloatingLabel(),
-                getDisplayText: _getDisplayText,
+                getDisplayText: _getInputDisplayText, // Always use input display for selected values
                 getOptionValue: _getOptionValue,
                 onChanged: _handleValueChange,
                 loadOptionsFromAPI: _loadOptionsFromAPI,
@@ -327,7 +484,7 @@ class _CoreSelectState extends State<CoreSelect> {
                 isDisabled: _isDisabled,
                 hintText: widget.hintText,
                 floatingLabel: _buildFloatingLabel(),
-                getDisplayText: _getDisplayText,
+                getDisplayText: _getInputDisplayText, // Always use input display for selected values
                 onTap: () async {
                   if (widget.data is String && _options.isEmpty) {
                     await _loadOptionsFromAPI();
@@ -341,7 +498,7 @@ class _CoreSelectState extends State<CoreSelect> {
                 isDisabled: _isDisabled,
                 hintText: widget.hintText,
                 floatingLabel: _buildFloatingLabel(),
-                getDisplayText: _getDisplayText,
+                getDisplayText: _getInputDisplayText, // Always use input display for selected values
                 onTap: () async {
                   if (widget.data is String && _options.isEmpty) {
                     await _loadOptionsFromAPI();

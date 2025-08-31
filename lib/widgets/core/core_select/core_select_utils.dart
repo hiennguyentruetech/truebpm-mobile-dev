@@ -61,7 +61,8 @@ class CoreSelectUtils {
     
     try {
       if (displayField != null && option is Map) {
-        final displayValue = option[displayField];
+        // Handle nested paths like 'userPermission.name'
+        final displayValue = _getNestedValue(option, displayField);
         if (displayValue != null) {
           return displayValue.toString();
         } else {
@@ -97,9 +98,9 @@ class CoreSelectUtils {
   /// Get the actual value from an option
   static dynamic getOptionValue(dynamic option, String? displayField) {
     if (displayField != null && option is Map) {
-      return option; // Return the whole object
+      return option; // Return the whole object for object-based options
     }
-    return option; // Return the string value
+    return option; // Return the string value for primitive options
   }
 
   /// Compare two values for equality (handles objects and primitives)
@@ -110,7 +111,10 @@ class CoreSelectUtils {
     // If both are Maps, compare by the display field or the whole object
     if (value1 is Map && value2 is Map) {
       if (displayField != null) {
-        return value1[displayField] == value2[displayField];
+        // Handle nested paths like 'userPermission.name'
+        final val1 = _getNestedValue(value1, displayField);
+        final val2 = _getNestedValue(value2, displayField);
+        return val1 == val2;
       } else {
         return value1.toString() == value2.toString();
       }
@@ -118,6 +122,19 @@ class CoreSelectUtils {
     
     // For other types, use direct comparison
     return value1 == value2;
+  }
+
+  /// Get nested value by 'a.b.c' path
+  static dynamic _getNestedValue(Map<dynamic, dynamic> map, String path) {
+    dynamic curr = map;
+    for (final part in path.split('.')) {
+      if (curr is Map && curr.containsKey(part)) {
+        curr = curr[part];
+      } else {
+        return null;
+      }
+    }
+    return curr;
   }
 
   /// Get default label from dataKey

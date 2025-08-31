@@ -205,38 +205,59 @@ class CoreDynamicFields {
     final String? display = config['display']; // Display field for objects
     final List<Map<String, String>>? moreDisplay = config['moreDisplay']?.cast<Map<String, String>>();
     
-    // Convert selectType string to enum
-    CoreSelectType selectType;
-    switch (selectTypeStr.toLowerCase()) {
-      case 'dropdown':
-        selectType = CoreSelectType.dropdown;
-        break;
-      case 'multiple':
-        selectType = CoreSelectType.multiple;
-        break;
-      default:
-        selectType = CoreSelectType.select;
-    }
-    
-    // Build a stable key that changes when endpoint or field changes to avoid state reuse
-    final String dataKeyForKey = data is String ? data : 'static';
-    final Key widgetKey = ValueKey<String>('select:$fieldName|data:$dataKeyForKey');
+          // Special case for grantPermission with userPermission wrapper
+      final bool isGrantPermissionField = fieldName == 'grantPermission';
+      final String? specialDisplay = config['specialDisplay']; // For special display format like 'userPermission.name'
+      final bool useUserPermissionWrapper = config['useUserPermissionWrapper'] ?? false;
+      
+      // Split key functionality for different display in input vs dropdown
+      final bool splitKey = config['splitKey'] ?? false;
+      final String? dropdownDisplay = config['dropdownDisplay'];
+      
+      // Validate splitKey configuration
+      if (splitKey && dropdownDisplay == null) {
+        // If splitKey is true, dropdownDisplay should be provided
+        print('Warning: splitKey is true but dropdownDisplay is not provided for field $fieldName');
+      }
+      
+      // Convert selectType string to enum
+      CoreSelectType selectType;
+      switch (selectTypeStr.toLowerCase()) {
+        case 'dropdown':
+          selectType = CoreSelectType.dropdown;
+          break;
+        case 'multiple':
+          selectType = CoreSelectType.multiple;
+          break;
+        default:
+          selectType = CoreSelectType.select;
+      }
+      
+      // Build a stable key that changes when endpoint or field changes to avoid state reuse
+      final String dataKeyForKey = data is String ? data : 'static';
+      final Key widgetKey = ValueKey<String>('select:$fieldName|data:$dataKeyForKey');
 
-    return CoreSelect(
-      key: widgetKey,
-      dataKey: fieldName,
-      itemDetail: itemDetail,
-      label: label ?? (getDefaultLabel != null ? getDefaultLabel(fieldName) : CoreDynamicFields.getDefaultLabel(fieldName)),
-      type: selectType,
-      hintText: hintText,
-      disabled: config['disabled'] ?? false,
-      hidden: config['hidden'] ?? false,
-      data: data,
-      display: display,
-      moreDisplay: moreDisplay,
-      onChanged: (value) => onChanged(fieldName, value),
-      required: isRequired,
-    );
+      return CoreSelect(
+        key: widgetKey,
+        dataKey: fieldName,
+        itemDetail: itemDetail,
+        label: label ?? (getDefaultLabel != null ? getDefaultLabel(fieldName) : CoreDynamicFields.getDefaultLabel(fieldName)),
+        type: selectType,
+        hintText: hintText,
+        disabled: config['disabled'] ?? false,
+        hidden: config['hidden'] ?? false,
+        data: data,
+        display: display,
+        moreDisplay: moreDisplay,
+        onChanged: (value) => onChanged(fieldName, value),
+        required: isRequired,
+        // Pass special configuration
+        specialDisplay: specialDisplay,
+        useUserPermissionWrapper: useUserPermissionWrapper,
+        // Pass split key configuration
+        splitKey: splitKey,
+        dropdownDisplay: dropdownDisplay,
+      );
   }
   
   /// Build CoreDateTime field from configuration
@@ -711,4 +732,6 @@ class CoreDynamicFields {
     }
     return CoreStatusChipSize.medium;
   }
+
+
 }
