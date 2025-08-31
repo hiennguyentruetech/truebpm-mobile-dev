@@ -3,10 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
-import 'package:truebpm/widgets/loading_overlay.dart';
 import 'dart:async'; // Added for Timer
-import 'package:truebpm/services/core_service.dart'; // Added for CoreService
-import 'package:truebpm/services/auth_service.dart'; // Added for AuthService
 
 /// Tab body cho MODULE TABPMS (Table Application Permissions)
 /// Xử lý phân quyền kết hợp table và application permissions
@@ -261,7 +258,6 @@ class _ModuleTabpmsTabBodyState extends CoreTabBodyState<ModuleTabpmsTabBody> {
     );
   }
 
-  @override
   Map<String, dynamic> prepareDataForSave() {
     return Map<String, dynamic>.from(_moduleData);
   }
