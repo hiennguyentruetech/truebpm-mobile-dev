@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
+import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
 
 /// Tab body cho MODULE TBPMS (Table Permissions)
-/// Xử lý phân quyền table-level permissions
+/// Xử lý phân quyền table-level permissions sử dụng CoreTree
 class ModuleTbpmsTabBody extends CoreTabBody {
   const ModuleTbpmsTabBody({
     super.key,
@@ -19,584 +22,221 @@ class ModuleTbpmsTabBody extends CoreTabBody {
 
 class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
   
-  // Local data storage to replace removed formData
+  // Response data
+  Map<String, dynamic> _response = {};
+  Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
+  
+  // Caching mechanism to prevent widget recreation
+  Widget? _cachedTreeWidget;
   
   @override
   void initState() {
     super.initState();
-    _moduleData = Map<String, dynamic>.from(widget.initialData ?? {});
+    _updateDataFromInitialData();
+  }
+
+  @override
+  void didUpdateWidget(ModuleTbpmsTabBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Update data when initialData changes (e.g., after save operation)
+    if (oldWidget.initialData != widget.initialData) {
+      _updateDataFromInitialData();
+      // Clear cache when data changes
+      _cachedTreeWidget = null;
+    }
+  }
+
+  void _updateDataFromInitialData() {
+    // Extract data from response dynamically
+    _response = Map<String, dynamic>.from(widget.initialData ?? {});
+    
+    // Extract itemDetail dynamically
+    _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
+    
+    // Extract nested data from itemDetail dynamically
+    _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    
+    // Trigger rebuild if widget is already built
+    if (mounted) {
+      setState(() {});
+    }
   }
   
   // Method to update module data
-  void updateModuleData(String key, dynamic value) {
+  void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      if (key == 'tree' && value is Map<String, dynamic>) {
+        // CoreTree sends complete itemDetail structure as value
+        // Extract the tree data and update our structure correctly
+        _itemDetail = Map<String, dynamic>.from(value);
+        _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+        
+        // Clear cache when tree data changes
+        _cachedTreeWidget = null;
+      } else {
+        // Handle other field types normally
+        _moduleData[key] = value;
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
+    });
+    
+    // Defer notification to avoid calling setState during build
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.onDataChanged != null) {
+        widget.onDataChanged!(_response);
+      }
     });
   }
   
   @override
   Widget buildTabContent(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Section
-          _buildHeaderSection(),
-          const SizedBox(height: 24),
-          
-          // Permission Overview
-          _buildPermissionOverviewSection(),
-          const SizedBox(height: 24),
-          
-          // Role Permissions
-          _buildRolePermissionsSection(),
-          const SizedBox(height: 24),
-          
-          // User Permissions
-          _buildUserPermissionsSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.purple.shade600, Colors.purple.shade800],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.security,
-              size: 48,
-              color: Colors.white,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Table Permissions',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-            Text(
-              'Module: ${_moduleData['moduleCode']?.toString() ?? 'MODULE'}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionOverviewSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Permission Overview',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.purple.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Permission Statistics
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    'Total Roles',
-                    '${_moduleData['totalRoles'] ?? 5}',
-                    Icons.group,
-                    Colors.blue.shade600,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Total Users',
-                    '${_moduleData['totalUsers'] ?? 25}',
-                    Icons.person,
-                    Colors.green.shade600,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Active Permissions',
-                    '${_moduleData['activePermissions'] ?? 15}',
-                    Icons.check_circle,
-                    Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Quick Actions
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _refreshPermissions,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                ElevatedButton.icon(
-                  onPressed: _exportPermissions,
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRolePermissionsSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Role Permissions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _addRolePermission,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Role'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Role permissions list
-            if (_moduleData['rolePermissions'] != null) ...[
-              for (int i = 0; i < (_moduleData['rolePermissions'] as List).length; i++)
-                _buildRolePermissionItem(i),
-            ] else ...[
-              _buildEmptyState('No role permissions configured'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRolePermissionItem(int index) {
-    final rolePermission = (_moduleData['rolePermissions'] as List)[index];
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.purple.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.purple.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.group, color: Colors.purple.shade600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  rolePermission['roleName'] ?? 'Unnamed Role',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _editRolePermission(index),
-                icon: const Icon(Icons.edit),
-                color: Colors.purple.shade600,
-              ),
-              IconButton(
-                onPressed: () => _removeRolePermission(index),
-                icon: const Icon(Icons.delete),
-                color: Colors.red.shade600,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          
-          // Permission checkboxes
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              _buildPermissionChip('Read', rolePermission['canRead'] ?? false, (value) {
-                _updateRolePermission(index, 'canRead', value);
-              }),
-              _buildPermissionChip('Create', rolePermission['canCreate'] ?? false, (value) {
-                _updateRolePermission(index, 'canCreate', value);
-              }),
-              _buildPermissionChip('Update', rolePermission['canUpdate'] ?? false, (value) {
-                _updateRolePermission(index, 'canUpdate', value);
-              }),
-              _buildPermissionChip('Delete', rolePermission['canDelete'] ?? false, (value) {
-                _updateRolePermission(index, 'canDelete', value);
-              }),
-              _buildPermissionChip('Execute', rolePermission['canExecute'] ?? false, (value) {
-                _updateRolePermission(index, 'canExecute', value);
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserPermissionsSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'User Permissions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _addUserPermission,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add User'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // User permissions list
-            if (_moduleData['userPermissions'] != null) ...[
-              for (int i = 0; i < (_moduleData['userPermissions'] as List).length; i++)
-                _buildUserPermissionItem(i),
-            ] else ...[
-              _buildEmptyState('No user permissions configured'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserPermissionItem(int index) {
-    final userPermission = (_moduleData['userPermissions'] as List)[index];
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.person, color: Colors.blue.shade600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  userPermission['userName'] ?? 'Unnamed User',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _editUserPermission(index),
-                icon: const Icon(Icons.edit),
-                color: Colors.blue.shade600,
-              ),
-              IconButton(
-                onPressed: () => _removeUserPermission(index),
-                icon: const Icon(Icons.delete),
-                color: Colors.red.shade600,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          
-          // Permission checkboxes
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              _buildPermissionChip('Read', userPermission['canRead'] ?? false, (value) {
-                _updateUserPermission(index, 'canRead', value);
-              }),
-              _buildPermissionChip('Create', userPermission['canCreate'] ?? false, (value) {
-                _updateUserPermission(index, 'canCreate', value);
-              }),
-              _buildPermissionChip('Update', userPermission['canUpdate'] ?? false, (value) {
-                _updateUserPermission(index, 'canUpdate', value);
-              }),
-              _buildPermissionChip('Delete', userPermission['canDelete'] ?? false, (value) {
-                _updateUserPermission(index, 'canDelete', value);
-              }),
-              _buildPermissionChip('Execute', userPermission['canExecute'] ?? false, (value) {
-                _updateUserPermission(index, 'canExecute', value);
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPermissionChip(String label, bool value, Function(bool) onChanged) {
-    return FilterChip(
-      label: Text(label),
-      selected: value,
-      onSelected: onChanged,
-      selectedColor: Colors.purple.shade200,
-      checkmarkColor: Colors.purple.shade700,
-    );
-  }
-
-  Widget _buildEmptyState(String message) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.grey.shade600),
-          const SizedBox(width: 12),
-          Text(message),
-        ],
-      ),
-    );
-  }
-
-  // Event handlers
-  void _refreshPermissions() async {
-    setState(() {}); // Loading managed by provider
-    try {
-      await Future.delayed(const Duration(seconds: 2));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permissions refreshed successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } finally {
-      setState(() {}); // Loading managed by provider
+    if (_itemDetail.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
-  }
 
-  void _exportPermissions() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Exporting permissions...'),
-        backgroundColor: Colors.blue,
-      ),
+    // Use cached widget if available to prevent recreation
+    if (_cachedTreeWidget != null) {
+      return _cachedTreeWidget!;
+    }
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _buildFieldConfig(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final fieldConfig = snapshot.data ?? _buildBaseFieldConfig();
+
+        final fields = CoreDynamicFields.buildFields(
+          fieldConfigs: [fieldConfig],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        );
+
+        // Cache the tree widget to prevent recreation
+        _cachedTreeWidget = Padding(
+          padding: const EdgeInsets.all(8),
+          child: fields.isNotEmpty ? fields.first : const SizedBox.shrink(),
+        );
+
+        return _cachedTreeWidget!;
+      },
     );
   }
 
-  void _addRolePermission() {
-    final rolePermissions = List<Map<String, dynamic>>.from(_moduleData['rolePermissions'] ?? []);
-    rolePermissions.add({
-      'roleId': '',
-      'roleName': 'New Role',
-      'canRead': false,
-      'canCreate': false,
-      'canUpdate': false,
-      'canDelete': false,
-      'canExecute': false,
-    });
-    updateModuleData('rolePermissions', rolePermissions);
+  Future<Map<String, dynamic>> _buildFieldConfig() async {
+    // Simulate async operation to match the pattern
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _buildBaseFieldConfig();
   }
 
-  void _editRolePermission(int index) {
-    // TODO: Show dialog to edit role permission
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit role permission ${index + 1}'),
-        backgroundColor: Colors.purple,
-      ),
-    );
-  }
-
-  void _removeRolePermission(int index) {
-    final rolePermissions = List<Map<String, dynamic>>.from(_moduleData['rolePermissions'] ?? []);
-    rolePermissions.removeAt(index);
-    updateModuleData('rolePermissions', rolePermissions);
-  }
-
-  void _updateRolePermission(int index, String key, bool value) {
-    final rolePermissions = List<Map<String, dynamic>>.from(_moduleData['rolePermissions'] ?? []);
-    rolePermissions[index][key] = value;
-    updateModuleData('rolePermissions', rolePermissions);
-  }
-
-  void _addUserPermission() {
-    final userPermissions = List<Map<String, dynamic>>.from(_moduleData['userPermissions'] ?? []);
-    userPermissions.add({
-      'userId': '',
-      'userName': 'New User',
-      'canRead': false,
-      'canCreate': false,
-      'canUpdate': false,
-      'canDelete': false,
-      'canExecute': false,
-    });
-    updateModuleData('userPermissions', userPermissions);
-  }
-
-  void _editUserPermission(int index) {
-    // TODO: Show dialog to edit user permission
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit user permission ${index + 1}'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _removeUserPermission(int index) {
-    final userPermissions = List<Map<String, dynamic>>.from(_moduleData['userPermissions'] ?? []);
-    userPermissions.removeAt(index);
-    updateModuleData('userPermissions', userPermissions);
-  }
-
-  void _updateUserPermission(int index, String key, bool value) {
-    final userPermissions = List<Map<String, dynamic>>.from(_moduleData['userPermissions'] ?? []);
-    userPermissions[index][key] = value;
-    updateModuleData('userPermissions', userPermissions);
-  }
-
-  @override
-  bool validateData() {
-    // Basic validation
-    return true;
-  }
-
-  @override
-  Map<String, dynamic> prepareDataForSave() {
+  Map<String, dynamic> _buildBaseFieldConfig() {
     return {
-      'rolePermissions': _moduleData['rolePermissions'] ?? [],
-      'userPermissions': _moduleData['userPermissions'] ?? [],
+      'key': 'tree',
+      'widget': 'tree',
+      'label': 'Table Permissions Configuration',
+      'headerTemplate': '{stt} - {actionMap.name}',
+      'isUseUpdateAction': true,
+      'isOnItemDetailValue': false, // Mode 2
+      'titleTemplate': '{stt} - {actionMap.name}',
+      'allowAdd': true,
+      'allowEdit': true,
+      'allowDelete': true,
+      
+      // Giới hạn chỉ ở level 0 - không cho phép đi vào cấp con
+      'levelRestrictions': {
+        'minLevelForAdd': 0,           // Chỉ cho phép Add ở level 0
+        'minLevelForEdit': 0,          // Chỉ cho phép Edit ở level 0
+        'minLevelForDelete': 0,        // Chỉ cho phép Delete ở level 0
+        'minLevelForFooterActions': 0, // Chỉ cho phép Footer Actions ở level 0
+        'maxLevel': 0,                 // Giới hạn tối đa chỉ ở level 0
+        'preventChildCreation': true,  // Không cho phép tạo cấp con
+        'showNextLevelIcon': false,    // Không hiển thị icon next level
+      },
+      
+      // Summary shows stt, actionMap, grantPermission, isDisabled, isHidden
+      'summary': {
+        'layout': 'row',
+        'fields': [
+          {'key': 'grantPermission', 'label': 'Grant Permission', 'collectionTemplate': '{name}', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'isDisabled', 'label': 'Disabled', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'isHidden', 'label': 'Hidden', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+        ]
+      },
+      
+      // Editable fields in the dialog
+      'children': [
+        {'key': 'stt', 'label': 'STT', 'required': true, 'type': 'number'},
+        {
+          'key': 'actionMap',
+          'widget': 'select',
+          'selectType': 'dropdown',
+          'label': 'Action',
+          'data': 'DROPDOWN.MODULE.TOOLBAR.ACTION',
+          'display': 'name',
+          'required': true,
+        },
+        {
+          'key': 'grantPermission',
+          'widget': 'select',
+          'selectType': 'multiple',
+          'label': 'Grant Permission',
+          'data': 'DROPDOWN.USRPER',
+          'display': 'name',
+          'required': false,
+        },
+        {
+          'key': 'isDisabled',
+          'widget': 'checkbox',
+          'label': 'Disabled',
+          'checkboxStyle': 'switch',
+        },
+        {
+          'key': 'isHidden',
+          'widget': 'checkbox',
+          'label': 'Hidden',
+          'checkboxStyle': 'switch',
+        },
+      ],
     };
   }
 
   @override
+  bool validateData() {
+    return CoreDynamicFields.validateData(
+      context: context,
+      moduleData: _moduleData,
+      itemDetail: _itemDetail,
+    );
+  }
+
+  Map<String, dynamic> prepareDataForSave() {
+    return Map<String, dynamic>.from(_moduleData);
+  }
+
+  @override
   Future<Map<String, dynamic>> loadTabSpecificData() async {
-    // Return empty map to use initialData from provider instead of mock data
+    // No-op, data provided by provider initialData
     return {};
   }
 
-  @override
   Future<void> saveTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 
-  @override
   Future<void> submitTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 }
