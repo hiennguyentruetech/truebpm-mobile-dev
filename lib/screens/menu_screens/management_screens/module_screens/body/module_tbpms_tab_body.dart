@@ -132,10 +132,7 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
         _moduleData[key] = formattedValue;
         _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
         _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
-        
-        // Debug: print('🔄 Formatted grantPermission with splitKey: $formattedValue');
-        // Debug: print('  • Input value: $value');
-        // Debug: print('  • Formatted value: $formattedValue');
+
       } else {
         // Handle other field types normally
         _moduleData[key] = value;
@@ -469,29 +466,12 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
         }
       };
 
-      // Log API Request theo format của CoreService
-      print('📤 API Request - Reload Module Data:');
-      print('  • Method: POST');
-      print('  • Endpoint: MODULE.TBPMS');
-      print('  • Module ID: $moduleId');
-      print('  • Status ID: $_currentStatusId');
-      print('  • Tab Module ID: $_currentTabModuleId');
-      print('  • Full Payload: $requestPayload');
-
       // Call CoreService.fetchDetailData với payload mới
       final response = await CoreService.instance.fetchDetailData(
         'MODULE',
         'TBPMS',
         requestPayload,
       );
-
-      // Log API Response theo format của CoreService
-      print('📥 API Response - Reload Module Data:');
-      print('  • Success: ${response?['success'] ?? false}');
-      print('  • Message Type: ${response?['messageType'] ?? 'N/A'}');
-      print('  • Message: ${response?['message'] ?? 'N/A'}');
-      print('  • Has ItemDetail: ${response?['itemDetail'] != null}');
-      print('  • Full Response: $response');
 
       // Hide loading overlay
       context.hideLoading();
@@ -506,11 +486,6 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
           
           // Update response structure
           _response = Map<String, dynamic>.from(response);
-          
-          // Log updated data structure
-          print('🔄 Updated Data Structure:');
-          print('  • Item Detail: $_itemDetail');
-          print('  • Response: $_response');
         });
         
         // Clear cache to force rebuild tree with new data
@@ -542,11 +517,6 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
     } catch (e, stackTrace) {
       // Hide loading overlay
       context.hideLoading();
-      
-      // Log error theo format của CoreService
-      print('❌ API Error - Reload Module Data:');
-      print('  • Error: $e');
-      print('  • Stack Trace: $stackTrace');
       
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
