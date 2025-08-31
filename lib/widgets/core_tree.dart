@@ -100,6 +100,56 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
     }
   }
 
+  // Helper method to check if navigation to children is allowed
+  bool _isNavigationAllowed() {
+    if (widget.levelRestrictions == null) return true;
+    
+    final restrictions = widget.levelRestrictions!;
+    final currentLevel = _navigationStack.length;
+    
+    // Check maxLevel restriction
+    final maxLevel = restrictions['maxLevel'] as int?;
+    if (maxLevel != null && currentLevel >= maxLevel) {
+      return false;
+    }
+    
+    // Check preventChildCreation restriction
+    final preventChildCreation = restrictions['preventChildCreation'] as bool?;
+    if (preventChildCreation == true) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Helper method to check if next level icon should be shown
+  bool _shouldShowNextLevelIcon() {
+    if (widget.levelRestrictions == null) return true;
+    
+    final restrictions = widget.levelRestrictions!;
+    final showNextLevelIcon = restrictions['showNextLevelIcon'] as bool?;
+    
+    // If explicitly set to false, don't show
+    if (showNextLevelIcon == false) {
+      return false;
+    }
+    
+    // If preventChildCreation is true, don't show
+    final preventChildCreation = restrictions['preventChildCreation'] as bool?;
+    if (preventChildCreation == true) {
+      return false;
+    }
+    
+    // Check maxLevel restriction
+    final currentLevel = _navigationStack.length;
+    final maxLevel = restrictions['maxLevel'] as int?;
+    if (maxLevel != null && currentLevel >= maxLevel) {
+      return false;
+    }
+    
+    return true;
+  }
+
   // Helper method to check if action is allowed based on permissions
   bool _isActionAllowedByPermission(String actionType, [Map<String, dynamic>? item]) {
     if (widget.permissions == null) return true;
@@ -1021,21 +1071,22 @@ class _CoreTreeState extends State<CoreTree> with TickerProviderStateMixin {
                   ),
                 ),
                 // Navigate to children icon
-                InkWell(
-                  onTap: () => _navigateToChildren(item),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white,
-                      size: 16,
+                if (_shouldShowNextLevelIcon())
+                  InkWell(
+                    onTap: _isNavigationAllowed() ? () => _navigateToChildren(item) : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

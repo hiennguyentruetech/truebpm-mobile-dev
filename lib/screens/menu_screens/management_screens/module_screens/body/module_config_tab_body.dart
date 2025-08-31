@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
-import 'package:truebpm/widgets/core/tab_form_field.dart';
+import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
 
 /// Tab body cho MODULE CONFIG (Grid Configuration)
 /// Xử lý cấu hình grid và display settings
@@ -20,533 +22,215 @@ class ModuleConfigTabBody extends CoreTabBody {
 
 class _ModuleConfigTabBodyState extends CoreTabBodyState<ModuleConfigTabBody> {
   
-  // Local data storage to replace removed formData
+  // Response data
+  Map<String, dynamic> _response = {};
+  Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
+  
+  // Caching mechanism to prevent widget recreation
+  Widget? _cachedTreeWidget;
   
   @override
   void initState() {
     super.initState();
-    _moduleData = Map<String, dynamic>.from(widget.initialData ?? {});
+    _updateDataFromInitialData();
+  }
+
+  @override
+  void didUpdateWidget(ModuleConfigTabBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Update data when initialData changes (e.g., after save operation)
+    if (oldWidget.initialData != widget.initialData) {
+      _updateDataFromInitialData();
+      // Clear cache when data changes
+      _cachedTreeWidget = null;
+    }
+  }
+
+  void _updateDataFromInitialData() {
+    // Extract data from response dynamically
+    _response = Map<String, dynamic>.from(widget.initialData ?? {});
+    
+    // Extract itemDetail dynamically
+    _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
+    
+    // Extract nested data from itemDetail dynamically
+    _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    
+    // Trigger rebuild if widget is already built
+    if (mounted) {
+      setState(() {});
+    }
   }
   
   // Method to update module data
-  void updateModuleData(String key, dynamic value) {
+  void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      if (key == 'tree' && value is Map<String, dynamic>) {
+        // CoreTree sends complete itemDetail structure as value
+        // Extract the tree data and update our structure correctly
+        _itemDetail = Map<String, dynamic>.from(value);
+        _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+        
+        // Clear cache when tree data changes
+        _cachedTreeWidget = null;
+      } else {
+        // Handle other field types normally
+        _moduleData[key] = value;
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
+    });
+    
+    // Defer notification to avoid calling setState during build
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.onDataChanged != null) {
+        widget.onDataChanged!(_response);
+      }
     });
   }
   
   @override
   Widget buildTabContent(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Section
-          _buildHeaderSection(),
-          const SizedBox(height: 24),
-          
-          // Grid Display Configuration
-          _buildGridDisplaySection(),
-          const SizedBox(height: 24),
-          
-          // Column Configuration
-          _buildColumnConfigSection(),
-          const SizedBox(height: 24),
-          
-          // Toolbar Configuration
-          _buildToolbarConfigSection(),
-          const SizedBox(height: 24),
-          
-          // Action Buttons Configuration
-          _buildActionButtonsSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.orange.shade600, Colors.orange.shade800],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.settings,
-              size: 48,
-              color: Colors.white,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Grid Configuration',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-            Text(
-              'Module: ${_moduleData['moduleCode']?.toString() ?? 'MODULE'}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGridDisplaySection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Grid Display Settings',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Headers configuration
-            TabFormField(
-              label: 'Headers',
-              value: _moduleData['headers']?.toString() ?? '',
-              onChanged: (value) => updateModuleData('headers', value),
-              required: true,
-              hintText: 'Code, Name, Module Code',
-            ),
-            const SizedBox(height: 16),
-            
-            // Content configuration
-            TabFormField(
-              label: 'Content Fields',
-              value: _moduleData['content']?.toString() ?? '',
-              onChanged: (value) => updateModuleData('content', value),
-              required: true,
-              hintText: 'code, name, moduleCode',
-            ),
-            const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                // Page Size
-                Expanded(
-                  child: TabFormField(
-                    label: 'Page Size',
-                    value: _moduleData['pageSize']?.toString() ?? '20',
-                    onChanged: (value) => updateModuleData('pageSize', int.tryParse(value) ?? 20),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                
-                // Enable Pagination
-                Expanded(
-                  child: SwitchListTile(
-                    title: const Text('Enable Pagination'),
-                    value: _moduleData['enablePagination'] ?? true,
-                    onChanged: (value) => updateModuleData('enablePagination', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                // Enable Sorting
-                Expanded(
-                  child: SwitchListTile(
-                    title: const Text('Enable Sorting'),
-                    value: _moduleData['enableSorting'] ?? true,
-                    onChanged: (value) => updateModuleData('enableSorting', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-                
-                // Enable Filtering
-                Expanded(
-                  child: SwitchListTile(
-                    title: const Text('Enable Filtering'),
-                    value: _moduleData['enableFiltering'] ?? true,
-                    onChanged: (value) => updateModuleData('enableFiltering', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildColumnConfigSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Column Configuration',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _addNewColumn,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Column'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Column list
-            if (_moduleData['columns'] != null) ...[
-              for (int i = 0; i < (_moduleData['columns'] as List).length; i++)
-                _buildColumnItem(i),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.grey.shade600),
-                    const SizedBox(width: 12),
-                    const Text('No columns configured. Click "Add Column" to start.'),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildColumnItem(int index) {
-    final column = (_moduleData['columns'] as List)[index];
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Column ${index + 1}: ${column['name'] ?? 'Unnamed'}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _editColumn(index),
-                icon: const Icon(Icons.edit),
-                color: Colors.orange.shade600,
-              ),
-              IconButton(
-                onPressed: () => _removeColumn(index),
-                icon: const Icon(Icons.delete),
-                color: Colors.red.shade600,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text('Field: ${column['field'] ?? 'N/A'}'),
-              ),
-              Expanded(
-                child: Text('Type: ${column['type'] ?? 'Text'}'),
-              ),
-              Expanded(
-                child: Text('Width: ${column['width'] ?? 'Auto'}'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolbarConfigSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Toolbar Configuration',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                // Show Search
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Show Search'),
-                    value: _moduleData['showSearch'] ?? true,
-                    onChanged: (value) => updateModuleData('showSearch', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-                
-                // Show Export
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Show Export'),
-                    value: _moduleData['showExport'] ?? false,
-                    onChanged: (value) => updateModuleData('showExport', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-            
-            Row(
-              children: [
-                // Show Refresh
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Show Refresh'),
-                    value: _moduleData['showRefresh'] ?? true,
-                    onChanged: (value) => updateModuleData('showRefresh', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-                
-                // Show Column Chooser
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Column Chooser'),
-                    value: _moduleData['showColumnChooser'] ?? false,
-                    onChanged: (value) => updateModuleData('showColumnChooser', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButtonsSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Action Buttons',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                // Enable Add
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Enable Add'),
-                    value: _moduleData['enableAdd'] ?? true,
-                    onChanged: (value) => updateModuleData('enableAdd', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-                
-                // Enable Edit
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Enable Edit'),
-                    value: _moduleData['enableEdit'] ?? true,
-                    onChanged: (value) => updateModuleData('enableEdit', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-            
-            Row(
-              children: [
-                // Enable Delete
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Enable Delete'),
-                    value: _moduleData['enableDelete'] ?? true,
-                    onChanged: (value) => updateModuleData('enableDelete', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-                
-                // Enable View
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Enable View'),
-                    value: _moduleData['enableView'] ?? true,
-                    onChanged: (value) => updateModuleData('enableView', value),
-                    activeColor: Colors.orange.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _addNewColumn() {
-    final columns = List<Map<String, dynamic>>.from(_moduleData['columns'] ?? []);
-    columns.add({
-      'name': 'New Column',
-      'field': 'newField',
-      'type': 'Text',
-      'width': 100,
-      'visible': true,
-      'sortable': true,
-      'filterable': true,
-    });
-    updateModuleData('columns', columns);
-  }
-
-  void _editColumn(int index) {
-    // TODO: Show dialog to edit column
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit column ${index + 1}'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  void _removeColumn(int index) {
-    final columns = List<Map<String, dynamic>>.from(_moduleData['columns'] ?? []);
-    columns.removeAt(index);
-    updateModuleData('columns', columns);
-  }
-
-  @override
-  bool validateData() {
-    if (_moduleData['headers']?.toString().trim().isEmpty ?? true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Headers configuration is required'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
+    if (_itemDetail.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
-    
-    if (_moduleData['content']?.toString().trim().isEmpty ?? true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Content fields configuration is required'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
+
+    // Use cached widget if available to prevent recreation
+    if (_cachedTreeWidget != null) {
+      return _cachedTreeWidget!;
     }
-    
-    return true;
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _buildFieldConfig(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final fieldConfig = snapshot.data ?? _buildBaseFieldConfig();
+
+        final fields = CoreDynamicFields.buildFields(
+          fieldConfigs: [fieldConfig],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        );
+
+        // Cache the tree widget to prevent recreation
+        _cachedTreeWidget = Padding(
+          padding: const EdgeInsets.all(8),
+          child: fields.isNotEmpty ? fields.first : const SizedBox.shrink(),
+        );
+
+        return _cachedTreeWidget!;
+      },
+    );
   }
 
-  @override
-  Map<String, dynamic> prepareDataForSave() {
+  Future<Map<String, dynamic>> _buildFieldConfig() async {
+    // Simulate async operation to match the pattern
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _buildBaseFieldConfig();
+  }
+
+  Map<String, dynamic> _buildBaseFieldConfig() {
     return {
-      'headers': _moduleData['headers']?.toString().trim(),
-      'content': _moduleData['content']?.toString().trim(),
-      'pageSize': _moduleData['pageSize'] ?? 20,
-      'enablePagination': _moduleData['enablePagination'] ?? true,
-      'enableSorting': _moduleData['enableSorting'] ?? true,
-      'enableFiltering': _moduleData['enableFiltering'] ?? true,
-      'columns': _moduleData['columns'] ?? [],
-      'showSearch': _moduleData['showSearch'] ?? true,
-      'showExport': _moduleData['showExport'] ?? false,
-      'showRefresh': _moduleData['showRefresh'] ?? true,
-      'showColumnChooser': _moduleData['showColumnChooser'] ?? false,
-      'enableAdd': _moduleData['enableAdd'] ?? true,
-      'enableEdit': _moduleData['enableEdit'] ?? true,
-      'enableDelete': _moduleData['enableDelete'] ?? true,
-      'enableView': _moduleData['enableView'] ?? true,
+      'key': 'tree',
+      'widget': 'tree',
+      'label': 'Grid Column Structure',
+      'headerTemplate': '{order} - {key}',
+      'isUseUpdateAction': true,
+      'isOnItemDetailValue': false, // Mode 2
+      'titleTemplate': '{order} - {key} ({typeId.value})',
+      'allowAdd': true,
+      'allowEdit': true,
+      'allowDelete': true,
+      
+      // Giới hạn chỉ ở level 0 - không cho phép đi vào cấp con
+      'levelRestrictions': {
+        'minLevelForAdd': 0,           // Chỉ cho phép Add ở level 0
+        'minLevelForEdit': 0,          // Chỉ cho phép Edit ở level 0
+        'minLevelForDelete': 0,        // Chỉ cho phép Delete ở level 0
+        'minLevelForFooterActions': 0, // Chỉ cho phép Footer Actions ở level 0
+        'maxLevel': 0,                 // Giới hạn tối đa chỉ ở level 0
+        'preventChildCreation': true,  // Không cho phép tạo cấp con
+        'showNextLevelIcon': false,    // Không hiển thị icon next level
+      },
+      
+      // Summary shows order, key, typeId, valueGetter, display, en, vi, width, hidden
+      'summary': {
+        'layout': 'row',
+        'fields': [
+          {'key': 'valueGetter', 'label': 'Value Getter', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'display', 'label': 'Display', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'en', 'label': 'English', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'vi', 'label': 'Vietnamese', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'width', 'label': 'Width', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'hidden', 'label': 'Hidden', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+        ]
+      },
+      
+      // Editable fields in the dialog
+      'children': [
+        {'key': 'order', 'label': 'Order', 'required': true, 'type': 'number'},
+        {'key': 'key', 'label': 'Key', 'required': true},
+        {
+          'key': 'typeId',
+          'widget': 'select',
+          'selectType': 'dropdown',
+          'label': 'Type',
+          'data': 'DROPDOWN.MODULE.GRIDCOLUMN.TYPE',
+          'display': 'value',
+          'required': true,
+        },
+        {'key': 'valueGetter', 'label': 'Value Getter'},
+        {'key': 'display', 'label': 'Display'},
+        {'key': 'en', 'label': 'English Label'},
+        {'key': 'vi', 'label': 'Vietnamese Label'},
+        {'key': 'width', 'label': 'Width', 'type': 'number'},
+        {
+          'key': 'hidden',
+          'widget': 'checkbox',
+          'label': 'Hidden',
+          'checkboxStyle': 'switch',
+        },
+      ],
     };
   }
 
   @override
+  bool validateData() {
+    return CoreDynamicFields.validateData(
+      context: context,
+      moduleData: _moduleData,
+      itemDetail: _itemDetail,
+    );
+  }
+
+  Map<String, dynamic> prepareDataForSave() {
+    return Map<String, dynamic>.from(_moduleData);
+  }
+
+  @override
   Future<Map<String, dynamic>> loadTabSpecificData() async {
-    // Return empty map to use initialData from provider instead of mock data
+    // No-op, data provided by provider initialData
     return {};
   }
 
-  @override
   Future<void> saveTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 
-  @override
   Future<void> submitTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 }

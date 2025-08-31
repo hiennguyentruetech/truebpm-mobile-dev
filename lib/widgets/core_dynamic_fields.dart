@@ -473,6 +473,12 @@ class CoreDynamicFields {
     final int? minLevelForDelete = levelRestrictions?['minLevelForDelete'] as int?;
     // ignore: unused_local_variable
     final int? minLevelForFooterActions = levelRestrictions?['minLevelForFooterActions'] as int?;
+    // ignore: unused_local_variable
+    final int? maxLevel = levelRestrictions?['maxLevel'] as int?;
+    // ignore: unused_local_variable
+    final bool? preventChildCreation = levelRestrictions?['preventChildCreation'] as bool?;
+    // ignore: unused_local_variable
+    final bool? showNextLevelIcon = levelRestrictions?['showNextLevelIcon'] as bool?;
 
     // Default values for tree fields
     final Map<String, dynamic>? defaultValues = config['defaultValues'] as Map<String, dynamic>?;
