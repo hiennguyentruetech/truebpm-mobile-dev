@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
 
 /// Tab body cho MODULE QUERY (Query Configuration)
 /// Xử lý cấu hình query và database operations
@@ -20,30 +22,58 @@ class ModuleQueryTabBody extends CoreTabBody {
 
 class _ModuleQueryTabBodyState extends CoreTabBodyState<ModuleQueryTabBody> {
   
-  // Local data storage to replace removed formData
+  // Response data
+  Map<String, dynamic> _response = {};
+  Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
   
   @override
   void initState() {
     super.initState();
-    // Khởi tạo moduleData từ initialData hoặc từ itemDetail.value nếu có
-    _moduleData = Map<String, dynamic>.from(widget.initialData ?? {});
+    _updateDataFromInitialData();
+  }
+
+  @override
+  void didUpdateWidget(ModuleQueryTabBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
     
-    // Nếu có itemDetail.value.queryFieldString, lấy giá trị đó
-    if (widget.initialData != null && 
-        widget.initialData!['itemDetail'] is Map<String, dynamic> &&
-        widget.initialData!['itemDetail']['value'] is Map<String, dynamic>) {
-      final itemDetailValue = widget.initialData!['itemDetail']['value'] as Map<String, dynamic>;
-      if (itemDetailValue.containsKey('queryFieldString')) {
-        _moduleData['queryFieldString'] = itemDetailValue['queryFieldString'];
-      }
+    // Update data when initialData changes (e.g., after save operation)
+    if (oldWidget.initialData != widget.initialData) {
+      _updateDataFromInitialData();
+    }
+  }
+
+  void _updateDataFromInitialData() {
+    // Extract data from response dynamically
+    _response = Map<String, dynamic>.from(widget.initialData ?? {});
+    
+    // Extract itemDetail dynamically
+    _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
+    
+    // Extract nested data from itemDetail dynamically
+    _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    
+    // Trigger rebuild if widget is already built
+    if (mounted) {
+      setState(() {});
     }
   }
   
   // Method to update module data
-  void updateModuleData(String key, dynamic value) {
+  void _onChanged(String key, dynamic value) {
     setState(() {
       _moduleData[key] = value;
+      
+      // Sync changes back to itemDetail.value to ensure action handlers get latest data
+      _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+      
+      // Sync changes back to the main response structure
+      _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+    });
+    
+    // Defer notification to avoid calling setState during build
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      widget.onDataChanged?.call(_response);
     });
   }
   
@@ -62,66 +92,51 @@ class _ModuleQueryTabBodyState extends CoreTabBodyState<ModuleQueryTabBody> {
       }
     ];
 
-    // Tạo itemDetail với value chứa moduleData
-    final Map<String, dynamic> itemDetail = {
-      'value': _moduleData,
-      'attribute': {
-        'required': {
-          'queryFieldString': true,
-        }
-      }
-    };
+
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Sử dụng CoreDynamicFields để build input field
           ...CoreDynamicFields.buildFields(
             fieldConfigs: fieldConfigs,
-            itemDetail: itemDetail,
+            itemDetail: _itemDetail,
             moduleData: _moduleData,
-            onChanged: updateModuleData,
+            onChanged: _onChanged,
           ),
         ],
       ),
-    );
+    ).dismissKeyboardOnTap();
   }
 
   @override
   bool validateData() {
-    if (_moduleData['queryFieldString']?.toString().trim().isEmpty ?? true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Query Field String is required'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-    
-    return true;
+    return CoreDynamicFields.validateData(
+      context: context,
+      moduleData: _moduleData,
+      itemDetail: _itemDetail,
+    );
   }
 
   Map<String, dynamic> prepareDataForSave() {
-    return {
-      'queryFieldString': _moduleData['queryFieldString']?.toString().trim(),
-    };
+    return Map<String, dynamic>.from(_moduleData);
   }
 
+  @override
   Future<Map<String, dynamic>> loadTabSpecificData() async {
-    // Return empty map to use initialData from provider instead of mock data
+    // No-op, data provided by provider initialData
     return {};
   }
 
   Future<void> saveTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 
   Future<void> submitTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 300));
     // TODO: Implement actual API call
   }
 }
