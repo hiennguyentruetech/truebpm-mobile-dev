@@ -516,7 +516,6 @@ class _ModuleAtpmsTabBodyState extends CoreTabBodyState<ModuleAtpmsTabBody> {
     );
   }
 
-  @override
   Map<String, dynamic> prepareDataForSave() {
     return Map<String, dynamic>.from(_moduleData);
   }

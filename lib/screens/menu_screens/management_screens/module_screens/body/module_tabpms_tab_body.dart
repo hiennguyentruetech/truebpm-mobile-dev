@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
+import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/widgets/loading_overlay.dart';
+import 'dart:async'; // Added for Timer
+import 'package:truebpm/services/core_service.dart'; // Added for CoreService
+import 'package:truebpm/services/auth_service.dart'; // Added for AuthService
 
 /// Tab body cho MODULE TABPMS (Table Application Permissions)
 /// Xử lý phân quyền kết hợp table và application permissions
@@ -19,485 +26,259 @@ class ModuleTabpmsTabBody extends CoreTabBody {
 
 class _ModuleTabpmsTabBodyState extends CoreTabBodyState<ModuleTabpmsTabBody> {
   
-  // Local data storage to replace removed formData
+  // Response data
+  Map<String, dynamic> _response = {};
+  Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
+  
+  // Caching mechanism to prevent widget recreation
+  Widget? _cachedTreeWidget;
   
   @override
   void initState() {
     super.initState();
-    _moduleData = Map<String, dynamic>.from(widget.initialData ?? {});
+    _updateDataFromInitialData();
+  }
+
+  @override
+  void didUpdateWidget(ModuleTabpmsTabBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Update data when initialData changes (e.g., after save operation)
+    if (oldWidget.initialData != widget.initialData) {
+      _updateDataFromInitialData();
+      // Clear cache when data changes
+      _cachedTreeWidget = null;
+    }
+  }
+
+  void _updateDataFromInitialData() {
+    // Extract data from response dynamically
+    _response = Map<String, dynamic>.from(widget.initialData ?? {});
+    
+    // Extract itemDetail dynamically
+    _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
+    
+    // Extract nested data from itemDetail dynamically
+    _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    
+    // Trigger rebuild if widget is already built
+    if (mounted) {
+      setState(() {});
+    }
   }
   
   // Method to update module data
-  void updateModuleData(String key, dynamic value) {
+  void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      if (key == 'tree' && value is Map<String, dynamic>) {
+        // CoreTree sends complete itemDetail structure as value
+        // Extract the tree data and update our structure correctly
+        _itemDetail = Map<String, dynamic>.from(value);
+        _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+        
+        // Clear cache when tree data changes
+        _cachedTreeWidget = null;
+      } else if (key == 'grantPermission' && value is List) {
+        // Special handling for grantPermission field with splitKey functionality
+        // Check if values are already formatted (have userPermission wrapper)
+        final formattedValue = value.map((item) {
+          if (item is Map<String, dynamic>) {
+            // Check if already formatted (has userPermission wrapper)
+            if (item.containsKey('userPermission')) {
+              return item; // Already formatted, return as-is
+            }
+
+            // Format raw option to userPermission wrapper
+            return {
+              'userPermission': {
+                'id': item['id'] ?? item['userPermissionId'] ?? '',
+                'name': item['name'] ?? item['permissionName'] ?? '',
+                // Copy all other fields
+                ...item.entries.where((entry) => 
+                  entry.key != 'id' && 
+                  entry.key != 'name' && 
+                  entry.key != 'userPermissionId' && 
+                  entry.key != 'permissionName'
+                ).fold<Map<String, dynamic>>({}, (map, entry) {
+                  map[entry.key] = entry.value;
+                  return map;
+                }),
+              }
+            };
+          } else if (item is String) {
+            // If item is string (ID), create userPermission object with ID
+            return {
+              'userPermission': {
+                'id': item,
+                'name': item, // Fallback name
+              }
+            };
+          }
+          return item;
+        }).toList();
+        
+        // Update module data with formatted value
+        _moduleData[key] = formattedValue;
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+
+      } else {
+        // Handle other field types normally
+        _moduleData[key] = value;
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
+    });
+    
+    // Defer notification to avoid calling setState during build
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.onDataChanged != null) {
+        widget.onDataChanged!(_response);
+      }
     });
   }
   
   @override
   Widget buildTabContent(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Section
-          _buildHeaderSection(),
-          const SizedBox(height: 24),
-          
-          // Combined Permissions Matrix
-          _buildPermissionsMatrixSection(),
-          const SizedBox(height: 24),
-          
-          // Advanced Permissions
-          _buildAdvancedPermissionsSection(),
-        ],
-      ),
+    if (_itemDetail.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Use cached widget if available to prevent recreation
+    if (_cachedTreeWidget != null) {
+      return _cachedTreeWidget!;
+    }
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _buildFieldConfig(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final fieldConfig = snapshot.data ?? _buildBaseFieldConfig();
+
+        final fields = CoreDynamicFields.buildFields(
+          fieldConfigs: [fieldConfig],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        );
+
+        // Cache the tree widget to prevent recreation
+        _cachedTreeWidget = Padding(
+          padding: const EdgeInsets.all(8),
+          child: fields.isNotEmpty ? fields.first : const SizedBox.shrink(),
+        );
+
+        return _cachedTreeWidget!;
+      },
     );
   }
 
-  Widget _buildHeaderSection() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.teal.shade600, Colors.teal.shade800],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.grid_view,
-              size: 48,
-              color: Colors.white,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Table Application Permissions',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-            Text(
-              'Module: ${_moduleData['moduleCode']?.toString() ?? 'MODULE'}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<Map<String, dynamic>> _buildFieldConfig() async {
+    // Simulate async operation to match the pattern
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _buildBaseFieldConfig();
   }
 
-  Widget _buildPermissionsMatrixSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Permissions Matrix',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.teal.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Matrix header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.teal.shade100,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    flex: 3,
-                    child: Text(
-                      'Role / User',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'List',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'View',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Create',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Edit',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Delete',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Matrix rows
-            if (_moduleData['permissionsMatrix'] != null) ...[
-              for (int i = 0; i < (_moduleData['permissionsMatrix'] as List).length; i++)
-                _buildPermissionMatrixRow(i),
-            ] else ...[
-              _buildEmptyState('No permissions configured'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionMatrixRow(int index) {
-    final permission = (_moduleData['permissionsMatrix'] as List)[index];
-    final isEven = index % 2 == 0;
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        color: isEven ? Colors.grey.shade50 : Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                Icon(
-                  permission['type'] == 'role' ? Icons.group : Icons.person,
-                  size: 20,
-                  color: Colors.teal.shade600,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    permission['name'] ?? 'Unknown',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _buildPermissionCheckbox(
-              permission['canList'] ?? false,
-              (value) => _updatePermissionMatrix(index, 'canList', value),
-            ),
-          ),
-          Expanded(
-            child: _buildPermissionCheckbox(
-              permission['canView'] ?? false,
-              (value) => _updatePermissionMatrix(index, 'canView', value),
-            ),
-          ),
-          Expanded(
-            child: _buildPermissionCheckbox(
-              permission['canCreate'] ?? false,
-              (value) => _updatePermissionMatrix(index, 'canCreate', value),
-            ),
-          ),
-          Expanded(
-            child: _buildPermissionCheckbox(
-              permission['canEdit'] ?? false,
-              (value) => _updatePermissionMatrix(index, 'canEdit', value),
-            ),
-          ),
-          Expanded(
-            child: _buildPermissionCheckbox(
-              permission['canDelete'] ?? false,
-              (value) => _updatePermissionMatrix(index, 'canDelete', value),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPermissionCheckbox(bool value, Function(bool) onChanged) {
-    return Center(
-      child: Checkbox(
-        value: value,
-        onChanged: (newValue) => onChanged(newValue ?? false),
-        activeColor: Colors.teal.shade600,
-      ),
-    );
-  }
-
-  Widget _buildAdvancedPermissionsSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Advanced Permissions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.teal.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Global Settings
-            _buildAdvancedSetting(
-              'Inherit Parent Permissions',
-              _moduleData['inheritParent'] ?? false,
-              (value) => updateModuleData('inheritParent', value),
-              'Automatically inherit permissions from parent module',
-            ),
-            
-            _buildAdvancedSetting(
-              'Enable Role Hierarchy',
-              _moduleData['enableRoleHierarchy'] ?? true,
-              (value) => updateModuleData('enableRoleHierarchy', value),
-              'Use hierarchical role-based permissions',
-            ),
-            
-            _buildAdvancedSetting(
-              'Dynamic Permissions',
-              _moduleData['dynamicPermissions'] ?? false,
-              (value) => updateModuleData('dynamicPermissions', value),
-              'Allow runtime permission modifications',
-            ),
-            
-            _buildAdvancedSetting(
-              'Audit Permission Changes',
-              _moduleData['auditChanges'] ?? true,
-              (value) => updateModuleData('auditChanges', value),
-              'Log all permission changes for audit trail',
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Action buttons
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _resetPermissions,
-                  icon: const Icon(Icons.restore),
-                  label: const Text('Reset All'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                ElevatedButton.icon(
-                  onPressed: _copyFromTemplate,
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy Template'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                ElevatedButton.icon(
-                  onPressed: _exportMatrix,
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdvancedSetting(String title, bool value, Function(bool) onChanged, String description) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.teal.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.teal.shade200),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal.shade700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Colors.teal.shade600,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String message) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.grey.shade600),
-          const SizedBox(width: 12),
-          Text(message),
-        ],
-      ),
-    );
-  }
-
-  void _updatePermissionMatrix(int index, String key, bool value) {
-    final matrix = List<Map<String, dynamic>>.from(_moduleData['permissionsMatrix'] ?? []);
-    matrix[index][key] = value;
-    updateModuleData('permissionsMatrix', matrix);
-  }
-
-  void _resetPermissions() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All permissions have been reset'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  void _copyFromTemplate() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Permissions copied from template'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _exportMatrix() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Permissions matrix exported'),
-        backgroundColor: Colors.teal,
-      ),
-    );
-  }
-
-  @override
-  @override
-  bool validateData() {
-    return true;
-  }
-
-  // Method to prepare data for save (not overriding since base method was removed)
-  Map<String, dynamic> prepareDataForSave() {
+  Map<String, dynamic> _buildBaseFieldConfig() {
     return {
-      'permissionsMatrix': _moduleData['permissionsMatrix'] ?? [],
-      'inheritParent': _moduleData['inheritParent'] ?? false,
-      'enableRoleHierarchy': _moduleData['enableRoleHierarchy'] ?? true,
-      'dynamicPermissions': _moduleData['dynamicPermissions'] ?? false,
-      'auditChanges': _moduleData['auditChanges'] ?? true,
+      'key': 'tree',
+      'widget': 'tree',
+      'label': 'Table Application Permissions Configuration',
+      'headerTemplate': '{stt} - {actionMap.name}',
+      'isUseUpdateAction': true,
+      'isOnItemDetailValue': false, // Mode 2
+      'titleTemplate': '{stt} - {tabModuleMap.name}',
+      'allowAdd': true,
+      'allowEdit': true,
+      'allowDelete': true,
+      
+      // Giới hạn chỉ ở level 0 - không cho phép đi vào cấp con
+      'levelRestrictions': {
+        'minLevelForAdd': 0,           // Chỉ cho phép Add ở level 0
+        'minLevelForEdit': 0,          // Chỉ cho phép Edit ở level 0
+        'minLevelForDelete': 0,        // Chỉ cho phép Delete ở level 0
+        'minLevelForFooterActions': 0, // Chỉ cho phép Footer Actions ở level 0
+        'maxLevel': 0,                 // Giới hạn tối đa chỉ ở level 0
+        'preventChildCreation': true,  // Không cho phép tạo cấp con
+        'showNextLevelIcon': false,    // Không hiển thị icon next level
+      },
+      
+      // Summary shows stt, actionMap, grantPermission, isDisabled, isHidden
+      'summary': {
+        'layout': 'row',
+        'fields': [
+          {'key': 'grantPermission', 'label': 'Grant Permission', 'collectionTemplate': '{userPermission.name}', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'isDisabled', 'label': 'Disabled', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+          {'key': 'isHidden', 'label': 'Hidden', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
+        ]
+      },
+      
+      // Editable fields in the dialog
+      'children': [
+        {'key': 'stt', 'label': 'STT', 'required': true, 'type': 'number'},
+        {
+          'key': 'grantPermission',
+          'widget': 'select',
+          'selectType': 'multiple',
+          'label': 'Grant Permission',
+          'data': 'DROPDOWN.USRPER',
+          'display': 'userPermission.name', // For input field display
+          'dropdownDisplay': 'name', // For dropdown/popup display
+          'splitKey': true, // Enable split key functionality
+          'required': false,
+        },
+        {
+          'key': 'isDisabled',
+          'widget': 'checkbox',
+          'label': 'Disabled',
+          'checkboxStyle': 'switch',
+        },
+        {
+          'key': 'isHidden',
+          'widget': 'checkbox',
+          'label': 'Hidden',
+          'checkboxStyle': 'switch',
+        },
+      ],
     };
   }
 
   @override
+  bool validateData() {
+    return CoreDynamicFields.validateData(
+      context: context,
+      moduleData: _moduleData,
+      itemDetail: _itemDetail,
+    );
+  }
+
+  @override
+  Map<String, dynamic> prepareDataForSave() {
+    return Map<String, dynamic>.from(_moduleData);
+  }
+
+  @override
   Future<Map<String, dynamic>> loadTabSpecificData() async {
-    // Return empty map to use initialData from provider instead of mock data
+    // No-op, data provided by provider initialData
     return {};
   }
 
-  // Save and submit methods (not overriding since base methods were removed)
   Future<void> saveTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 300));
+    // TODO: Implement actual API call
   }
 
   Future<void> submitTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 300));
+    // TODO: Implement actual API call
   }
 }
