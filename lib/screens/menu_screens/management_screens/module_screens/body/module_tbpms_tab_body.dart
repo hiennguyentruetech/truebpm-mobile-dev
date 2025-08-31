@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
-import 'package:truebpm/widgets/core_dynamic_fields.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
-import 'package:truebpm/widgets/loading_overlay.dart';
 import 'dart:async'; // Added for Timer
 import 'package:truebpm/services/core_service.dart'; // Added for CoreService
 import 'package:truebpm/services/auth_service.dart'; // Added for AuthService
@@ -320,10 +318,10 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
     final String? moduleId = _itemDetail['value']?['id']?.toString();
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.only(top: 12, left: 7, right: 7),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -336,7 +334,6 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
         children: [
           // Status dropdown - 1 dòng
           _buildStatusDropdown(moduleId, _currentStatusId),
-          const SizedBox(height: 12),
           
           // Tab Module dropdown - 1 dòng
           _buildTabModuleDropdown(moduleId, _currentTabModuleId),
@@ -398,8 +395,8 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
   }
 
   void _onFilterChanged(String key, dynamic value) {
-    // Log filter change
-    print('🔄 Filter changed: $key = $value');
+    // Log filter change với thông tin chi tiết hơn
+    print('🔄 Filter changed: $key = $value (current statusId: $_currentStatusId, tabModuleId: $_currentTabModuleId)');
     
     // Update local state immediately
     if (key == 'statusId') {
@@ -428,14 +425,17 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
 
   // Debounce timer để tránh gọi API quá nhiều
   Timer? _debounceTimer;
+  bool _isLoading = false; // Thêm flag để tránh gọi API đồng thời
   
   void _debouncedDataReload() {
     // Cancel previous timer
     _debounceTimer?.cancel();
     
-    // Set new timer with shorter delay
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _triggerDataReload();
+    // Set new timer với delay ngắn hơn để UX tốt hơn
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!_isLoading) {
+        _triggerDataReload();
+      }
     });
   }
 
@@ -445,9 +445,19 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
 
     if (moduleId == null) return;
 
+    // Prevent multiple simultaneous API calls
+    if (_isLoading) {
+      print('⚠️ API call already in progress, skipping...');
+      return;
+    }
+
+    _isLoading = true;
+
     try {
-      // Show loading overlay using existing LoadingOverlay
-      context.showLoading(message: 'Reloading data...');
+      // Show loading overlay using LoadingOverlay với context đúng
+      if (mounted) {
+        LoadingOverlay.show(context, message: 'Đang tải lại dữ liệu...');
+      }
 
       // Prepare API request payload theo format của CoreService.fetchDetailData
       final Map<String, dynamic> requestPayload = {
@@ -474,7 +484,9 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
       );
 
       // Hide loading overlay
-      context.hideLoading();
+      if (mounted) {
+        LoadingOverlay.hide();
+      }
       
       // Update data with API response
       if (response != null && response['success'] == true && response['itemDetail'] != null) {
@@ -496,36 +508,30 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
           widget.onDataChanged!(_response);
         }
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Data reloaded successfully'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        // KHÔNG HIỂN THỊ TOAST NOTIFICATION - TẮT HẲN
+        // Chỉ log để debug
+        print('✅ Data reloaded successfully');
+        
       } else {
-        // Handle error response
+        // Handle error response - KHÔNG HIỂN THỊ TOAST
         final errorMessage = response?['message'] ?? 'Failed to reload data';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        print('❌ Error reloading data: $errorMessage');
+        
+        // Có thể thêm logic xử lý lỗi khác ở đây nếu cần
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Hide loading overlay
-      context.hideLoading();
+      if (mounted) {
+        LoadingOverlay.hide();
+      }
       
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error reloading data: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      // Log error - KHÔNG HIỂN THỊ TOAST
+      print('❌ Exception reloading data: ${e.toString()}');
+      
+      // Có thể thêm logic xử lý lỗi khác ở đây nếu cần
+    } finally {
+      // Always reset loading flag
+      _isLoading = false;
     }
   }
 
@@ -543,7 +549,17 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
 
   @override
   void dispose() {
+    // Cancel debounce timer
     _debounceTimer?.cancel();
+    
+    // Hide loading overlay if still showing
+    if (_isLoading) {
+      LoadingOverlay.hide();
+    }
+    
+    // Clear cache
+    _cachedTreeWidget = null;
+    
     super.dispose();
   }
 }
