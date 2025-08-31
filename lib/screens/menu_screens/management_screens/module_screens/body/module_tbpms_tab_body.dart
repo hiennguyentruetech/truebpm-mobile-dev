@@ -4,6 +4,9 @@ import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/widgets/loading_overlay.dart';
+import 'dart:async'; // Added for Timer
+import 'package:truebpm/services/core_service.dart'; // Added for CoreService
+import 'package:truebpm/services/auth_service.dart'; // Added for AuthService
 
 /// Tab body cho MODULE TBPMS (Table Permissions)
 /// Xử lý phân quyền table-level permissions sử dụng CoreTree
@@ -155,6 +158,21 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    return Column(
+      children: [
+        // Filter dropdowns section - LUÔN HIỂN THỊ
+        _buildFilterDropdowns(),
+        
+        // Tree content - Có thể bị ẩn khi loading
+        Expanded(
+          child: _buildTreeContent(),
+        ),
+      ],
+    );
+  }
+
+  /// Build tree content với caching và loading state
+  Widget _buildTreeContent() {
     // Use cached widget if available to prevent recreation
     if (_cachedTreeWidget != null) {
       return _cachedTreeWidget!;
@@ -186,72 +204,15 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
           child: fields.isNotEmpty ? fields.first : const SizedBox.shrink(),
         );
 
-        return Column(
-          children: [
-            // Filter dropdowns section
-            _buildFilterDropdowns(),
-            const SizedBox(height: 16),
-            
-                    // Debug button for testing grantPermission logic with splitKey
-        if (widget.moduleCode == 'MODULE') // Only show in debug mode
-          _buildDebugTestButton(),
-            
-            // Tree content
-            Expanded(child: _cachedTreeWidget!),
-          ],
-        );
+        return _cachedTreeWidget!;
       },
     );
   }
 
-  /// Debug test button để kiểm tra logic grantPermission với splitKey
-  Widget _buildDebugTestButton() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              // Test data structure
-              final testData = [
-                {
-                  'id': '4E346B64-947E-4094-8A30-E6AF8CAA9ECB',
-                  'name': 'All Permissions'
-                },
-                {
-                  'id': '1923CD49-472C-4F57-A477-F6879EFA0CA1',
-                  'name': 'All Permission Except HR & Accountant'
-                }
-              ];
-              
-              // Debug: print('🧪 Testing grantPermission logic with splitKey:');
-              // Debug: print('  • Test data: $testData');
-              
-              // Test format với userPermission wrapper
-              _onChanged('grantPermission', testData);
-              
-              // Debug: print('  • After format: ${_moduleData['grantPermission']}');
-            },
-            child: const Text('🧪 Test GrantPermission Logic with SplitKey'),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () {
-              // Test clear data
-              _onChanged('grantPermission', []);
-              
-              // Debug: print('🧹 Cleared grantPermission data');
-            },
-            child: const Text('🧹 Clear GrantPermission Data'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Future<Map<String, dynamic>> _buildFieldConfig() async {
-    // Simulate async operation to match the pattern
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Return immediately without artificial delay
     return _buildBaseFieldConfig();
   }
 
@@ -440,97 +401,179 @@ class _ModuleTbpmsTabBodyState extends CoreTabBodyState<ModuleTbpmsTabBody> {
   }
 
   void _onFilterChanged(String key, dynamic value) {
-    // Update local state immediately (no setState to avoid re-render)
+    // Log filter change
+    print('🔄 Filter changed: $key = $value');
+    
+    // Update local state immediately
     if (key == 'statusId') {
       _currentStatusId = value;
     } else if (key == 'tabModuleId') {
       _currentTabModuleId = value;
     }
 
-    // Trigger API call to reload data
-    _triggerDataReload();
+    // Update itemDetail immediately for better UX
+    setState(() {
+      if (_itemDetail['value'] == null) {
+        _itemDetail['value'] = {};
+      }
+      if (_itemDetail['value']['dataSelect'] == null) {
+        _itemDetail['value']['dataSelect'] = {};
+      }
+      _itemDetail['value']['dataSelect'][key] = value;
+      
+      // Update response
+      _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+    });
+
+    // Trigger API call to reload data with debouncing
+    _debouncedDataReload();
   }
 
-  void _triggerDataReload() {
+  // Debounce timer để tránh gọi API quá nhiều
+  Timer? _debounceTimer;
+  
+  void _debouncedDataReload() {
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+    
+    // Set new timer with shorter delay
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _triggerDataReload();
+    });
+  }
+
+  void _triggerDataReload() async {
     // Get current values from local state
     final String? moduleId = _itemDetail['value']?['id']?.toString();
-    final dynamic statusId = _currentStatusId;
-    final dynamic tabModuleId = _currentTabModuleId;
 
     if (moduleId == null) return;
 
-    // Prepare payload for API call
-    final Map<String, dynamic> payload = {
-      "user": {
-        "id": "4EDCE3A5-898E-46E1-9812-11FE5B8A16BC",
-        "code": "admintest_1",
-        "fullName": "System Administrator",
-        "phone": "909682278",
-        "email": "admintest@mailinator.com",
-        "personalEmail": null,
-        "position": "CEO",
-        "createdDate": "2023-03-17T15:17:45Z",
-        "managerFullName": null,
-        "roles": []
-      },
-      "moduleCode": "MODULE",
-      "tabModuleCode": "TBPMS",
-      "listItem": {
-        "dataSelect": {
-          "statusId": statusId,
-          "tabModuleId": tabModuleId,
-        },
-        "id": moduleId,
-        "code": _itemDetail['value']?['code'] ?? "MODULE",
-        "name": _itemDetail['value']?['name'] ?? "Module",
-        "moduleId": moduleId
-      }
-    };
+    try {
+      // Show loading overlay using existing LoadingOverlay
+      context.showLoading(message: 'Reloading data...');
 
-    // Show loading overlay using existing LoadingOverlay
-    context.showLoading(message: 'Reloading data...');
+      // Prepare API request payload theo format của CoreService.fetchDetailData
+      final Map<String, dynamic> requestPayload = {
+        'user': await _getUserData(),
+        'moduleCode': 'MODULE',
+        'tabModuleCode': 'TBPMS',
+        'listItem': {
+          'dataSelect': {
+            'statusId': _currentStatusId,
+            'tabModuleId': _currentTabModuleId,
+          },
+          'id': moduleId,
+          'code': _itemDetail['value']?['code'] ?? '',
+          'name': _itemDetail['value']?['name'] ?? '',
+          'moduleId': moduleId,
+        }
+      };
 
-    // TODO: Implement actual API call here
-    // Example:
-    // await _apiService.reloadModuleData(payload);
-    
-    // For now, simulate API call
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        // Hide loading overlay
-        context.hideLoading();
+      // Log API Request theo format của CoreService
+      print('📤 API Request - Reload Module Data:');
+      print('  • Method: POST');
+      print('  • Endpoint: MODULE.TBPMS');
+      print('  • Module ID: $moduleId');
+      print('  • Status ID: $_currentStatusId');
+      print('  • Tab Module ID: $_currentTabModuleId');
+      print('  • Full Payload: $requestPayload');
+
+      // Call CoreService.fetchDetailData với payload mới
+      final response = await CoreService.instance.fetchDetailData(
+        'MODULE',
+        'TBPMS',
+        requestPayload,
+      );
+
+      // Log API Response theo format của CoreService
+      print('📥 API Response - Reload Module Data:');
+      print('  • Success: ${response?['success'] ?? false}');
+      print('  • Message Type: ${response?['messageType'] ?? 'N/A'}');
+      print('  • Message: ${response?['message'] ?? 'N/A'}');
+      print('  • Has ItemDetail: ${response?['itemDetail'] != null}');
+      print('  • Full Response: $response');
+
+      // Hide loading overlay
+      context.hideLoading();
+      
+      // Update data with API response
+      if (response != null && response['success'] == true && response['itemDetail'] != null) {
+        final responseItemDetail = response['itemDetail'] as Map<String, dynamic>;
         
-        // Update itemDetail with new values
         setState(() {
-          if (_itemDetail['value'] == null) {
-            _itemDetail['value'] = {};
-          }
-          if (_itemDetail['value']['dataSelect'] == null) {
-            _itemDetail['value']['dataSelect'] = {};
-          }
-          _itemDetail['value']['dataSelect']['statusId'] = _currentStatusId;
-          _itemDetail['value']['dataSelect']['tabModuleId'] = _currentTabModuleId;
+          // Update itemDetail với data mới từ API
+          _itemDetail = Map<String, dynamic>.from(responseItemDetail);
           
-          // Update response
-          _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+          // Update response structure
+          _response = Map<String, dynamic>.from(response);
+          
+          // Log updated data structure
+          print('🔄 Updated Data Structure:');
+          print('  • Item Detail: $_itemDetail');
+          print('  • Response: $_response');
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data reloaded successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        
-        // Clear cache to force rebuild tree
+        // Clear cache to force rebuild tree with new data
         _cachedTreeWidget = null;
         
         // Notify parent about data change
         if (widget.onDataChanged != null) {
           widget.onDataChanged!(_response);
         }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Data reloaded successfully'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Handle error response
+        final errorMessage = response?['message'] ?? 'Failed to reload data';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
-    });
+    } catch (e, stackTrace) {
+      // Hide loading overlay
+      context.hideLoading();
+      
+      // Log error theo format của CoreService
+      print('❌ API Error - Reload Module Data:');
+      print('  • Error: $e');
+      print('  • Stack Trace: $stackTrace');
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error reloading data: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Helper method to get user data from session (tương tự như trong DetailCoreScreen)
+  Future<Map<String, dynamic>> _getUserData() async {
+    try {
+      final authService = AuthService();
+      final userInfo = await authService.getSavedUserInfo();
+      return userInfo?.toJson() ?? {};
+    } catch (e) {
+      print('❌ Error getting user data: $e');
+      return {};
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 }

@@ -1,5 +1,4 @@
 import 'package:truebpm/services/core_service.dart';
-import 'package:truebpm/utils/global_store.dart';
 
 /// Service chuyên biệt cho TBPMS (Table Permissions) module
 /// Tái sử dụng logic từ CoreService với dataSelect trong listItem
