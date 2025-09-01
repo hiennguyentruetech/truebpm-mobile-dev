@@ -82,8 +82,8 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
           fieldConfigs: [
             { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
             { 'key': 'code', 'label': 'Code', 'widget': 'input', 'type': 'text', 'disabled': true },
-            { 'key': 'purpose', 'label': 'Purpose', 'widget': 'input', 'type': 'text', 'required': true },
             { 'key': 'fromDate', 'widget': 'datetime', 'label': 'From Date - To Date', 'datetimeType': 'daterange', 'startDateKey': 'fromDate', 'endDateKey': 'toDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select duration...', 'required': true},
+            { 'key': 'purpose', 'label': 'Purpose', 'widget': 'input', 'type': 'text', 'maxLines': 3, 'required': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -95,7 +95,7 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
 
   Widget _buildAssetInformationSection() {
     return CardSection(
-      title: 'Asset Information',
+      title: 'Car Information',
       headerIcon: Icons.car_rental,
       headerColor: const Color.fromARGB(255, 87, 6, 101),
       children: [
@@ -111,7 +111,7 @@ class _CarBookingDetailsTabBodyState extends CoreTabBodyState<CarBookingDetailsT
               'required': true,
             },
             // Display nested asset fields as view-only inputs
-            { 'key': 'assetId.name', 'label': 'Asset Name', 'widget': 'input', 'type': 'text', 'onlyView': true },
+            // { 'key': 'assetId.name', 'label': 'Asset Name', 'widget': 'input', 'type': 'text', 'onlyView': true },
             { 'key': 'beforeKM', 'label': 'Before KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0, 'suffix': 'KM' },
             { 'key': 'afterKM', 'label': 'After KM', 'widget': 'input', 'type': 'number', 'decimalPlaces': 0, 'suffix': 'KM' },
           ],

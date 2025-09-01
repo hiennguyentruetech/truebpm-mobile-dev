@@ -257,7 +257,9 @@ class _CoreStatusChipState extends State<CoreStatusChip> {
         ],
       ),
       child: Row(
-        children: [
+  // Cho phép text xuống dòng nếu quá dài
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
           // Left icon container with enhanced styling
           if (widget.showIcon && style.icon != null) ...[
             Container(
@@ -284,12 +286,13 @@ class _CoreStatusChipState extends State<CoreStatusChip> {
               style.label,
               style: widget.textStyle ?? TextStyle(
                 color: _isDisabled ? Colors.grey.shade500 : style.color,
-                fontSize: 14, // Fixed consistent size
-                fontWeight: FontWeight.w700, // Đậm hơn (tăng từ w600 lên w700)
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 0.2,
                 height: 1.2,
               ),
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
+              overflow: TextOverflow.visible, // Hiển thị full, không cắt ...
             ),
           ),
           // Right indicator (optional visual enhancement)
