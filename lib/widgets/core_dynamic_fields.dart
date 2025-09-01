@@ -206,7 +206,6 @@ class CoreDynamicFields {
     final List<Map<String, String>>? moreDisplay = config['moreDisplay']?.cast<Map<String, String>>();
     
           // Special case for grantPermission with userPermission wrapper
-      final bool isGrantPermissionField = fieldName == 'grantPermission';
       final String? specialDisplay = config['specialDisplay']; // For special display format like 'userPermission.name'
       final bool useUserPermissionWrapper = config['useUserPermissionWrapper'] ?? false;
       
@@ -277,12 +276,36 @@ class CoreDynamicFields {
     final String displayFormatStr = config['displayFormat'] ?? 'ddMMyyyy';
     
     // Parse min/max constraints
-    final DateTime? minDate = config['minDate'] != null 
+    DateTime? minDate = config['minDate'] != null 
         ? (config['minDate'] is DateTime ? config['minDate'] : DateTime.tryParse(config['minDate'].toString()))
         : null;
-    final DateTime? maxDate = config['maxDate'] != null 
+    DateTime? maxDate = config['maxDate'] != null 
         ? (config['maxDate'] is DateTime ? config['maxDate'] : DateTime.tryParse(config['maxDate'].toString()))
         : null;
+
+    // Dynamic date constraints via path
+    dynamic _getByPathLocal(Map<String, dynamic>? map, String path) {
+      if (map == null) return null;
+      dynamic curr = map;
+      for (final part in path.split('.')) {
+        if (curr is Map && curr.containsKey(part)) {
+          curr = curr[part];
+        } else {
+          return null;
+        }
+      }
+      return curr;
+    }
+
+    final valueMap = itemDetail['value'] is Map<String, dynamic> ? itemDetail['value'] as Map<String, dynamic> : <String,dynamic>{};
+    if (config['minDatePath'] != null && minDate == null) {
+      final raw = _getByPathLocal(valueMap, config['minDatePath']);
+      if (raw is DateTime) minDate = raw; else if (raw is String) { minDate = DateTime.tryParse(raw); }
+    }
+    if (config['maxDatePath'] != null && maxDate == null) {
+      final raw = _getByPathLocal(valueMap, config['maxDatePath']);
+      if (raw is DateTime) maxDate = raw; else if (raw is String) { maxDate = DateTime.tryParse(raw); }
+    }
     final TimeOfDay? minTime = config['minTime'] != null 
         ? _parseTimeOfDay(config['minTime'])
         : null;
@@ -323,6 +346,18 @@ class CoreDynamicFields {
         displayFormat = DateDisplayFormat.ddMMyyyy;
     }
     
+    // Determine disabled state with optional required key dependencies
+    bool disabled = config['disabled'] ?? false;
+    if (config['requireKeys'] is List) {
+      for (final keyPath in (config['requireKeys'] as List)) {
+        final dep = _getByPathLocal(valueMap, keyPath.toString());
+        if (dep == null || (dep is String && dep.isEmpty)) {
+          disabled = true;
+          break;
+        }
+      }
+    }
+
     return CoreDateTime(
       dataKey: fieldName,
       startDateKey: startDateKey,
@@ -337,7 +372,7 @@ class CoreDynamicFields {
       minTime: minTime,
       maxTime: maxTime,
       defaultTime: defaultTime,
-  disabled: config['disabled'],
+  disabled: disabled,
   hidden: config['hidden'],
       onChanged: datetimeType != CoreDateTimeType.daterange 
           ? (value) => onChanged(fieldName, value)

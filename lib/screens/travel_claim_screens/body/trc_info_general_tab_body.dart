@@ -6,6 +6,7 @@ import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/utils/logger.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
+import 'package:truebpm/widgets/loading_overlay.dart';
 
 /// Tab body for TRACLA INFO - General Expense (use same tab code 'INFO' but separate UI tab)
 class TRCInfoGeneralTabBody extends CoreTabBody {
@@ -48,12 +49,40 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     _response = Map<String, dynamic>.from(widget.initialData ?? {});
     _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
     _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    // Preserve parent record id separately so collection item 'id' doesn't override in templates
+    if (_moduleData['id'] != null) {
+      _moduleData['_parentId'] = _moduleData['id'];
+    }
     if (mounted) setState(() {});
   }
 
   void _onChanged(String key, dynamic value) {
     setState(() {
       _moduleData[key] = value;
+      // Auto-recalculate for generalExpense collection items
+      if (key == 'generalExpense' && value is List) {
+        for (final item in value) {
+          if (item is Map<String, dynamic>) {
+            final totalRaw = item['total'];
+            double total = 0;
+            if (totalRaw is int) total = totalRaw.toDouble();
+            else if (totalRaw is double) total = totalRaw;
+            final deductibleRaw = item['deductible'];
+            double deductiblePercent = 0;
+            if (deductibleRaw is int) deductiblePercent = deductibleRaw.toDouble();
+            else if (deductibleRaw is double) deductiblePercent = deductibleRaw;
+            double taxPercent = 0;
+            if (item['expenseType'] is Map && (item['expenseType']['tax'] is num)) {
+              taxPercent = (item['expenseType']['tax'] as num).toDouble();
+            } else if (item['tax'] is num) {
+              taxPercent = (item['tax'] as num).toDouble();
+            }
+            final totalAfterDeductible = total - (total * (deductiblePercent / 100));
+            final totalAfterTax = totalAfterDeductible - (totalAfterDeductible * (taxPercent / 100));
+            item['totalAfterTax'] = totalAfterTax.round();
+          }
+        }
+      }
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
@@ -78,73 +107,131 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
           children: [
             _buildGenerateButtons(context),
             const SizedBox(height: 8),
-            ...CoreDynamicFields.buildFields(
-              fieldConfigs: [
-                {
-                  'key': 'generalExpense',
-                  'widget': 'collection',
-                  'label': 'General Expense',
-                  'itemLabel': 'Expense Item',
-                  'addButtonText': 'Add Expense',
-                  'hintText': 'No expense added yet. Click Add to create one.',
-                  'allowAdd': true,
-                  'allowRemove': true,
-                  'editMode': 'modal',
-                  'useFloatingAddButton': true,
-                  'useAddFirstList': true,
-                  'totalSummary': {
-                    'key': 'totalAfterTax',
-                    'label': 'Total After Tax',
-                    'format': '#,##0',
-                    'suffix': ' VND',
-                    'bgColor': '#E8F5E8',
-                    'borderColor': '#A5D6A7',
-                    'labelColor': '#2E7D32',
-                    'valueColor': '#1B5E20',
-                  },
-                  'summary': {
-                    'fields': [
-                      { 'key': 'travelRequest', 'display': 'code', 'label': 'Travel Request', 'bgColor': '#F3E5F5', 'borderColor': '#CE93D8', 'labelColor': '#7B1FA2', 'valueColor': '#4A148C' },
-                      { 'key': 'date', 'label': 'Date', 'type': 'date', 'format': 'dd/MM/yyyy', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
-                      { 'key': 'expenseType', 'display': 'name', 'label': 'Type', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
-                      { 'key': 'locationObject', 'display': 'name', 'label': 'Location', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
-                      { 'key': 'purpose', 'label': 'Purpose', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
-                      { 'key': 'deductible', 'label': 'Deductible', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
-                      { 'key': 'total', 'label': 'Total', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
-                      { 'key': 'tax', 'label': 'Tax', 'type': 'number', 'decimalPlaces': 2, 'format': '#,##0.00', 'suffix': '%', 'bgColor': '#FFF3E0', 'borderColor': '#FFB74D', 'labelColor': '#E65100', 'valueColor': '#BF360C' },
-                      { 'key': 'totalAfterTax', 'label': 'Total After Tax', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
-                    ]
-                  },
-                  'children': [
-                    {
-                      'key': 'travelRequest',
-                      'widget': 'select',
-                      'selectType': 'dropdown',
-                      'label': 'Travel Request',
-                      'data': 'DROPDOWN.TRACLA/TRAVELREQUESTS',
-                      'display': 'code',
-                      'required': true,
-                      'hintText': 'Select travel request...',
-                    },
-                    {'key': 'date', 'widget': 'datetime', 'label': 'Date', 'datetimeType': 'date', 'displayFormat': 'ddMMyyyy', 'required': true},
-                    {'key': 'expenseType', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Expense Type', 'data': 'DROPDOWN.TRACLA/EXPENSETYPES', 'display': 'name', 'required': true},
-                    {'key': 'locationObject', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Location', 'data': 'DROPDOWN.TRACLA/LOCATIONS', 'display': 'name', 'required': true},
-                    {'key': 'purpose', 'label': 'Purpose', 'type': 'textarea', 'maxLines': 3, 'required': true},
-                    {'key': 'deductible', 'label': 'Deductible', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'required': true},
-                    {'key': 'total', 'label': 'Total', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'required': true},
-                    {'key': 'tax', 'label': 'Tax', 'type': 'number', 'decimalPlaces': 2, 'suffix': '%', 'required': true},
-                    {'key': 'totalAfterTax', 'label': 'Total After Tax', 'type': 'number', 'decimalPlaces': 0, 'suffix': ' VND', 'required': true},
-                  ],
-                },
-              ],
-              itemDetail: _itemDetail,
-              moduleData: _moduleData,
-              onChanged: _onChanged,
-            ),
+            ..._buildDynamicFieldConfigs(),
           ],
         ),
       ),
       floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  List<Widget> _buildDynamicFieldConfigs() {
+  // Build dropdown endpoints with explicit parent id to avoid null templates
+  final parentId = _moduleData['_parentId'] ?? _moduleData['id'] ?? _moduleData['travelClaimId'];
+  final encodedParentId = parentId == null ? '' : Uri.encodeComponent(parentId.toString());
+    final fieldConfigs = [
+      {
+        'key': 'generalExpense',
+        'widget': 'collection',
+        'label': 'General Expense',
+        'itemLabel': 'Expense Item',
+        'addButtonText': 'Add Expense',
+        'hintText': 'No expense added yet. Click Add to create one.',
+        'allowAdd': true,
+        'allowRemove': true,
+        'editMode': 'modal',
+        'useFloatingAddButton': true,
+        'useAddFirstList': true,
+        'totalSummary': {
+          'key': 'totalAfterTax',
+          'label': 'Total After Tax',
+          'format': '#,##0',
+          'suffix': ' VND',
+          'bgColor': '#E8F5E8',
+          'borderColor': '#A5D6A7',
+          'labelColor': '#2E7D32',
+          'valueColor': '#1B5E20',
+        },
+        'summary': {
+          'fields': [
+            { 'key': 'travelRequest', 'display': 'code', 'label': 'Travel Request', 'bgColor': '#F3E5F5', 'borderColor': '#CE93D8', 'labelColor': '#7B1FA2', 'valueColor': '#4A148C' },
+            { 'key': 'date', 'label': 'Date', 'type': 'date', 'format': 'dd/MM/yyyy', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+            { 'key': 'expenseType', 'display': 'name', 'label': 'Type', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
+            { 'key': 'locationObject', 'display': 'name', 'label': 'Location', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+            { 'key': 'purpose', 'label': 'Purpose', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+            { 'key': 'deductible', 'label': 'Deductible', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' %', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+            { 'key': 'total', 'label': 'Total', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+            { 'key': 'totalAfterTax', 'label': 'Total After Tax', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+          ]
+        },
+        'children': [
+          {
+            'key': 'travelRequest',
+            'widget': 'select',
+            'selectType': 'dropdown',
+            'label': 'Travel Request',
+            'data': 'DROPDOWN.TRACLA/TR.BYCLAIM?id=$encodedParentId',
+            'display': 'code',
+            'required': true,
+            'hintText': 'Select travel request...',
+            'clearOnChange': ['date'],
+          },
+          {
+            'key': 'date',
+            'widget': 'datetime',
+            'label': 'Date',
+            'datetimeType': 'date',
+            'displayFormat': 'ddMMyyyy',
+            'required': true,
+            // Use dynamic paths for min/max constraints resolved at runtime
+            'minDatePath': 'travelRequest.startDate',
+            'maxDatePath': 'travelRequest.endDate',
+            // Disable until travelRequest chosen
+            'requireKeys': ['travelRequest.id'],
+          },
+          {
+            'key': 'expenseType',
+            'widget': 'select',
+            'selectType': 'dropdown',
+            'label': 'Expense Type',
+            'data': 'DROPDOWN.TRACLA/EXP.TYPE',
+            'display': 'name',
+            'required': true,
+          },
+          {
+            'key': 'locationObject',
+            'widget': 'select',
+            'selectType': 'dropdown',
+            'label': 'Location',
+            'data': 'DROPDOWN.TRACLA/LOC.BYCLAIM?id=$encodedParentId',
+            'display': 'name',
+            'required': true,
+          },
+          {'key': 'purpose', 'label': 'Purpose', 'type': 'textarea', 'maxLines': 3, 'required': true},
+          {
+            'key': 'deductible',
+            'label': 'Deductible (%)',
+            'type': 'number',
+            'suffix': ' %',
+            'decimalPlaces': 0,
+            'required': false,
+          },
+          {
+            'key': 'total',
+            'label': 'Total',
+            'type': 'number',
+            'suffix': ' VND',
+            'decimalPlaces': 0,
+            'required': true,
+          },
+          {
+            'key': 'totalAfterTax',
+            'label': 'Total After Tax',
+            'type': 'number',
+            'suffix': ' VND',
+            'decimalPlaces': 0,
+            'required': false,
+            'disabled': true,
+          },
+        ],
+      },
+    ];
+
+    return CoreDynamicFields.buildFields(
+      fieldConfigs: fieldConfigs,
+      itemDetail: _itemDetail,
+      moduleData: _moduleData,
+      onChanged: _onChanged,
     );
   }
 
@@ -255,7 +342,8 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
 
     try {
       final endpoint = 'TRACLA/GEN.EXPENSE?code=$code&travelClaimId=$travelClaimId';
-  appLogger.logWithClass('TRCInfoGeneralTabBody', 'Generating expenses via $endpoint');
+      appLogger.logWithClass('TRCInfoGeneralTabBody', 'Generating expenses via $endpoint');
+      LoadingOverlay.show(context, message: 'Generating expenses...');
       final res = await CoreService.instance.getDropdownData(endpoint);
       if (res['success'] == true) {
         final data = res['data'];
@@ -279,8 +367,9 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Generate expense failed: ${res['message'] ?? 'Unknown error'}')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
+  LoadingOverlay.hide();
       if (mounted) {
         setState(() {
           if (isPerdiem) {
