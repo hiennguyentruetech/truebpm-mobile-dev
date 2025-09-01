@@ -250,6 +250,7 @@ class _ModuleAtpmsTabBodyState extends CoreTabBodyState<ModuleAtpmsTabBody> {
       // Editable fields in the dialog
       'children': [
         {'key': 'stt', 'label': 'STT', 'required': true, 'type': 'number'},
+        {'key': 'field', 'label': 'Field', 'required': true},
         {
           'key': 'grantPermission',
           'widget': 'select',
