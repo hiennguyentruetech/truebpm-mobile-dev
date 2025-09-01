@@ -39,6 +39,8 @@ import 'package:truebpm/screens/car_booking_screens/car_booking_page_screen.dart
 import 'package:truebpm/screens/product_screens/product_page_screen.dart';
 // Quotation Screens
 import 'package:truebpm/screens/quotation_screens/quotation_page_screen.dart';
+// Customer Screens
+import 'package:truebpm/screens/customer_screens/customer_page_screen.dart';
 // Project Management Screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
 // Weekly Report Screens
@@ -91,6 +93,9 @@ class StackRoutes {
 
     // Quotation Stack Routes
     AppRoutes.quotation: () => const QuotationPageScreen(),
+
+    // Customer Stack Routes
+    AppRoutes.customer: () => const CustomerPageScreen(),
 
     // Weekly Report Stack Routes
     AppRoutes.weeklyReport: () => const WeeklyReportPageScreen(),

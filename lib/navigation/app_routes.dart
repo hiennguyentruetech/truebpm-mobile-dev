@@ -50,6 +50,10 @@ class AppRoutes {
   quotation =         '/quotation',
   detailQuotation =   '/detailQuotation',
 
+  // Customer routes
+  customer =          '/customer',
+  detailCustomer =    '/detailCustomer',
+
   // Product routes
   product =           '/product',
   detailProduct =     '/detailProduct',

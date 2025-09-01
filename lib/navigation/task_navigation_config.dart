@@ -46,6 +46,8 @@ enum TaskModuleType {
         return TaskModuleType.dataSpy;
       case 'QUTATI':
         return TaskModuleType.generic; // Use generic detail for now
+      case 'CTM':
+        return TaskModuleType.generic; // Use generic detail for now
       default:
         return TaskModuleType.generic;
     }

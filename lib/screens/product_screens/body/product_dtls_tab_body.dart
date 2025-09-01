@@ -64,32 +64,11 @@ class _ProductDetailsTabBodyState extends CoreTabBodyState<ProductDetailsTabBody
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildBasicInfoSection(),
           _buildProductDetailsSection(),
           _buildSystemInfoSection(),
         ],
       ),
     ).dismissKeyboardOnTap();
-  }
-
-  Widget _buildBasicInfoSection() {
-    return CardSection(
-      title: 'General Information',
-      headerIcon: Icons.info_outline,
-      headerColor: Colors.indigo,
-      children: [
-        ...CoreDynamicFields.buildFields(
-          fieldConfigs: [
-            { 'key': 'code', 'label': 'Code', 'disabled': true },
-            { 'key': 'name', 'label': 'Name', 'required': true },
-            { 'key': 'description', 'label': 'Description', 'type': 'textarea', 'maxLines': 3, 'hintText': 'Enter product description...' },
-          ],
-          itemDetail: _itemDetail,
-          moduleData: _moduleData,
-          onChanged: _onChanged,
-        ),
-      ],
-    );
   }
 
   Widget _buildProductDetailsSection() {
@@ -100,10 +79,13 @@ class _ProductDetailsTabBodyState extends CoreTabBodyState<ProductDetailsTabBody
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
+            { 'key': 'code', 'label': 'Code', 'disabled': true },
+            { 'key': 'name', 'label': 'Name', 'required': true },
+            { 'key': 'description', 'label': 'Description', 'type': 'textarea', 'maxLines': 3, 'hintText': 'Enter product description...' },
             { 'key': 'manufacturer', 'widget': 'input', 'type': 'text', 'label': 'Manufacturer', 'hintText': 'Enter manufacturer' },
             { 'key': 'unit', 'widget': 'input', 'type': 'text', 'label': 'Unit', 'hintText': 'Enter unit' },
             { 'key': 'version', 'widget': 'input', 'type': 'text', 'label': 'Version', 'hintText': 'Enter version' },
-            { 'key': 'newFeature', 'widget': 'input', 'type': 'text', 'label': 'New Feature', 'hintText': 'Enter new feature' },
+            { 'key': 'newFeature', 'widget': 'input', 'type': 'text', 'label': 'New Feature', 'hintText': 'Enter new feature', 'maxLines': 3 },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -121,10 +103,8 @@ class _ProductDetailsTabBodyState extends CoreTabBodyState<ProductDetailsTabBody
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            { 'key': 'createdBy', 'label': 'Created By', 'hintText': 'Created by user', 'type': 'text' },
-            { 'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'hintText': 'Record creation date' },
-            { 'key': 'updatedDate', 'widget': 'datetime', 'label': 'Updated Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'hintText': 'Last update date' },
-            { 'key': 'editId', 'label': 'Edit ID', 'type': 'number', 'hintText': 'Edit identifier' },
+            { 'key': 'createdBy', 'label': 'Created By', 'hintText': 'Created by user', 'type': 'text', 'disabled': true },
+            { 'key': 'createdDate', 'widget': 'datetime', 'label': 'Created Date', 'datetimeType': 'datetime', 'displayFormat': 'ddMMyyyy', 'hintText': 'Record creation date', 'disabled': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
