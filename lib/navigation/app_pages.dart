@@ -44,6 +44,8 @@ import 'package:truebpm/screens/car_booking_screens/car_booking_page_screen.dart
 
 // Product screens
 import 'package:truebpm/screens/product_screens/product_page_screen.dart';
+// Quotation screens
+import 'package:truebpm/screens/quotation_screens/quotation_page_screen.dart';
 // Project Management screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
 
@@ -98,6 +100,9 @@ class AppPages {
 
     // Product route
     AppRoutes.product: (context) => const ProductPageScreen(),
+
+  // Quotation route
+  AppRoutes.quotation: (context) => const QuotationPageScreen(),
 
     // Weekly Report route
     AppRoutes.weeklyReport: (context) => const WeeklyReportPageScreen(),

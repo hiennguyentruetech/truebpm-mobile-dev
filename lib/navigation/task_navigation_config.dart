@@ -44,6 +44,8 @@ enum TaskModuleType {
         return TaskModuleType.eLeave;
       case 'DATASPY':
         return TaskModuleType.dataSpy;
+      case 'QUTATI':
+        return TaskModuleType.generic; // Use generic detail for now
       default:
         return TaskModuleType.generic;
     }

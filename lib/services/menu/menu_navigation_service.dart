@@ -22,6 +22,9 @@ class MenuNavigationService {
         case 'tab-module':
           routeName = AppRoutes.tabModule;
           break;
+        case 'quotation-page':
+          routeName = AppRoutes.quotation;
+          break;
         case 'weekly-report-page':
           routeName = AppRoutes.weeklyReport;
           break;

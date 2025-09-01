@@ -46,6 +46,10 @@ class AppRoutes {
   carBooking =        '/carBooking',
   detailCarBooking =  '/detailCarBooking',
 
+  // Quotation routes
+  quotation =         '/quotation',
+  detailQuotation =   '/detailQuotation',
+
   // Product routes
   product =           '/product',
   detailProduct =     '/detailProduct',
