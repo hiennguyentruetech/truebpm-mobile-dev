@@ -42,6 +42,9 @@ import 'package:truebpm/screens/project_management_screens/project_management_pa
 // Weekly Report Screens
 import 'package:truebpm/screens/weekly_report_screens/weekly_report_page_screen.dart';
 
+// DataSpy Screens
+import 'package:truebpm/screens/menu_screens/management_screens/dataspy_screens/dataspy_page_screen.dart';
+
 /// Stack Routes Configuration
 class StackRoutes {
   // Tất cả routes được định nghĩa chung trong 1 Map
@@ -89,6 +92,9 @@ class StackRoutes {
 
     // Project Management Stack Routes
     AppRoutes.projectManagement: () => const ProjectManagementPageScreen(),
+
+    // DataSpy Stack Routes
+    AppRoutes.dataSpy: () => const DataSpyPageScreen(),
   };
 
   /// Enhanced page route builder with swipe back support

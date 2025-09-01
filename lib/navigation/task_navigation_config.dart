@@ -5,6 +5,7 @@ import 'package:truebpm/screens/product_screens/detail_product_screen.dart';
 import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
 import 'package:truebpm/screens/project_cmdr_screens/project_cmdr_detail_screen.dart';
 import 'package:truebpm/screens/e_leave_screens/detail_e_leave_screen.dart';
+import 'package:truebpm/screens/menu_screens/management_screens/dataspy_screens/detail_dataspy_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -16,6 +17,7 @@ enum TaskModuleType {
   travelClaim('TRACLA'),
   weeklyReport('WKLRPT'),
   eLeave('ELEAVE'),
+  dataSpy('DATASPY'),
   generic('GENERIC');
 
   const TaskModuleType(this.code);
@@ -40,6 +42,8 @@ enum TaskModuleType {
         return TaskModuleType.weeklyReport;
       case 'ELEAVE':
         return TaskModuleType.eLeave;
+      case 'DATASPY':
+        return TaskModuleType.dataSpy;
       default:
         return TaskModuleType.generic;
     }
@@ -154,6 +158,14 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.dataSpy:
+        return DetailDataSpyScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.generic:
         return GenericDetailCoreScreen(
           moduleCode: config.moduleCode,
@@ -184,6 +196,8 @@ class TaskScreenFactory {
         return 'Weekly Report';
       case TaskModuleType.eLeave:
         return 'E-Leave Request';
+      case TaskModuleType.dataSpy:
+        return 'Data Spy';
       case TaskModuleType.generic:
         return 'Task Detail';
     }
@@ -211,6 +225,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Weekly Report';
       case TaskModuleType.eLeave:
         return 'E-Leave';
+      case TaskModuleType.dataSpy:
+        return 'Data Spy';
       case TaskModuleType.generic:
         return 'General Task';
     }
@@ -235,6 +251,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.calendar_view_week;
       case TaskModuleType.eLeave:
         return Icons.event_note;
+      case TaskModuleType.dataSpy:
+        return Icons.analytics;
       case TaskModuleType.generic:
         return Icons.task_alt;
     }

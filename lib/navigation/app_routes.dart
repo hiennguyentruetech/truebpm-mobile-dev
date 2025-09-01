@@ -62,6 +62,10 @@ class AppRoutes {
   projectCmdr = '/projectCmdr',
   detailProjectCmdr = '/detailProjectCmdr',
 
+  // DataSpy routes
+  dataSpy = '/dataSpy',
+  detailDataSpy = '/detailDataSpy',
+
   // Main tab route
   mainTab =           '/mainTab';
 }

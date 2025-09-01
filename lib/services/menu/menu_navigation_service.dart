@@ -52,6 +52,9 @@ class MenuNavigationService {
         case 'e-leave-page':
           routeName = AppRoutes.eLeave;
           break;
+        case 'dataspy-page':
+          routeName = AppRoutes.dataSpy;
+          break;
         default:
           routeName = AppRoutes.detailMenu;
       }
