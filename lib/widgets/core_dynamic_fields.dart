@@ -138,6 +138,9 @@ class CoreDynamicFields {
         inputType = CoreInputType.text;
     }
     
+    final bool? disabledOverride = config.containsKey('disabled') ? config['disabled'] as bool? : null;
+    final bool? hiddenOverride = config.containsKey('hidden') ? config['hidden'] as bool? : null;
+
     return CoreInput(
       dataKey: fieldName,
       itemDetail: itemDetail,
@@ -149,8 +152,8 @@ class CoreDynamicFields {
       decimalPlaces: decimalPlaces,
       minValue: minValue,
       maxValue: maxValue,
-      disabled: config['disabled'],
-      hidden: config['hidden'],
+      disabled: disabledOverride,
+      hidden: hiddenOverride,
       onlyView: config['onlyView'] ?? false,
       onChanged: (value) {
         // Ensure numeric type for number inputs
@@ -236,6 +239,9 @@ class CoreDynamicFields {
       final String dataKeyForKey = data is String ? data : 'static';
       final Key widgetKey = ValueKey<String>('select:$fieldName|data:$dataKeyForKey');
 
+      final bool? disabledOverride = config.containsKey('disabled') ? config['disabled'] as bool? : null;
+      final bool? hiddenOverride = config.containsKey('hidden') ? config['hidden'] as bool? : null;
+
       return CoreSelect(
         key: widgetKey,
         dataKey: fieldName,
@@ -243,8 +249,8 @@ class CoreDynamicFields {
         label: label ?? (getDefaultLabel != null ? getDefaultLabel(fieldName) : CoreDynamicFields.getDefaultLabel(fieldName)),
         type: selectType,
         hintText: hintText,
-        disabled: config['disabled'] ?? false,
-        hidden: config['hidden'] ?? false,
+        disabled: disabledOverride ?? false,
+        hidden: hiddenOverride ?? false,
         data: data,
         display: display,
         moreDisplay: moreDisplay,
@@ -346,17 +352,25 @@ class CoreDynamicFields {
         displayFormat = DateDisplayFormat.ddMMyyyy;
     }
     
-    // Determine disabled state with optional required key dependencies
-    bool disabled = config['disabled'] ?? false;
+    // Determine disabled override with optional required key dependencies.
+    // IMPORTANT: We only pass a non-null disabled/hidden override to CoreDateTime when we *intend* to override
+    // the attribute map coming from backend. If we always pass `false`, the widget's internal logic
+    // (which first checks widget.disabled != null) would ignore attribute-based disabled flags.
+    bool? disabledOverride = config.containsKey('disabled') ? config['disabled'] as bool? : null;
+    bool unmetDependency = false;
     if (config['requireKeys'] is List) {
       for (final keyPath in (config['requireKeys'] as List)) {
         final dep = _getByPathLocal(valueMap, keyPath.toString());
         if (dep == null || (dep is String && dep.isEmpty)) {
-          disabled = true;
+          unmetDependency = true;
           break;
         }
       }
     }
+    if (unmetDependency) {
+      disabledOverride = true; // force disable when dependencies not satisfied
+    }
+    final bool? hiddenOverride = config.containsKey('hidden') ? config['hidden'] as bool? : null;
 
     return CoreDateTime(
       dataKey: fieldName,
@@ -372,8 +386,8 @@ class CoreDynamicFields {
       minTime: minTime,
       maxTime: maxTime,
       defaultTime: defaultTime,
-  disabled: disabled,
-  hidden: config['hidden'],
+      disabled: disabledOverride,
+      hidden: hiddenOverride,
       onChanged: datetimeType != CoreDateTimeType.daterange 
           ? (value) => onChanged(fieldName, value)
           : null,
