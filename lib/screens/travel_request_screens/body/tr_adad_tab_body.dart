@@ -5,7 +5,6 @@ import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
 
 /// Tab body for TRAREQ ADAD (Additional Advance)
-/// Show entire body as a collection similar to project_management_addcostdoc_tab_body.dart
 class TRAdditionalAdvanceTabBody extends CoreTabBody {
   const TRAdditionalAdvanceTabBody({
     super.key,
@@ -42,22 +41,50 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
   void _updateDataFromInitialData() {
     _response = Map<String, dynamic>.from(widget.initialData ?? {});
     _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
-    final value = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
-    // ADAD uses the entire list from key 'additionalAdvanceList'
-    final List<dynamic> additionalAdvanceList = List<dynamic>.from(value['additionalAdvanceList'] ?? []);
-
-    // Normalize module data structure for CoreDynamicFields consumption
-    _moduleData = {
-      'additionalAdvanceList': additionalAdvanceList,
-      // include some summary fields if needed
-      'perDiemAdvance': value['perDiemAdvance'],
-      'perDiemOthers': value['perDiemOthers'],
-      'perDiemTotal': value['perDiemTotal'],
-    };
-
-    _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
-    _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+    _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
+    
+    // Initialize additionalAdvance if not exists
+    if (!_moduleData.containsKey('additionalAdvance')) {
+      _moduleData['additionalAdvance'] = {
+        'perDiemAdvance': 0,
+        'perDiemOthers': 0,
+        'perDiemTotal': 0,
+        'reasons': '',
+      };
+      _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+      _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+    }
+    
     if (mounted) setState(() {});
+  }
+
+  void _onChanged(String key, dynamic value) {
+    setState(() {
+      // Support nested path updates like 'additionalAdvance.reasons'
+      if (key.contains('.')) {
+        _setByPath(_moduleData, key, value);
+      } else {
+        _moduleData[key] = value;
+      }
+      _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+      _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      
+      // Auto-calc perDiemTotal when additionalAdvance amounts change
+      if (key == 'additionalAdvance.perDiemAdvance' || key == 'additionalAdvance.perDiemOthers') {
+        final perDiemAdvance = _moduleData['additionalAdvance']?['perDiemAdvance'] ?? 0;
+        final perDiemOthers = _moduleData['additionalAdvance']?['perDiemOthers'] ?? 0;
+        final total = (perDiemAdvance ?? 0) + (perDiemOthers ?? 0);
+        _setByPath(_moduleData, 'additionalAdvance.perDiemTotal', total);
+        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+      }
+    });
+    
+    if (widget.onDataChanged != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        widget.onDataChanged!(_response);
+      });
+    }
   }
 
   void _setByPath(Map<String, dynamic> map, String path, dynamic value) {
@@ -77,34 +104,6 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
     }
   }
 
-  void _onChanged(String key, dynamic value) {
-    setState(() {
-      // Support nested path updates like 'additionalAdvance.reasons'
-      if (key.contains('.')) {
-        _setByPath(_moduleData, key, value);
-      } else {
-        _moduleData[key] = value;
-      }
-      _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
-      _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
-      
-      // Auto-calc perDiemTotal when advance amounts change
-      if (key == 'additionalAdvance.perDiemAdvance' || key == 'additionalAdvance.perDiemOthers') {
-        final perDiemAdvance = _moduleData['additionalAdvance']?['perDiemAdvance'] ?? 0;
-        final perDiemOthers = _moduleData['additionalAdvance']?['perDiemOthers'] ?? 0;
-        final total = (perDiemAdvance ?? 0) + (perDiemOthers ?? 0);
-        _moduleData['perDiemTotal'] = total;
-        _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
-        _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
-      }
-    });
-    if (widget.onDataChanged != null) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        widget.onDataChanged!(_response);
-      });
-    }
-  }
-
   Widget _buildAdvanceInfoSection() {
     return CardSection(
       title: 'Additional Advance Information',
@@ -113,50 +112,12 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            {'key': 'additionalAdvance.perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
-            {'key': 'additionalAdvance.perDiemOthers', 'label': 'Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
+            {'key': 'additionalAdvance.perDiemAdvance', 'label': 'Per Diem Advance', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
+            {'key': 'additionalAdvance.perDiemOthers', 'label': 'Per Diem Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'onlyView': false},
+            {'key': 'additionalAdvance.perDiemTotal', 'label': 'Per Diem Total', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true, 'onlyView': true},
             {'key': 'additionalAdvance.reasons', 'label': 'Additional Advance Reasons', 'type': 'textarea', 'maxLines': 3, 'onlyView': false},
           ],
           itemDetail: {'value': _moduleData},
-          moduleData: _moduleData,
-          onChanged: _onChanged,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAdditionalAdvanceListSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...CoreDynamicFields.buildFields(
-          fieldConfigs: [
-            {
-              'key': 'additionalAdvanceList',
-              'widget': 'collection',
-              'label': 'Additional Advance',
-              'itemLabel': 'Advance Item',
-              'addButtonText': 'Add New Advance',
-              'hintText': 'No additional advance.',
-              'allowAdd': false,
-              'allowRemove': false,
-              'editMode': 'modal',
-              'summary': {
-                  'fields': [
-                    { 'key': 'perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
-                    { 'key': 'perDiemOthers', 'label': 'Others', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
-                    { 'key': 'reasons', 'label': 'Reasons', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
-                    { 'key': 'statusName', 'label': 'Status', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
-                  ]
-                },
-              'children': [
-                {'key': 'perDiemAdvance', 'label': 'Per Diem Advance', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0},
-                {'key': 'perDiemOthers', 'label': 'Per Diem Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0},
-                {'key': 'reasons', 'label': 'Reasons', 'type': 'textarea', 'maxLines': 3},
-              ],
-            },
-          ],
-          itemDetail: _itemDetail,
           moduleData: _moduleData,
           onChanged: _onChanged,
         ),
@@ -184,6 +145,47 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
     );
   }
 
+  Widget _buildAdditionalAdvanceListSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {
+              'key': 'additionalAdvanceList',
+              'widget': 'collection',
+              'label': 'Additional Advance List',
+              'itemLabel': 'Advance Item',
+              'addButtonText': 'Add New Advance',
+              'hintText': 'No additional advance.',
+              'allowAdd': false,
+              'allowRemove': false,
+              'editMode': 'modal',
+              'disabled': true,
+              'onlyView': true,
+              'summary': {
+                'fields': [
+                  { 'key': 'perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                  { 'key': 'perDiemOthers', 'label': 'Others', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                  { 'key': 'reasons', 'label': 'Reasons', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                  { 'key': 'statusName', 'label': 'Status', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                ]
+              },
+              'children': [
+                {'key': 'perDiemAdvance', 'label': 'Per Diem Advance', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
+                {'key': 'perDiemOthers', 'label': 'Per Diem Others', 'type': 'number', 'suffix': ' VND', 'decimalPlaces': 0, 'disabled': true},
+                {'key': 'reasons', 'label': 'Reasons', 'type': 'textarea', 'maxLines': 3, 'disabled': true},
+              ],
+            },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget buildTabContent(BuildContext context) {
     return KeyboardUtils.withKeyboardDismissal(
@@ -202,5 +204,16 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
       ),
     );
   }
-}
 
+  @override
+  bool validateData() {
+    return CoreDynamicFields.validateData(
+      context: context,
+      moduleData: _moduleData,
+      itemDetail: _itemDetail,
+    );
+  }
+
+  @override
+  Future<void> loadTabSpecificData() async {}
+}
