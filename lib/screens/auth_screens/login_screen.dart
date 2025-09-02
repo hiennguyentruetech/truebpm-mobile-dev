@@ -248,13 +248,12 @@ class LoginScreenState extends State<LoginScreen>
                           children: [
                             const SizedBox(height: 40),
                             
-                            // Animated Logo
+                            // Animated Logo with glow effect
                             AnimatedLogo(
                               logoAnimationController: logoAnimationController,
                               logoScaleAnimation: logoScaleAnimation,
                               logoSlideAnimation: logoSlideAnimation,
-                              logoRotationAnimation: logoRotationAnimation,
-                              logoPulseAnimation: logoPulseAnimation,
+                              logoGlowAnimation: logoGlowAnimation,
                             ),
                             
                             const SizedBox(height: 40),

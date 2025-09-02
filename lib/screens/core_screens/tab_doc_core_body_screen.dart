@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image/image.dart' as img;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:truebpm/providers/core_detail_provider.dart';
@@ -271,25 +273,63 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         allowMultiple: true,
         type: FileType.any,
         allowedExtensions: null,
+        withData: false, // Don't load data directly
+        withReadStream: false,
       );
 
       if (result != null && result.files.isNotEmpty) {
-        for (final file in result.files) {
-          if (file.bytes != null) {
-            final selectedFile = _createSelectedFileWithDefaults(
-              name: file.name,
-              size: file.size,
-              bytes: file.bytes!,
-              path: file.path,
-            );
+        for (final platformFile in result.files) {
+          // Read file from path instead of using bytes directly
+          if (platformFile.path != null) {
+            try {
+              final file = File(platformFile.path!);
+              if (await file.exists()) {
+                final bytes = await file.readAsBytes();
+                
+                final selectedFile = _createSelectedFileWithDefaults(
+                  name: platformFile.name,
+                  size: bytes.length,
+                  bytes: bytes,
+                  path: platformFile.path,
+                );
 
-            setState(() {
-              _selectedFiles.add(selectedFile);
-              // Auto-expand upload area when files are selected
-              if (!_isUploadAreaExpanded) {
-                _isUploadAreaExpanded = true;
+                setState(() {
+                  _selectedFiles.add(selectedFile);
+                  // Auto-expand upload area when files are selected
+                  if (!_isUploadAreaExpanded) {
+                    _isUploadAreaExpanded = true;
+                  }
+                });
+              } else {
+                throw Exception('File not found at path: ${platformFile.path}');
               }
-            });
+            } catch (fileError) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error reading file ${platformFile.name}: $fileError'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // Fallback to using bytes if available
+            if (platformFile.bytes != null) {
+              final selectedFile = _createSelectedFileWithDefaults(
+                name: platformFile.name,
+                size: platformFile.size,
+                bytes: platformFile.bytes!,
+                path: null,
+              );
+
+              setState(() {
+                _selectedFiles.add(selectedFile);
+                if (!_isUploadAreaExpanded) {
+                  _isUploadAreaExpanded = true;
+                }
+              });
+            }
           }
         }
       }
@@ -355,26 +395,85 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
       );
 
       if (image != null) {
-        final file = File(image.path);
-        final bytes = await file.readAsBytes();
+        // Fix green tint issue by processing the image
+        File processedFile = File(image.path);
+        Uint8List processedBytes = await processedFile.readAsBytes();
         
-        final selectedFile = _createSelectedFileWithDefaults(
-          name: image.name,
-          size: bytes.length,
-          bytes: bytes,
-          path: image.path,
-        );
-        
-        setState(() {
-          _selectedFiles.add(selectedFile);
-          // Auto-expand upload area when files are selected
-          if (!_isUploadAreaExpanded) {
-            _isUploadAreaExpanded = true;
+        // Convert image to ensure proper color space (fix green tint)
+        try {
+          final originalImage = img.decodeImage(processedBytes);
+          if (originalImage != null) {
+            // Convert to RGB format to fix color issues
+            final fixedImage = img.copyResize(
+              originalImage,
+              width: originalImage.width,
+              height: originalImage.height,
+              interpolation: img.Interpolation.linear,
+            );
+            
+            // Save corrected image to temp file
+            final tempDir = await getTemporaryDirectory();
+            final tempFile = File('${tempDir.path}/temp_${DateTime.now().millisecondsSinceEpoch}.jpg');
+            await tempFile.writeAsBytes(img.encodeJpg(fixedImage, quality: 85));
+            
+            processedFile = tempFile;
+            processedBytes = await tempFile.readAsBytes();
           }
-        });
+        } catch (imgError) {
+          // If image processing fails, continue with original
+          debugPrint('Image processing error: $imgError');
+        }
+        
+        // Apply image cropping
+        final croppedFile = await _cropImage(processedFile.path);
+        
+        if (croppedFile != null) {
+          final croppedBytes = await File(croppedFile.path).readAsBytes();
+          final fileName = 'IMG_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          
+          final selectedFile = _createSelectedFileWithDefaults(
+            name: fileName,
+            size: croppedBytes.length,
+            bytes: croppedBytes,
+            path: croppedFile.path,
+          );
+          
+          setState(() {
+            _selectedFiles.add(selectedFile);
+            // Auto-expand upload area when files are selected
+            if (!_isUploadAreaExpanded) {
+              _isUploadAreaExpanded = true;
+            }
+          });
+          
+          // Clean up temp file if different from cropped
+          if (processedFile.path != image.path && processedFile.path != croppedFile.path) {
+            try {
+              await processedFile.delete();
+            } catch (_) {}
+          }
+        } else {
+          // User cancelled cropping, still use the processed image
+          final fileName = 'IMG_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          
+          final selectedFile = _createSelectedFileWithDefaults(
+            name: fileName,
+            size: processedBytes.length,
+            bytes: processedBytes,
+            path: processedFile.path,
+          );
+          
+          setState(() {
+            _selectedFiles.add(selectedFile);
+            if (!_isUploadAreaExpanded) {
+              _isUploadAreaExpanded = true;
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -384,6 +483,64 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
       }
     } finally {
       setState(() => _isProcessing = false);
+    }
+  }
+  
+  Future<CroppedFile?> _cropImage(String imagePath) async {
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imagePath,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 85,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Image',
+            toolbarColor: const Color(0xFF667EEA),
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: const Color(0xFF667EEA),
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            hideBottomControls: false,
+            dimmedLayerColor: Colors.black.withOpacity(0.8),
+            cropFrameColor: const Color(0xFF667EEA),
+            cropGridColor: Colors.white.withOpacity(0.3),
+            cropFrameStrokeWidth: 3,
+            cropGridStrokeWidth: 1,
+            cropGridRowCount: 3,
+            cropGridColumnCount: 3,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Crop Image',
+            cancelButtonTitle: 'Cancel',
+            doneButtonTitle: 'Done',
+            aspectRatioLockEnabled: false,
+            resetAspectRatioEnabled: true,
+            aspectRatioPickerButtonHidden: false,
+            rotateButtonsHidden: false,
+            rotateClockwiseButtonHidden: false,
+            resetButtonHidden: false,
+            hidesNavigationBar: true,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+        ],
+      );
+      return croppedFile;
+    } catch (e) {
+      debugPrint('Error cropping image: $e');
+      return null;
     }
   }
 
