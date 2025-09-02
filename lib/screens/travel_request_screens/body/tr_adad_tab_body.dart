@@ -139,13 +139,14 @@ class _TRAdditionalAdvanceTabBodyState extends CoreTabBodyState<TRAdditionalAdva
               'addButtonText': 'Add New Advance',
               'hintText': 'No additional advance.',
               'allowAdd': false,
-              'allowRemove': true,
+              'allowRemove': false,
               'editMode': 'modal',
-                              'summary': {
+              'summary': {
                   'fields': [
                     { 'key': 'perDiemAdvance', 'label': 'Per Diem', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
                     { 'key': 'perDiemOthers', 'label': 'Others', 'type': 'number', 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
                     { 'key': 'reasons', 'label': 'Reasons', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
+                    { 'key': 'statusName', 'label': 'Status', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12' },
                   ]
                 },
               'children': [
