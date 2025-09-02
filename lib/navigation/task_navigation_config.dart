@@ -6,6 +6,9 @@ import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
 import 'package:truebpm/screens/project_cmdr_screens/project_cmdr_detail_screen.dart';
 import 'package:truebpm/screens/e_leave_screens/detail_e_leave_screen.dart';
 import 'package:truebpm/screens/menu_screens/management_screens/dataspy_screens/detail_dataspy_screen.dart';
+import 'package:truebpm/screens/travel_request_screens/detail_travel_request_screen.dart';
+import 'package:truebpm/screens/travel_claim_screens/detail_travel_claim_screen.dart';
+import 'package:truebpm/screens/weekly_report_screens/detail_weekly_report_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -128,8 +131,7 @@ class TaskScreenFactory {
         );
 
       case TaskModuleType.travelRequest:
-        return GenericDetailCoreScreen(
-          moduleCode: 'TRAREQ',
+        return DetailTravelRequestScreen(
           listItem: {'id': config.listItemId},
           initialTabCode: config.initialTabCode,
           fromTaskScreen: config.fromTaskScreen,
@@ -137,8 +139,7 @@ class TaskScreenFactory {
         );
 
       case TaskModuleType.travelClaim:
-        return GenericDetailCoreScreen(
-          moduleCode: 'TRACLA',
+        return DetailTravelClaimScreen(
           listItem: {'id': config.listItemId},
           initialTabCode: config.initialTabCode,
           fromTaskScreen: config.fromTaskScreen,
@@ -146,8 +147,7 @@ class TaskScreenFactory {
         );
 
       case TaskModuleType.weeklyReport:
-        return GenericDetailCoreScreen(
-          moduleCode: 'WKLRPT',
+        return DetailWeeklyReportScreen(
           listItem: {'id': config.listItemId},
           initialTabCode: config.initialTabCode,
           fromTaskScreen: config.fromTaskScreen,

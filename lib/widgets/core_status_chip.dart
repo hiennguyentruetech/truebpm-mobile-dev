@@ -257,9 +257,9 @@ class _CoreStatusChipState extends State<CoreStatusChip> {
         ],
       ),
       child: Row(
-  // Cho phép text xuống dòng nếu quá dài
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
+        // Căn giữa theo chiều dọc để icon và text align với nhau
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
           // Left icon container with enhanced styling
           if (widget.showIcon && style.icon != null) ...[
             Container(
@@ -282,17 +282,22 @@ class _CoreStatusChipState extends State<CoreStatusChip> {
           ],
           // Status text with enhanced styling
           Expanded(
-            child: Text(
-              style.label,
-              style: widget.textStyle ?? TextStyle(
-                color: _isDisabled ? Colors.grey.shade500 : style.color,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-                height: 1.2,
+            child: Container(
+              // Đảm bảo text được căn giữa trong container
+              alignment: Alignment.centerLeft,
+              child: Text(
+                style.label,
+                style: widget.textStyle ?? TextStyle(
+                  color: _isDisabled ? Colors.grey.shade500 : style.color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                  height: 1.2,
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible, // Hiển thị full, không cắt ...
+                textAlign: TextAlign.left, // Căn trái text trong container
               ),
-              softWrap: true,
-              overflow: TextOverflow.visible, // Hiển thị full, không cắt ...
             ),
           ),
           // Right indicator (optional visual enhancement)

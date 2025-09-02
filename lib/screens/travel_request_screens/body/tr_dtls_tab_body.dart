@@ -121,6 +121,7 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
   Widget buildTabContent(BuildContext context) {
     final hasId = _moduleData['id'] != null;
     final hasCode = _moduleData['code'] != null;
+    final isNewRecord = !hasId || !hasCode; // Consider as new if either id or code is missing
     
     return KeyboardUtils.withKeyboardDismissal(
       child: SingleChildScrollView(
@@ -129,8 +130,8 @@ class _TRDetailsTabBodyState extends CoreTabBodyState<TRDetailsTabBody> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildGeneralInfoSection(),
-            if (hasId && hasCode) _buildAdvanceSummarySection(),
-            if (!hasId && !hasCode) _buildAdvanceInfoSection(),
+            if (!isNewRecord) _buildAdvanceSummarySection(),
+            if (isNewRecord) _buildAdvanceInfoSection(),
             _buildReasonsSection(),
             _buildSystemInfoSection(),
           ],
