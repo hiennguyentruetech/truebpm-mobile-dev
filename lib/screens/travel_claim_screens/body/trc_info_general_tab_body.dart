@@ -253,7 +253,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             'widget': 'select',
             'selectType': 'dropdown',
             'label': 'Expense Type',
-            'data': 'DROPDOWN.TRACLA/EXP.TYPE',
+            'data': 'DROPDOWN.TRACLA/EXP.TYPE.GENERAL',
             'display': 'name',
             'required': true,
           },

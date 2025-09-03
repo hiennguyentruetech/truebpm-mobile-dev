@@ -471,6 +471,13 @@ class _CoreInputState extends State<CoreInput> {
     String s = value is num ? value.toString() : value.toString().trim();
     if (s.isEmpty) return '';
 
+    // Preserve negative sign (was previously stripped by digit-only filtering)
+    bool isNegative = false;
+    if (s.startsWith('-')) {
+      isNegative = true;
+      s = s.substring(1); // Work with absolute part, re-attach later
+    }
+
     String intRaw = '';
     String decRaw = '';
 
@@ -508,13 +515,19 @@ class _CoreInputState extends State<CoreInput> {
 
     final grouped = _groupThousands(intRaw);
 
+    String result;
     if (widget.decimalPlaces > 0 && decRaw.isNotEmpty) {
       if (decRaw.length > widget.decimalPlaces) {
         decRaw = decRaw.substring(0, widget.decimalPlaces);
       }
-      return '$grouped,$decRaw';
+      result = '$grouped,$decRaw';
+    } else {
+      result = grouped;
     }
-    return grouped;
+    if (isNegative && result.isNotEmpty && result != '0') {
+      result = '-$result';
+    }
+    return result;
   }
 
   String _groupThousands(String digits) {
