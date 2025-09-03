@@ -185,6 +185,8 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
   // Build dropdown endpoints with explicit parent id to avoid null templates
   final parentId = _moduleData['_parentId'] ?? _moduleData['id'] ?? _moduleData['travelClaimId'];
   final encodedParentId = parentId == null ? '' : Uri.encodeComponent(parentId.toString());
+  // Detect hidden deductible flag coming from API: itemDetail.attribute.hidden.generalExpense.deductible == true
+  final hiddenDeductible = _itemDetail['attribute']?['hidden']?['generalExpense']?['deductible'] == true;
     final fieldConfigs = [
       {
         'key': 'generalExpense',
@@ -216,6 +218,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             { 'key': 'expenseType', 'display': 'name', 'label': 'Type', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'locationObject', 'display': 'name', 'label': 'Location', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'purpose', 'label': 'Purpose', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+            // Deductible summary field will be conditionally removed below
             { 'key': 'deductible', 'label': 'Deductible', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' %', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'total', 'label': 'Total', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'totalAfterTax', 'label': 'Total After Tax', 'type': 'number', 'decimalPlaces': 0, 'format': '#,##0', 'suffix': ' VND', 'bgColor': '#FFF4E6', 'borderColor': '#FFCC99', 'labelColor': '#C15700', 'valueColor': '#A14400' },
@@ -267,6 +270,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             'required': true,
           },
           {'key': 'purpose', 'label': 'Purpose', 'type': 'textarea', 'maxLines': 3, 'required': true},
+          // Deductible child field (conditionally removed below)
           {
             'key': 'deductible',
             'label': 'Deductible (%)',
@@ -295,6 +299,19 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
         ],
       },
     ];
+
+    if (hiddenDeductible) {
+      // Remove deductible from summary fields
+      final generalConfig = fieldConfigs.firstWhere((e) => e['key'] == 'generalExpense');
+      final summary = generalConfig['summary'];
+      if (summary is Map && summary['fields'] is List) {
+        (summary['fields'] as List).removeWhere((f) => f is Map && f['key'] == 'deductible');
+      }
+      // Remove deductible from children
+      if (generalConfig['children'] is List) {
+        (generalConfig['children'] as List).removeWhere((f) => f is Map && f['key'] == 'deductible');
+      }
+    }
 
     return CoreDynamicFields.buildFields(
       fieldConfigs: fieldConfigs,
