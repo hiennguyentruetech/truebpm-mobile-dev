@@ -7,6 +7,7 @@ import 'package:truebpm/screens/travel_claim_screens/detail_travel_claim_screen.
 import 'package:truebpm/screens/travel_claim_screens/body/trc_dtls_tab_body.dart';
 import 'package:truebpm/screens/travel_claim_screens/body/trc_info_general_tab_body.dart';
 import 'package:truebpm/screens/travel_claim_screens/body/trc_info_special_tab_body.dart';
+import 'package:truebpm/widgets/core/core_action_dialog.dart';
 
 /// Travel Claim Page
 /// Mirrors the structure of OT Registration module
@@ -28,6 +29,20 @@ class TravelClaimPageScreen extends StatelessWidget {
     TabConfig(code: 'DOC', name: 'Documents', tabBodyBuilder: TabDocCoreBodyScreen.new),
   ];
 
+  // Print report actions for Travel Claim
+  // URL pattern: https://solomon.truetech.com.vn/report/?context=travelClaim&id={id}&fileName={code}
+  static final List<PrintReportOption> printReports = [
+    const PrintReportOption(
+      reportName: 'Travel Claim Report',
+      reportUrl: 'https://solomon.truetech.com.vn/report/?context=travelClaim&id={id}&fileName={code}',
+      reportIcon: Icons.picture_as_pdf_rounded,
+      urlParams: {
+        'id': 'value.id',
+        'code': 'value.code',
+      },
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return ListCoreScreen(
@@ -35,6 +50,7 @@ class TravelClaimPageScreen extends StatelessWidget {
       moduleName: moduleName,
       tabModuleCode: defaultTabCode,
       availableTabs: availableTabs,
+      // ListCoreScreen doesn't take printReports directly; passed via detailScreenBuilder
       detailScreenBuilder: _createDetailScreen,
     );
   }
@@ -43,6 +59,7 @@ class TravelClaimPageScreen extends StatelessWidget {
     return DetailTravelClaimScreen(
       listItem: listItem,
       initialTabCode: defaultTabCode,
+      printReports: printReports,
     );
   }
 }
