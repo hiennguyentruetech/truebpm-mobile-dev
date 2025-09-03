@@ -25,8 +25,8 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
   final List<BottomNavItem> _navItems = const [
     BottomNavItem(icon: Icons.home_rounded, label: 'Home'),
-    BottomNavItem(icon: Icons.event_busy_rounded, label: 'E-Leave'),
     BottomNavItem(icon: Icons.task_alt_rounded, label: 'Task'),
+    BottomNavItem(icon: Icons.event_busy_rounded, label: 'E-Leave'),
     BottomNavItem(icon: Icons.flight_takeoff_rounded, label: 'Travel'),
     BottomNavItem(icon: Icons.menu_rounded, label: 'Menu'),
   ];
@@ -49,8 +49,8 @@ class _MainTabScreenState extends State<MainTabScreen> {
   Widget build(BuildContext context) {
     final List<Widget> stackNavigators = [
       HomeStackNavigator(navigatorKey: _navigatorKeys[0]),
-      ELeaveStackNavigator(navigatorKey: _navigatorKeys[1]),
-      TaskStackNavigator(navigatorKey: _navigatorKeys[2]),
+      TaskStackNavigator(navigatorKey: _navigatorKeys[1]),
+      ELeaveStackNavigator(navigatorKey: _navigatorKeys[2]),
       TravelRequestStackNavigator(navigatorKey: _navigatorKeys[3]),
       MenuStackNavigator(navigatorKey: _navigatorKeys[4]),
     ];

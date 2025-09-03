@@ -620,22 +620,22 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
-                            _metricCard(
-                              label: 'Annual Leave',
-                              value: _fmtNum(_eleave?['totalAnnualLeave']),
-                              icon: Icons.event_available,
-                              gradient: const [Color(0xFF26A69A), Color(0xFF00796B)],
-                              suffix: 'days',
-                              decimalPlaces: 2,
-                            ),
-                            _metricCard(
-                              label: 'Applied',
-                              value: _fmtNum(_eleave?['totalLeaveApplied']),
-                              icon: Icons.edit_calendar_rounded,
-                              gradient: const [Color(0xFF26A69A), Color(0xFF00897B)],
-                              suffix: 'days',
-                              decimalPlaces: 2,
-                            ),
+                            // _metricCard(
+                            //   label: 'Annual Leave',
+                            //   value: _fmtNum(_eleave?['totalAnnualLeave']),
+                            //   icon: Icons.event_available,
+                            //   gradient: const [Color(0xFF26A69A), Color(0xFF00796B)],
+                            //   suffix: 'days',
+                            //   decimalPlaces: 2,
+                            // ),
+                            // _metricCard(
+                            //   label: 'Applied',
+                            //   value: _fmtNum(_eleave?['totalLeaveApplied']),
+                            //   icon: Icons.edit_calendar_rounded,
+                            //   gradient: const [Color(0xFF26A69A), Color(0xFF00897B)],
+                            //   suffix: 'days',
+                            //   decimalPlaces: 2,
+                            // ),
                             _metricCard(
                               label: 'Remaining',
                               value: _fmtNum(_eleave?['totalRemainLeave']),

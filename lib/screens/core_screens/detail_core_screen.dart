@@ -89,8 +89,18 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
 
   // Track changes for unsaved changes warning
   bool _hasUnsavedChanges = false;
+  // Legacy raw snapshots kept (might still be referenced by older tab bodies); suppress unused warnings
+  // ignore: unused_field
   Map<String, dynamic> _originalData = {};
+  // ignore: unused_field
   Map<String, dynamic> _currentData = {};
+  // Enhanced dirty tracking (sanitized snapshot + suppression windows)
+  Map<String, dynamic> _originalEditableSnapshot = {};
+  DateTime? _screenInitTime;
+  DateTime? _lastTabChangeTime;
+  final Duration _initialSuppression = const Duration(milliseconds: 1200);
+  final Duration _tabSwitchSuppression = const Duration(milliseconds: 800);
+  bool _debugDirtyTracking = false; // set true for debug prints
 
   @override
   void initState() {
@@ -146,20 +156,41 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
   /// Initialize change tracking with current data
   void _initializeChangeTracking() {
     if (_provider.rawResponse != null) {
+      // Legacy fallback snapshots (kept for compatibility)
       _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
       _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
+
+      // New sanitized editable snapshot
+      _originalEditableSnapshot = _buildEditableSnapshot(_provider);
+      _screenInitTime ??= DateTime.now(); // set only first time
       _hasUnsavedChanges = false;
+      if (_debugDirtyTracking) {
+        debugPrint('[DirtyTrack] Baseline initialized. Keys=${_originalEditableSnapshot.keys.length}');
+      }
     }
   }
 
   /// Check if there are unsaved changes by comparing current data with original data
   bool _checkForUnsavedChanges() {
     if (_provider.rawResponse == null) return false;
-    
-    _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
-    
-    // Deep comparison of data
-    return _deepCompareData(_originalData, _currentData);
+
+    // Suppression windows (initial load or shortly after tab switch)
+    final now = DateTime.now();
+    if (_screenInitTime != null && now.difference(_screenInitTime!) < _initialSuppression) {
+      if (_debugDirtyTracking) debugPrint('[DirtyTrack] Suppressed (initial load window)');
+      return false;
+    }
+    if (_lastTabChangeTime != null && now.difference(_lastTabChangeTime!) < _tabSwitchSuppression) {
+      if (_debugDirtyTracking) debugPrint('[DirtyTrack] Suppressed (tab switch window)');
+      return false;
+    }
+
+    final currentSnapshot = _buildEditableSnapshot(_provider);
+    final changed = _deepCompareData(_originalEditableSnapshot, currentSnapshot);
+    if (_debugDirtyTracking && changed) {
+      debugPrint('[DirtyTrack] Detected change.');
+    }
+    return changed;
   }
 
   /// Deep comparison of two data maps
@@ -214,7 +245,9 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     if (_provider.rawResponse != null) {
       _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
       _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
+      _originalEditableSnapshot = _buildEditableSnapshot(_provider);
       _hasUnsavedChanges = false;
+      if (_debugDirtyTracking) debugPrint('[DirtyTrack] Baseline reset.');
     }
   }
 
@@ -269,6 +302,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     setState(() {
       _currentTabCode = tabCode;
     });
+  // Mark tab switch time for suppression window
+  _lastTabChangeTime = DateTime.now();
     
     // If switching to DOC, determine the default sub-tab
     String? docSubTabCode;
@@ -292,6 +327,56 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeChangeTracking();
     });
+  }
+
+  // Build a sanitized snapshot focusing on editable content only
+  Map<String, dynamic> _buildEditableSnapshot(CoreDetailProvider provider) {
+    final raw = provider.rawResponse;
+    if (raw == null) return {};
+
+    // Prefer nested itemDetail.value if present
+    dynamic itemDetail = raw['itemDetail'];
+    if (itemDetail is Map<String, dynamic>) {
+      if (itemDetail.containsKey('value') && itemDetail['value'] is Map<String, dynamic>) {
+        itemDetail = itemDetail['value'];
+      } else if (itemDetail.containsKey('itemDetail') && itemDetail['itemDetail'] is Map<String, dynamic>) {
+        // Some responses nest deeper
+        final nested = itemDetail['itemDetail'];
+        if (nested is Map<String, dynamic> && nested.containsKey('value')) {
+          itemDetail = nested['value'];
+        }
+      }
+    }
+
+    if (itemDetail is! Map<String, dynamic>) {
+      return {};
+    }
+
+    final volatileKeys = {
+      'lastModifiedDate', 'lastModified', 'lastUpdate', 'updatedAt', 'updatedTime',
+      'status', 'statusHistory', 'logs', 'attachments', 'comments', '_timestamp'
+    };
+
+  dynamic sanitize(dynamic input) {
+      if (input is Map<String, dynamic>) {
+        final result = <String, dynamic>{};
+        input.forEach((k, v) {
+          if (volatileKeys.contains(k)) return; // skip volatile
+          result[k] = sanitize(v);
+        });
+        return result;
+      } else if (input is List) {
+        return input.map(sanitize).toList();
+      } else {
+        return input; // primitive
+      }
+    }
+
+    final sanitized = sanitize(itemDetail);
+    if (sanitized is Map<String, dynamic>) {
+      return sanitized;
+    }
+    return {};
   }
 
   /// Check if the current record is new (no ID)
