@@ -57,12 +57,25 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
   }
 
   void _onChanged(String key, dynamic value) {
+    bool hasAutoFillChanges = false;
+    
     setState(() {
       _moduleData[key] = value;
       // Auto-recalculate for generalExpense collection items
       if (key == 'generalExpense' && value is List) {
         for (final item in value) {
           if (item is Map<String, dynamic>) {
+            // Handle auto-fill logic for travelRequest selection
+            if (_handleTravelRequestAutoFill(item)) {
+              hasAutoFillChanges = true;
+            }
+            
+            // Handle auto-fill logic for locationObject selection
+            if (_handleLocationAutoFill(item)) {
+              hasAutoFillChanges = true;
+            }
+            
+            // Calculate totalAfterTax
             final totalRaw = item['total'];
             double total = 0;
             if (totalRaw is int) total = totalRaw.toDouble();
@@ -86,9 +99,25 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
+    
+    // Trigger data change callback
     if (widget.onDataChanged != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         widget.onDataChanged!(_response);
+        
+        // If auto-fill occurred, trigger an additional setState to refresh UI
+        if (hasAutoFillChanges && mounted) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              setState(() {
+                // Force UI refresh to show auto-filled values in popup
+                _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+                _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+              });
+              widget.onDataChanged!(_response);
+            }
+          });
+        }
       });
     }
   }
@@ -400,6 +429,42 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     map['totalAfterTax'] = map['totalAfterTax'] ?? map['total'] ?? 0;
     // Date normalization (if ISO string keep as is, dynamic fields component may parse)
     return map;
+  }
+
+  /// Auto-fill date when travelRequest is selected
+  bool _handleTravelRequestAutoFill(Map<String, dynamic> item) {
+    final travelRequest = item['travelRequest'];
+    if (travelRequest is Map<String, dynamic>) {
+      final startDate = travelRequest['startDate'];
+      if (startDate != null && (item['date'] == null || item['date'].toString().isEmpty)) {
+        item['date'] = startDate;
+        return true; // Data was changed
+      }
+    }
+    return false; // No changes
+  }
+
+  /// Auto-fill total from perDiemAmount when locationObject is selected and expenseType is "Per Diem"
+  bool _handleLocationAutoFill(Map<String, dynamic> item) {
+    final locationObject = item['locationObject'];
+    final expenseType = item['expenseType'];
+    
+    if (locationObject is Map<String, dynamic> && expenseType is Map<String, dynamic>) {
+      final expenseTypeId = expenseType['id'];
+      final expenseTypeName = expenseType['name'];
+      final perDiemAmount = locationObject['perDiemAmount'];
+      
+      // Check if this is a "Per Diem" expense type
+      if (expenseTypeId == '225F3E9E-16CC-460D-B0F6-42167AC41EA8' || 
+          (expenseTypeName != null && expenseTypeName.toString().toLowerCase().contains('per diem'))) {
+        if (perDiemAmount != null) {
+          // Auto-fill total with perDiemAmount (user can change it later)
+          item['total'] = perDiemAmount;
+          return true; // Data was changed
+        }
+      }
+    }
+    return false; // No changes
   }
 }
 
