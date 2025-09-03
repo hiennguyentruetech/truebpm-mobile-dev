@@ -61,6 +61,34 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     
     setState(() {
       _moduleData[key] = value;
+      
+      // Handle individual field changes within collection items
+      if (key.contains('.') && key.startsWith('generalExpense[')) {
+        // This is a field change within a collection item (e.g., "generalExpense[0].travelRequest")
+        final regex = RegExp(r'generalExpense\[(\d+)\]\.(.+)');
+        final match = regex.firstMatch(key);
+        if (match != null) {
+          final index = int.parse(match.group(1)!);
+          final fieldKey = match.group(2)!;
+          
+          final generalExpense = _moduleData['generalExpense'] as List?;
+          if (generalExpense != null && index < generalExpense.length) {
+            final item = generalExpense[index] as Map<String, dynamic>;
+            
+            // Apply auto-fill logic for specific field changes
+            if (fieldKey == 'travelRequest') {
+              if (_handleTravelRequestAutoFill(item)) {
+                hasAutoFillChanges = true;
+              }
+            } else if (fieldKey == 'locationObject') {
+              if (_handleLocationAutoFill(item)) {
+                hasAutoFillChanges = true;
+              }
+            }
+          }
+        }
+      }
+      
       // Auto-recalculate for generalExpense collection items
       if (key == 'generalExpense' && value is List) {
         for (final item in value) {
@@ -105,16 +133,25 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
       SchedulerBinding.instance.addPostFrameCallback((_) {
         widget.onDataChanged!(_response);
         
-        // If auto-fill occurred, trigger an additional setState to refresh UI
+        // If auto-fill occurred, force an additional update cycle
         if (hasAutoFillChanges && mounted) {
-          Future.delayed(const Duration(milliseconds: 100), () {
+          // Multiple approaches to ensure UI refresh:
+          
+          // 1. Immediate setState
+          setState(() {});
+          
+          // 2. Delayed setState to ensure modal UI updates
+          Future.delayed(const Duration(milliseconds: 50), () {
             if (mounted) {
-              setState(() {
-                // Force UI refresh to show auto-filled values in popup
-                _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
-                _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
-              });
+              setState(() {});
               widget.onDataChanged!(_response);
+            }
+          });
+          
+          // 3. Another delayed setState for stubborn cases
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (mounted) {
+              setState(() {});
             }
           });
         }
