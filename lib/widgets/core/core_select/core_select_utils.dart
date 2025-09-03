@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/utils/functions.dart';
 
 /// CoreSelect utilities for API calls and data handling
 class CoreSelectUtils {
@@ -170,9 +171,21 @@ class CoreSelectUtils {
         if (hasMoreDisplay && option is Map) {
           for (final field in moreDisplay) {
             final key = field['key'] ?? '';
+            final type = field['type'];
+            final format = field['format'];
             final raw = getByPath(option, key);
-            final value = raw?.toString().toLowerCase() ?? '';
-            if (value.contains(searchLower)) {
+            
+            String value;
+            if (raw == null || raw.toString().isEmpty) {
+              value = '';
+            } else if (type == 'date' && format != null) {
+              // Format date using the Functions utility
+              value = Functions().formatDate(raw.toString());
+            } else {
+              value = raw.toString();
+            }
+            
+            if (value.toLowerCase().contains(searchLower)) {
               return true;
             }
           }

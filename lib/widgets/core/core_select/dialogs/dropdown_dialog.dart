@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core_select_utils.dart';
+import 'package:truebpm/utils/functions.dart';
 
 import '../components/option_card.dart';
 
@@ -72,8 +73,21 @@ class _DropdownDialogState extends State<DropdownDialog> {
           if (hasMoreDisplay && option is Map) {
             for (final field in widget.moreDisplay!) {
               final key = field['key'] ?? '';
-              final value = option[key]?.toString().toLowerCase() ?? '';
-              if (value.contains(searchLower)) {
+              final type = field['type'];
+              final format = field['format'];
+              final raw = CoreSelectUtils.getByPath(option, key);
+              
+              String value;
+              if (raw == null || raw.toString().isEmpty) {
+                value = '';
+              } else if (type == 'date' && format != null) {
+                // Format date using the Functions utility
+                value = Functions().formatDate(raw.toString());
+              } else {
+                value = raw.toString();
+              }
+              
+              if (value.toLowerCase().contains(searchLower)) {
                 return true;
               }
             }
@@ -96,8 +110,20 @@ class _DropdownDialogState extends State<DropdownDialog> {
       for (final field in widget.moreDisplay!) {
         final key = field['key'] ?? '';
         final label = field['label'] ?? key;
+        final type = field['type'];
+        final format = field['format'];
         final raw = CoreSelectUtils.getByPath(option, key);
-        final value = (raw == null || raw.toString().isEmpty) ? '-' : raw.toString();
+        
+        String value;
+        if (raw == null || raw.toString().isEmpty) {
+          value = '-';
+        } else if (type == 'date' && format != null) {
+          // Format date using the Functions utility
+          value = Functions().formatDate(raw.toString());
+        } else {
+          value = raw.toString();
+        }
+        
         additionalFields.add(MapEntry(label, value));
       }
     }

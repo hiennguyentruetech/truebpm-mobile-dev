@@ -129,8 +129,32 @@ class _TRCDetailsTabBodyState extends CoreTabBodyState<TRCDetailsTabBody> {
               'allowAdd': true,
               'allowRemove': true,
               'editMode': 'modal',
+              'summary': {
+                'fields': [
+                  { 'key': 'travelRequest.code', 'label': 'Code', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+                  { 'key': 'travelRequest.startDate', 'label': 'Start Date', 'type': 'date', 'format': 'dd/MM/yyyy', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'travelRequest.endDate', 'label': 'End Date', 'type': 'date', 'format': 'dd/MM/yyyy', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'travelRequest.location', 'label': 'Location', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'travelRequest.totalDays', 'label': 'Total Days', 'type': 'number', 'format': '#,##0', 'suffix': ' days', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'travelRequest.status.name', 'label': 'Status', 'bgColor': '#FFF3E0', 'borderColor': '#FFCC02', 'labelColor': '#F57C00', 'valueColor': '#E65100' },
+                ]
+              },
               'children': [
-                {'key': 'travelRequest', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Travel Request', 'data': 'DROPDOWN.TRACLA.TR?username={{username}}', 'display': 'code'},
+                {
+                  'key': 'travelRequest', 
+                  'widget': 'select', 
+                  'selectType': 'dropdown', 
+                  'label': 'Travel Request', 
+                  'data': 'DROPDOWN.TRACLA.TR?username={{username}}', 
+                  'display': 'code',
+                  'moreDisplay': [
+                    { 'key': 'startDate', 'label': 'Start Date', 'type': 'date', 'format': 'dd/MM/yyyy' },
+                    { 'key': 'endDate', 'label': 'End Date', 'type': 'date', 'format': 'dd/MM/yyyy' },
+                    { 'key': 'location', 'label': 'Location' },
+                    { 'key': 'totalDays', 'label': 'Total Days', 'type': 'number', 'suffix': ' days' },
+                    { 'key': 'status.name', 'label': 'Status' },
+                  ]
+                },
               ],
             },
           ],
