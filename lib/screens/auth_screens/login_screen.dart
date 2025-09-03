@@ -157,9 +157,10 @@ class LoginScreenState extends State<LoginScreen>
       context.showLoading(message: appStrings.signingIn);
 
       final username = _usernameController.text.trim();
+      final password = _passwordController.text;
       final result = await _authService.loginDirect(
         username: username,
-        password: _passwordController.text,
+        password: password,
         enableBiometric: _isBiometricAvailable && !_biometricLoginEnabled,
       );
 
@@ -180,10 +181,14 @@ class LoginScreenState extends State<LoginScreen>
         if (!mounted) return;
         context.hideLoading();
 
-        if (_isBiometricAvailable && !_biometricLoginEnabled) {
-          setState(() {
-            _biometricLoginEnabled = true;
-          });
+        // If biometric became available after initial async check or user logged in very fast
+        // Force ensure biometric is enabled for next launch (deterministic)
+        final recheckAvailable = await _authService.isBiometricAvailable();
+        if (recheckAvailable) {
+          await _authService.enableBiometricForCredentials(username, password);
+          if (mounted) {
+            setState(() { _biometricLoginEnabled = true; });
+          }
         }
 
         _navigateToMainScreen();

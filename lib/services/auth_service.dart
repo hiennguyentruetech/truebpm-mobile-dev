@@ -164,11 +164,12 @@ class AuthService {
         // logger.w('No saved credentials found');
         return AuthResult.failure(appStrings.savedCredentialsNotFound);
       }
-
+      // Keep biometric state if previously enabled to avoid clearing password
+      final wasEnabled = await isBiometricLoginEnabled();
       return await loginDirect(
         username: credentials['username']!,
         password: credentials['password']!,
-        enableBiometric: false, // Don't re-enable biometric for saved login
+        enableBiometric: wasEnabled,
       );
     } catch (e) {
       // logger.e('Error logging in with saved credentials: $e');
@@ -196,10 +197,13 @@ class AuthService {
         await prefs.setBool(_keyBiometricEnabled, true);
         // logger.i('Credentials saved with biometric authentication enabled');
       } else {
-        // Remove password if biometric is disabled
-        await prefs.remove(_keyPassword);
-        await prefs.setBool(_keyBiometricEnabled, false);
-        // logger.i('Only username saved (biometric disabled)');
+        // If previously enabled, keep existing password to avoid losing biometric login unexpectedly
+        final wasEnabled = prefs.getBool(_keyBiometricEnabled) ?? false;
+        if (!wasEnabled) {
+          // Remove password only if it wasn't previously enabled
+            await prefs.remove(_keyPassword);
+            await prefs.setBool(_keyBiometricEnabled, false);
+        }
       }
     } catch (e) {
       // logger.e('Error saving credentials: $e');
@@ -286,6 +290,15 @@ class AuthService {
       // logger.e('Biometric authentication error: $e');
       return false;
     }
+  }
+
+  /// Force enable biometric for given credentials (used when user logs in before async availability check completes)
+  Future<void> enableBiometricForCredentials(String username, String password) async {
+    await _saveCredentialsInternal(
+      username: username,
+      password: password,
+      enableBiometric: true,
+    );
   }
 
   /// Clear all saved credentials
