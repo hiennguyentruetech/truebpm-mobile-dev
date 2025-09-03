@@ -13,6 +13,7 @@ class CoreCollection extends StatefulWidget {
   final String? hintText;
   final List<Map<String, dynamic>> children; // Field configurations for each item
   final String? itemLabel; // Label for each item (e.g., "Reason")
+  final String? titleTemplate; // Dynamic template for item header e.g. '{travelRequest.code}'
   final String? addButtonText; // Custom text for add button
   final bool allowAdd;
   final bool allowRemove;
@@ -34,6 +35,7 @@ class CoreCollection extends StatefulWidget {
     this.hintText,
     required this.children,
     this.itemLabel,
+  this.titleTemplate,
     this.addButtonText,
     this.allowAdd = true,
     this.allowRemove = true,
@@ -417,7 +419,7 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Item Header
-                    _buildItemHeader(index),
+                    _buildItemHeader(index, item, showEditIcon: true),
                     
                     // Item Fields
                     Padding(
@@ -486,7 +488,7 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Item Header
-              _buildItemHeader(index, showEditIcon: true),
+              _buildItemHeader(index, item, showEditIcon: true),
               
               // Item Summary
               Padding(
@@ -500,7 +502,11 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
     );
   }
   
-  Widget _buildItemHeader(int index, {bool showEditIcon = false}) {
+  Widget _buildItemHeader(int index, Map<String, dynamic> item, {bool showEditIcon = false}) {
+    String resolvedTitle = widget.itemLabel ?? 'Item ${index + 1}';
+    if (widget.titleTemplate != null && widget.titleTemplate!.trim().isNotEmpty) {
+      resolvedTitle = _resolveTemplate(widget.titleTemplate!, item) ?? resolvedTitle;
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -552,7 +558,9 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              widget.itemLabel ?? 'Item ${index + 1}',
+              resolvedTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -1338,9 +1346,104 @@ class _CoreCollectionState extends State<CoreCollection> with TickerProviderStat
       onChanged: (key, value) {
         setModalState(() {
           item[key] = value;
+          // Track manual override for total when user edits directly
+          if (key == 'total') {
+            item['_manualTotal'] = true;
+          }
+          // Inline auto-fill logic for specific dependencies
+          if (key == 'travelRequest' && value is Map) {
+            // Do NOT auto-set date field anymore.
+            // Instead, store a helper defaultDate for the date picker to use on open.
+            final startDate = value['startDate'];
+            if (startDate != null) {
+              DateTime? parsed;
+              if (startDate is DateTime) parsed = startDate;
+              else if (startDate is String) parsed = DateTime.tryParse(startDate) ?? _tryParseDate(startDate);
+              if (parsed != null) {
+                item['_defaultDate_date'] = parsed.toIso8601String();
+              } else {
+                item['_defaultDate_date'] = startDate.toString();
+              }
+            }
+          }
+      if (key == 'locationObject' || key == 'expenseType') {
+            final expenseType = item['expenseType'];
+            final locationObj = item['locationObject'];
+            if (expenseType is Map && locationObj is Map) {
+              final expenseTypeId = expenseType['id'];
+              final perDiemAmount = locationObj['perDiemAmount'];
+              if (perDiemAmount != null && expenseTypeId == '225F3E9E-16CC-460D-B0F6-42167AC41EA8') {
+        // Expense type or location changed: re-auto-fill and reset manual flag
+        item['total'] = perDiemAmount;
+        item.remove('_manualTotal');
+              }
+            }
+          }
         });
       },
     );
+  }
+
+  /// Resolve template placeholders like '{travelRequest.code}' from item map
+  String? _resolveTemplate(String template, Map<String, dynamic> item) {
+    String result = template;
+    final regex = RegExp(r'\{([^}]+)\}');
+    return result.replaceAllMapped(regex, (m) {
+      final path = m.group(1)!.trim();
+  final value = _tplGetByPath(item, path);
+      return value?.toString() ?? '';
+    });
+  }
+
+  dynamic _tplGetByPath(Map<String, dynamic> source, String path) {
+    dynamic cur = source;
+    for (final part in path.split('.')) {
+      if (cur is Map && cur.containsKey(part)) {
+        cur = cur[part];
+      } else {
+        return null;
+      }
+    }
+    return cur;
+  }
+
+  /// Try parsing date from common patterns like yyyy-MM-dd, dd/MM/yyyy, ddMMyyyy
+  DateTime? _tryParseDate(String input) {
+    // Already tried DateTime.parse before calling this
+    // Try yyyy-MM-dd manually (in case of invalid timezone appended)
+    final isoBasic = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+    if (isoBasic.hasMatch(input)) {
+      final parts = input.split('-');
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y != null && m != null && d != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    // dd/MM/yyyy
+    final slash = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$');
+    final slashMatch = slash.firstMatch(input);
+    if (slashMatch != null) {
+      final d = int.tryParse(slashMatch.group(1)!);
+      final m = int.tryParse(slashMatch.group(2)!);
+      final y = int.tryParse(slashMatch.group(3)!);
+      if (y != null && m != null && d != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    // ddMMyyyy
+    final compact = RegExp(r'^(\d{2})(\d{2})(\d{4})$');
+    final compactMatch = compact.firstMatch(input);
+    if (compactMatch != null) {
+      final d = int.tryParse(compactMatch.group(1)!);
+      final m = int.tryParse(compactMatch.group(2)!);
+      final y = int.tryParse(compactMatch.group(3)!);
+      if (y != null && m != null && d != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
   }
   
   Widget _buildAddButton() {

@@ -62,45 +62,24 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     setState(() {
       _moduleData[key] = value;
       
-      // Handle individual field changes within collection items
-      if (key.contains('.') && key.startsWith('generalExpense[')) {
-        // This is a field change within a collection item (e.g., "generalExpense[0].travelRequest")
-        final regex = RegExp(r'generalExpense\[(\d+)\]\.(.+)');
-        final match = regex.firstMatch(key);
-        if (match != null) {
-          final index = int.parse(match.group(1)!);
-          final fieldKey = match.group(2)!;
-          
-          final generalExpense = _moduleData['generalExpense'] as List?;
-          if (generalExpense != null && index < generalExpense.length) {
-            final item = generalExpense[index] as Map<String, dynamic>;
-            
-            // Apply auto-fill logic for specific field changes
-            if (fieldKey == 'travelRequest') {
-              if (_handleTravelRequestAutoFill(item)) {
-                hasAutoFillChanges = true;
-              }
-            } else if (fieldKey == 'locationObject') {
-              if (_handleLocationAutoFill(item)) {
-                hasAutoFillChanges = true;
-              }
-            }
-          }
-        }
-      }
-      
       // Auto-recalculate for generalExpense collection items
       if (key == 'generalExpense' && value is List) {
-        for (final item in value) {
+        print('Processing generalExpense collection with ${value.length} items');
+        for (int i = 0; i < value.length; i++) {
+          final item = value[i];
           if (item is Map<String, dynamic>) {
+            print('Processing item $i: ${item.keys}');
+            
             // Handle auto-fill logic for travelRequest selection
             if (_handleTravelRequestAutoFill(item)) {
               hasAutoFillChanges = true;
+              print('Auto-filled date for item $i');
             }
             
-            // Handle auto-fill logic for locationObject selection
+            // Handle auto-fill logic for locationObject selection  
             if (_handleLocationAutoFill(item)) {
               hasAutoFillChanges = true;
+              print('Auto-filled total for item $i');
             }
             
             // Calculate totalAfterTax
@@ -112,14 +91,16 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             double deductiblePercent = 0;
             if (deductibleRaw is int) deductiblePercent = deductibleRaw.toDouble();
             else if (deductibleRaw is double) deductiblePercent = deductibleRaw;
-            double taxPercent = 0;
+            double rawTax = 0;
             if (item['expenseType'] is Map && (item['expenseType']['tax'] is num)) {
-              taxPercent = (item['expenseType']['tax'] as num).toDouble();
+              rawTax = (item['expenseType']['tax'] as num).toDouble();
             } else if (item['tax'] is num) {
-              taxPercent = (item['tax'] as num).toDouble();
+              rawTax = (item['tax'] as num).toDouble();
             }
+            // If tax already stored as fraction (0.1 = 10%), use directly; if stored as 10, convert by /100
+            final double taxRate = rawTax <= 1 ? rawTax : rawTax / 100;
             final totalAfterDeductible = total - (total * (deductiblePercent / 100));
-            final totalAfterTax = totalAfterDeductible - (totalAfterDeductible * (taxPercent / 100));
+            final totalAfterTax = totalAfterDeductible - (totalAfterDeductible * taxRate);
             item['totalAfterTax'] = totalAfterTax.round();
           }
         }
@@ -135,7 +116,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
         
         // If auto-fill occurred, force an additional update cycle
         if (hasAutoFillChanges && mounted) {
-          // Multiple approaches to ensure UI refresh:
+          print('Triggering additional UI refresh cycles for auto-fill');
           
           // 1. Immediate setState
           setState(() {});
@@ -143,6 +124,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
           // 2. Delayed setState to ensure modal UI updates
           Future.delayed(const Duration(milliseconds: 50), () {
             if (mounted) {
+              print('First delayed refresh');
               setState(() {});
               widget.onDataChanged!(_response);
             }
@@ -151,7 +133,25 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
           // 3. Another delayed setState for stubborn cases
           Future.delayed(const Duration(milliseconds: 150), () {
             if (mounted) {
+              print('Second delayed refresh');
               setState(() {});
+            }
+          });
+          
+          // 4. Force rebuild the entire collection by creating a new reference
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (mounted) {
+              print('Force rebuild collection');
+              setState(() {
+                // Create new list reference to force CoreCollection rebuild
+                final currentList = _moduleData['generalExpense'] as List?;
+                if (currentList != null) {
+                  _moduleData['generalExpense'] = List.from(currentList);
+                  _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
+                  _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
+                }
+              });
+              widget.onDataChanged!(_response);
             }
           });
         }
@@ -190,7 +190,9 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
         'key': 'generalExpense',
         'widget': 'collection',
         'label': 'General Expense',
-        'itemLabel': 'Expense Item',
+        // 'itemLabel': 'Expense Item',
+        // Dynamic header: show travel request code if available, else fallback index
+        'titleTemplate': '{travelRequest.code}',
         'addButtonText': 'Add Expense',
         'hintText': 'No expense added yet. Click Add to create one.',
         'allowAdd': true,
@@ -210,7 +212,6 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
         },
         'summary': {
           'fields': [
-            { 'key': 'travelRequest', 'display': 'code', 'label': 'Travel Request', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
             { 'key': 'date', 'label': 'Date', 'type': 'date', 'format': 'dd/MM/yyyy', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'expenseType', 'display': 'name', 'label': 'Type', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
             { 'key': 'locationObject', 'display': 'name', 'label': 'Location', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
@@ -242,8 +243,10 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             // Use dynamic paths for min/max constraints resolved at runtime
             'minDatePath': 'travelRequest.startDate',
             'maxDatePath': 'travelRequest.endDate',
-            // Disable until travelRequest chosen
-            'requireKeys': ['travelRequest.id'],
+            'requiredKeys': ['travelRequest.id'],
+            // Provide default date when opening picker (startDate of travelRequest)
+            'defaultDatePath': '_defaultDate_date',
+            // Allow user to open even before picking travelRequest (will default today)
           },
           {
             'key': 'expenseType',
@@ -473,7 +476,9 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     final travelRequest = item['travelRequest'];
     if (travelRequest is Map<String, dynamic>) {
       final startDate = travelRequest['startDate'];
-      if (startDate != null && (item['date'] == null || item['date'].toString().isEmpty)) {
+      if (startDate != null) {
+        // Always auto-fill if travelRequest has startDate (user can change later)
+        print('Auto-filling date: $startDate (previous: ${item['date']})');
         item['date'] = startDate;
         return true; // Data was changed
       }
@@ -485,6 +490,10 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
   bool _handleLocationAutoFill(Map<String, dynamic> item) {
     final locationObject = item['locationObject'];
     final expenseType = item['expenseType'];
+    // Respect manual override flag set in modal editing
+    if (item['_manualTotal'] == true) {
+      return false; // Do not overwrite user-entered total
+    }
     
     if (locationObject is Map<String, dynamic> && expenseType is Map<String, dynamic>) {
       final expenseTypeId = expenseType['id'];
@@ -495,7 +504,7 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
       if (expenseTypeId == '225F3E9E-16CC-460D-B0F6-42167AC41EA8' || 
           (expenseTypeName != null && expenseTypeName.toString().toLowerCase().contains('per diem'))) {
         if (perDiemAmount != null) {
-          // Auto-fill total with perDiemAmount (user can change it later)
+          print('Auto-filling total (parent-level) because no manual override: $perDiemAmount (previous: ${item['total']})');
           item['total'] = perDiemAmount;
           return true; // Data was changed
         }

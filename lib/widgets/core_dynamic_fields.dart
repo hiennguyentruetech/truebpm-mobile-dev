@@ -280,6 +280,8 @@ class CoreDynamicFields {
     final String? startDateKey = config['startDateKey'];
     final String? endDateKey = config['endDateKey'];
     final String displayFormatStr = config['displayFormat'] ?? 'ddMMyyyy';
+  final String? defaultDatePath = config['defaultDatePath'];
+  DateTime? defaultDate;
     
     // Parse min/max constraints
     DateTime? minDate = config['minDate'] != null 
@@ -311,6 +313,14 @@ class CoreDynamicFields {
     if (config['maxDatePath'] != null && maxDate == null) {
       final raw = _getByPathLocal(valueMap, config['maxDatePath']);
       if (raw is DateTime) maxDate = raw; else if (raw is String) { maxDate = DateTime.tryParse(raw); }
+    }
+    if (defaultDatePath != null) {
+      final raw = _getByPathLocal(valueMap, defaultDatePath);
+      if (raw is DateTime) {
+        defaultDate = raw;
+      } else if (raw is String) {
+        defaultDate = DateTime.tryParse(raw);
+      }
     }
     final TimeOfDay? minTime = config['minTime'] != null 
         ? _parseTimeOfDay(config['minTime'])
@@ -386,6 +396,7 @@ class CoreDynamicFields {
       minTime: minTime,
       maxTime: maxTime,
       defaultTime: defaultTime,
+  defaultDate: defaultDate,
       disabled: disabledOverride,
       hidden: hiddenOverride,
       onChanged: datetimeType != CoreDateTimeType.daterange 
@@ -483,6 +494,7 @@ class CoreDynamicFields {
     final bool useFloatingAddButton = config['useFloatingAddButton'] ?? false;
     final bool useAddFirstList = config['useAddFirstList'] ?? false;
     final Map<String, dynamic>? totalSummary = config['totalSummary'] as Map<String, dynamic>?;
+  final String? titleTemplate = config['titleTemplate'];
 
     return CoreCollection(
       dataKey: fieldName,
@@ -503,6 +515,7 @@ class CoreDynamicFields {
       useFloatingAddButton: useFloatingAddButton, // When true, CoreCollection hides bottom add button
       useAddFirstList: useAddFirstList,
       totalSummary: totalSummary,
+  titleTemplate: titleTemplate,
     );
   }
 
