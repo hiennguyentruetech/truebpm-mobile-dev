@@ -12,7 +12,8 @@ class HostStrings {
   final String coreUrl;
 
   HostStrings({
-    this.main                           = 'http://192.168.177.35:8386/',
+    // this.main                           = 'http://192.168.177.35:8386/',
+    this.main                           = 'https://solomon.truetech.com.vn/',
     this.bonitaService                  = 'bonita/',
     this.coreService                    = 'bonita/apps/',
     this.portalService                  = 'bonita/portal/resource/app/',
