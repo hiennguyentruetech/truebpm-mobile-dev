@@ -32,6 +32,8 @@
 	<string>Ứng dụng cần quyền lưu ảnh vào thư viện của bạn để lưu các ảnh bạn chụp hoặc tải về từ ứng dụng.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần quyền truy cập vào thư viện ảnh của bạn để chọn hình ảnh từ thiết bị làm ảnh đại diện hoặc đính kèm vào nội dung chia sẻ.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Ứng dụng sử dụng Face ID/Touch ID để đăng nhập nhanh chóng và bảo mật hơn</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
