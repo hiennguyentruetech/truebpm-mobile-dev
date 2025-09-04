@@ -93,19 +93,15 @@ class LoginScreenState extends State<LoginScreen>
     try {
       if (!mounted) return;
       context.showLoading(message: appStrings.authenticatingBiometric);
-      
       final isAuthenticated = await _authService.authenticateWithBiometrics();
-      
       if (!mounted) return;
       context.hideLoading();
-
       if (isAuthenticated) {
         await _loginWithSavedCredentials();
       }
     } catch (e) {
       if (!mounted) return;
       context.hideLoading();
-      // logger.e('Biometric authentication error: $e');
       _setErrorMessage(appStrings.biometricAuthFailed);
     }
   }

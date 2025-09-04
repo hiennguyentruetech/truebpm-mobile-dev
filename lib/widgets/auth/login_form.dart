@@ -197,14 +197,31 @@ class LoginForm extends StatelessWidget {
                           future: authService.getAvailableBiometrics(),
                           builder: (context, snapshot) {
                             final biometrics = snapshot.data ?? [];
+                            // spinner removed after reverting to simpler flow
+
+                            // Default icon
                             IconData icon = Icons.fingerprint;
-                            
-                            if (biometrics.contains(BiometricType.face)) {
-                              icon = Icons.face;
-                            } else if (biometrics.contains(BiometricType.fingerprint)) {
-                              icon = Icons.fingerprint;
+
+                            // Prioritize face if present (Android face or iOS Face ID)
+                            // On some Android devices face may be reported as strong only later; keep fingerprint default unless face explicitly present.
+                            final hasFace = biometrics.any((b) => b == BiometricType.face);
+                            if (hasFace) {
+                              return Image.asset(
+                                'assets/logos/face-id.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                              );
+                            } else if (biometrics.any((b) => b == BiometricType.fingerprint)) {
+                              return Image.asset(
+                                'assets/logos/fingerprint.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                              );
+                            } else if (biometrics.isEmpty) {
+                              icon = Icons.lock_outline; // neutral fallback
                             }
-                            
                             return Icon(icon, size: 24);
                           },
                         ),

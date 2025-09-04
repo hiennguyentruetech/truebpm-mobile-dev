@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
@@ -18,6 +20,10 @@ class AuthService {
   AuthService({
     DirectLoginService? directLoginService,
   }) : _directLoginService = directLoginService ?? DirectLoginService();
+
+  // Diagnostics for biometric last failure
+  String? lastBiometricErrorCode;
+  String? lastBiometricErrorMessage;
 
   /// Fetch Bonita user info from session API and save to SharedPreferences
   Future<Map<String, dynamic>?> fetchAndSaveBonitaUserInfo({List<String>? cookies}) async {
@@ -276,21 +282,51 @@ class AuthService {
     try {
       final localAuth = LocalAuthentication();
       
-      final isAuthenticated = await localAuth.authenticate(
+      // Primary attempt: biometric only
+      bool success = await localAuth.authenticate(
         localizedReason: appStrings.biometricReason,
         options: const AuthenticationOptions(
           biometricOnly: true,
           stickyAuth: true,
+          useErrorDialogs: true,
         ),
       );
 
-      // logger.i('Biometric authentication result: $isAuthenticated');
-      return isAuthenticated;
+      // If failed on Android, try a fallback attempt allowing device credential (some devices misreport Face / Fingerprint)
+      if (!success && Platform.isAndroid) {
+        // Verify still can check biometric (not canceled mid-way)
+        final canRetry = await isBiometricAvailable();
+        if (canRetry) {
+          try {
+            // tiny delay to avoid immediate duplicate rejection on some Samsung devices
+            await Future.delayed(const Duration(milliseconds: 120));
+            success = await localAuth.authenticate(
+              localizedReason: appStrings.biometricReason,
+              options: const AuthenticationOptions(
+                biometricOnly: false, // allow device credential fallback
+                stickyAuth: true,
+                useErrorDialogs: true,
+              ),
+            );
+          } catch (_) {/* ignore fallback exception */}
+        }
+      }
+
+      return success;
+    } on PlatformException catch (pe) {
+      lastBiometricErrorCode = pe.code;
+      lastBiometricErrorMessage = pe.message;
+      return false;
     } catch (e) {
       // logger.e('Biometric authentication error: $e');
       return false;
     }
   }
+
+  Map<String,String?> getLastBiometricError() => {
+    'code': lastBiometricErrorCode,
+    'message': lastBiometricErrorMessage,
+  };
 
   /// Force enable biometric for given credentials (used when user logs in before async availability check completes)
   Future<void> enableBiometricForCredentials(String username, String password) async {
