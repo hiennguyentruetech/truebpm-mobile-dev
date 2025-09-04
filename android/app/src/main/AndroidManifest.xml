@@ -24,7 +24,7 @@
         android:required="false" />
     
     <application
-        android:label="yohor"
+        android:label="Solomon"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"

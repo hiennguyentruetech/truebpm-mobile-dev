@@ -17,7 +17,28 @@ class QuotationPageScreen extends StatelessWidget {
   static final List<TabConfig> availableTabs = [
     TabConfig(code: 'DTLS', name: 'Details', isDefault: true, tabBodyBuilder: QuotationDetailsTabBody.new),
     TabConfig(code: 'CMT', name: 'Comments', tabBodyBuilder: TabCmtCoreBodyScreen.new),
-    TabConfig(code: 'DOC', name: 'Documents', tabBodyBuilder: TabDocCoreBodyScreen.new),
+    // Enable revision dropdown for Documents tab (similar to Project Commander)
+    TabConfig(
+      code: 'DOC',
+      name: 'Documents',
+      tabBodyBuilder: ({
+        Key? key,
+        required String moduleCode,
+        required String tabCode,
+        String? itemId,
+        Map<String, dynamic>? initialData,
+        Function(Map<String, dynamic>)? onDataChanged,
+      }) => TabDocCoreBodyScreen(
+        key: key,
+        moduleCode: moduleCode,
+        tabCode: tabCode,
+        itemId: itemId,
+        initialData: initialData,
+        onDataChanged: onDataChanged,
+        enableRevision: true,
+        dataRevision: 'DROPDOWN.RESOURCE/REVISION',
+      ),
+    ),
   ];
 
   @override

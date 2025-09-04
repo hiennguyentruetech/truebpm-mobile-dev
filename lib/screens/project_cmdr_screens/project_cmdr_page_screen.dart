@@ -20,7 +20,30 @@ class ProjectCmdrPageScreen extends StatelessWidget {
   static final List<TabConfig> availableTabs = [
     TabConfig(code: 'DTLS', name: 'Details', isDefault: true, tabBodyBuilder: CmdrDetailsTabBody.new),
     TabConfig(code: 'CMT', name: 'Comments', tabBodyBuilder: TabCmtCoreBodyScreen.new),
-    TabConfig(code: 'CMDRMD', name: 'Documents', tabBodyBuilder: TabDocCoreBodyScreen.new),
+    // Add revision config for Documents tab
+    TabConfig(
+      code: 'CMDRMD',
+      name: 'Documents',
+      tabBodyBuilder: ({
+        Key? key,
+        required String moduleCode,
+        required String tabCode,
+        String? itemId,
+        Map<String, dynamic>? initialData,
+        Function(Map<String, dynamic>)? onDataChanged,
+      }) => TabDocCoreBodyScreen(
+        key: key,
+        moduleCode: moduleCode,
+        tabCode: tabCode,
+        itemId: itemId,
+        initialData: initialData,
+        onDataChanged: onDataChanged,
+        enableRevision: true,
+        enableDocumentType: true,
+        dataRevision: 'DROPDOWN.RESOURCE/REVISION',
+        dataDocumentType: 'DROPDOWN.PRJMGT/PROJECTDOCTYPE',
+      ),
+    ),
   ];
 
   @override
