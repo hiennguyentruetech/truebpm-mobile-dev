@@ -47,10 +47,36 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
   void _onChanged(String key, dynamic value) {
     setState(() {
       _moduleData[key] = value;
+
+      // Khi chọn opportunityId mới, nếu object đầy đủ kèm leader/customer thì giữ trong _moduleData để onlyView hiển thị ngay
+      if (key == 'opportunityId' && value is Map<String, dynamic>) {
+        // Đảm bảo có các field nested, nếu API trả thiếu thì cố gắng map từ key phổ biến
+        // Example expected structure: { leader: { fullName }, customer: { name, address, contact, email, industry: { name } } }
+        final opp = value;
+        final leader = opp['leader'];
+        final customer = opp['customer'];
+        // Nếu thiếu nested, bỏ qua (UI chỉ hiển thị nếu có)
+        if (leader is Map<String, dynamic>) {
+          // nothing extra, path rendering uses nested map
+        }
+        if (customer is Map<String, dynamic>) {
+          // Ensure nested industry map existence
+          if (customer['industry'] == null) {
+            // try fallback mapping
+            if (opp['industry'] is Map<String, dynamic>) {
+              customer['industry'] = opp['industry'];
+            }
+          }
+        }
+        // Gán lại để đảm bảo reference copy trong moduleData
+        _moduleData['opportunityId'] = Map<String, dynamic>.from(opp);
+      }
+
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
 
+    // Gửi notify sau frame để CoreDetail nhận dirty state
     SchedulerBinding.instance.addPostFrameCallback((_) {
       widget.onDataChanged?.call(_response);
     });
@@ -83,6 +109,7 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
           fieldConfigs: [
             { 'key': 'code', 'label': 'Code', 'disabled': true },
             { 'key': 'name', 'label': 'Name', 'required': true },
+            { 'key': 'approvedDate', 'widget': 'datetime', 'label': 'Approved Date', 'datetimeType': 'date' },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -101,9 +128,29 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             // opportunityId object related selects (placeholder endpoints)
-            { 'key': 'opportunityId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Opportunity', 'data': 'DROPDOWN.QUTATI/OPPORTUNITY', 'display': 'opportunityName' },
+            {
+              'key': 'ownerId',
+              'label': 'Owner',
+              'widget': 'select',
+              'selectType': 'dropdown',
+              'data': 'DROPDOWN.QUTATI/OWNER',
+              'display': 'fullName',
+              'required': true,
+              // Khi đổi owner => clear opportunityId và các field phụ thuộc
+              'clearOnChange': [
+                'opportunityId'
+              ]
+            },
+            {
+              'key': 'opportunityId',
+              'widget': 'select',
+              'selectType': 'dropdown',
+              'label': 'Opportunity',
+              'data': 'DROPDOWN.QUTATI/OPPORTUNITY?ownerId={{ownerId.id}}',
+              'display': 'name',
+              'required': true,
+            },
             // Owner & Leader full name (view only)
-            { 'key': 'opportunityId.owner.fullName', 'label': 'Owner', 'widget': 'input', 'onlyView': true, 'disabled': true },
             { 'key': 'opportunityId.leader.fullName', 'label': 'Leader', 'widget': 'input', 'onlyView': true, 'disabled': true },
           ],
           itemDetail: _itemDetail,
