@@ -1713,6 +1713,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     final createdDate = file['createdDate']?.toString();
     final revisionCode = file['revisionCode']?.toString();
     final documentTypeName = file['documentTypeName']?.toString();
+    final revisionName = file['revisionName']?.toString();
     
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
@@ -1728,12 +1729,12 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(7),
         child: Row(
           children: [
             // File Icon
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: _getFileTypeColor(fileType).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -1741,11 +1742,11 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
               child: Icon(
                 _getFileTypeIcon(fileType),
                 color: _getFileTypeColor(fileType),
-                size: 24,
+                size: 22,
               ),
             ),
             
-            const SizedBox(width: 10),
+            const SizedBox(width: 5),
             
             // File Info
             Expanded(
@@ -1784,7 +1785,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                     ],
                   ),
                   // Show revision and document type info if available
-                  if (revisionCode != null || documentTypeName != null) ...[
+                  if (revisionCode != null || documentTypeName != null || revisionName != null) ...[
                     const SizedBox(height: 4),
                     Wrap(
                       spacing: 6,
@@ -1803,6 +1804,23 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                               style: TextStyle(
                                 fontSize: 9,
                                 color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        if (revisionName != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(
+                              'Revison: $revisionName',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.green.shade700,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -1862,7 +1880,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
     return GestureDetector(
       onTap: _isProcessing ? null : onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
@@ -1870,7 +1888,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
         child: Icon(
           icon,
           color: color,
-          size: 18,
+          size: 17,
         ),
       ),
     );
