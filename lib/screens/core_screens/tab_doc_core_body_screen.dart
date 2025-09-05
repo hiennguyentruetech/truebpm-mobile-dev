@@ -1817,7 +1817,7 @@ class _TabDocCoreBodyScreenState extends CoreTabBodyState<TabDocCoreBodyScreen> 
                               border: Border.all(color: Colors.green.shade200),
                             ),
                             child: Text(
-                              'Revison: $revisionName',
+                              'Revision: $revisionName',
                               style: TextStyle(
                                 fontSize: 9,
                                 color: Colors.green.shade700,
