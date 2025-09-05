@@ -91,30 +91,52 @@ class LoginScreenState extends State<LoginScreen>
 
   Future<void> _authenticateWithBiometrics() async {
     try {
+      print('Starting biometric authentication...');
       if (!mounted) return;
-      context.showLoading(message: appStrings.authenticatingBiometric);
+      
+      // Add small delay to ensure UI is ready
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      // Don't show loading immediately to avoid UI conflicts with biometric dialog
       final isAuthenticated = await _authService.authenticateWithBiometrics();
+      print('Biometric authentication result: $isAuthenticated');
+      
       if (!mounted) return;
-      context.hideLoading();
+
       if (isAuthenticated) {
+        print('Biometric success, logging in with saved credentials...');
+        context.showLoading(message: appStrings.signingIn);
         await _loginWithSavedCredentials();
+      } else {
+        print('Biometric authentication was not successful');
+        // Only show error if user didn't just cancel
+        final errorInfo = _authService.getLastBiometricError();
+        print('Last biometric error: $errorInfo');
+        
+        // Don't show error for user cancellation
+        if (errorInfo['code'] != 'NotAvailable' && 
+            errorInfo['code'] != 'UserCanceled' &&
+            errorInfo['code'] != 'SystemCanceled') {
+          _setErrorMessage('Xác thực sinh trắc học thất bại. Vui lòng thử lại.');
+        }
       }
     } catch (e) {
       if (!mounted) return;
       context.hideLoading();
-      _setErrorMessage(appStrings.biometricAuthFailed);
+      print('Biometric authentication error: $e');
+      print('Error type: ${e.runtimeType}');
+      _setErrorMessage('Lỗi xác thực sinh trắc học. Vui lòng thử lại.');
     }
   }
 
   Future<void> _loginWithSavedCredentials() async {
     try {
-      if (!mounted) return;
       context.showLoading(message: appStrings.signingIn);
-      
+
       final result = await _authService.loginWithSavedCredentials();
-      
+
       if (!mounted) return;
-      
+
       if (result.isSuccess) {
         // Fetch and save Bonita user info first
         context.showLoading(message: 'Loading Bonita session...');
@@ -129,7 +151,7 @@ class LoginScreenState extends State<LoginScreen>
           if (!mounted) return;
         }
         context.hideLoading();
-        
+
         _navigateToMainScreen();
       } else {
         context.hideLoading();

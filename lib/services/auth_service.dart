@@ -280,45 +280,56 @@ class AuthService {
   /// Authenticate with biometrics
   Future<bool> authenticateWithBiometrics() async {
     try {
+      print('AuthService: Starting biometric authentication');
       final localAuth = LocalAuthentication();
       
-      // Primary attempt: biometric only
+      // Check if biometric is available first
+      print('AuthService: Checking biometric availability...');
+      final canCheck = await localAuth.canCheckBiometrics;
+      print('AuthService: Can check biometrics: $canCheck');
+      
+      final isSupported = await localAuth.isDeviceSupported();
+      print('AuthService: Device supported: $isSupported');
+      
+      if (!canCheck || !isSupported) {
+        print('AuthService: Device does not support biometric authentication');
+        return false;
+      }
+      
+      final availableBiometrics = await localAuth.getAvailableBiometrics();
+      print('AuthService: Available biometrics: $availableBiometrics');
+      
+      // Add a small delay to ensure the UI is ready
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // For Android, use biometricOnly: false to allow both biometric and device credentials
+      // This works better on most Android devices
+      print('AuthService: Attempting biometric authentication...');
       bool success = await localAuth.authenticate(
-        localizedReason: appStrings.biometricReason,
-        options: const AuthenticationOptions(
-          biometricOnly: true,
+        localizedReason: 'Xác thực để đăng nhập vào ứng dụng',
+        options: AuthenticationOptions(
+          biometricOnly: Platform.isIOS ? true : false, // iOS: biometric only, Android: allow device credential fallback
           stickyAuth: true,
           useErrorDialogs: true,
         ),
       );
+      print('AuthService: Authentication result: $success');
 
-      // If failed on Android, try a fallback attempt allowing device credential (some devices misreport Face / Fingerprint)
-      if (!success && Platform.isAndroid) {
-        // Verify still can check biometric (not canceled mid-way)
-        final canRetry = await isBiometricAvailable();
-        if (canRetry) {
-          try {
-            // tiny delay to avoid immediate duplicate rejection on some Samsung devices
-            await Future.delayed(const Duration(milliseconds: 120));
-            success = await localAuth.authenticate(
-              localizedReason: appStrings.biometricReason,
-              options: const AuthenticationOptions(
-                biometricOnly: false, // allow device credential fallback
-                stickyAuth: true,
-                useErrorDialogs: true,
-              ),
-            );
-          } catch (_) {/* ignore fallback exception */}
-        }
-      }
-
+      // No need for retry logic since we're already allowing device credentials on Android
+      print('AuthService: Final authentication result: $success');
       return success;
     } on PlatformException catch (pe) {
+      print('AuthService: PlatformException caught!');
+      print('AuthService: Error code: ${pe.code}');
+      print('AuthService: Error message: ${pe.message}');
+      print('AuthService: Error details: ${pe.details}');
       lastBiometricErrorCode = pe.code;
       lastBiometricErrorMessage = pe.message;
       return false;
     } catch (e) {
-      // logger.e('Biometric authentication error: $e');
+      print('AuthService: General exception caught!');
+      print('AuthService: Error: $e');
+      print('AuthService: Error type: ${e.runtimeType}');
       return false;
     }
   }
