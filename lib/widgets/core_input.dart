@@ -324,16 +324,67 @@ class _CoreInputState extends State<CoreInput> {
   }
 
   bool get _isDisabled {
-  if (widget.onlyView) return true;
-  if (widget.disabled != null) return widget.disabled!;
-    final disabled = widget.itemDetail['attribute']?['disabled']?[widget.dataKey];
-    return disabled == true;
+    if (widget.onlyView) return true;
+    if (widget.disabled != null) return widget.disabled!;
+
+    // Support nested disabled flags using dot-paths, e.g., attribute.disabled.opportunityId.customer.contact = true
+    final attr = widget.itemDetail['attribute'];
+    if (attr is Map<String, dynamic>) {
+      final disabledRoot = attr['disabled'];
+      if (disabledRoot is Map) {
+        // 1) Exact key match
+        final direct = disabledRoot[widget.dataKey];
+        if (direct == true) return true;
+
+        // 2) Dot-path traversal; any ancestor set to true disables the field
+        if (widget.dataKey.contains('.')) {
+          final parts = widget.dataKey.split('.');
+          dynamic curr = disabledRoot;
+          for (final part in parts) {
+            if (curr is Map && curr.containsKey(part)) {
+              curr = curr[part];
+              if (curr == true) return true; // parent flag
+            } else {
+              curr = null;
+              break;
+            }
+          }
+          if (curr == true) return true; // leaf flag
+        }
+      }
+    }
+    return false;
   }
 
   bool get _isHidden {
     if (widget.hidden != null) return widget.hidden!;
-    final hidden = widget.itemDetail['attribute']?['hidden']?[widget.dataKey];
-    return hidden == true;
+    // Support nested hidden flags using dot-paths, e.g., attribute.hidden.opportunityId.customer.contact = true
+    final attr = widget.itemDetail['attribute'];
+    if (attr is Map<String, dynamic>) {
+      final hiddenRoot = attr['hidden'];
+      if (hiddenRoot is Map) {
+        // 1) Exact key match
+        final direct = hiddenRoot[widget.dataKey];
+        if (direct == true) return true;
+
+        // 2) Dot-path traversal; any ancestor set to true hides the field
+        if (widget.dataKey.contains('.')) {
+          final parts = widget.dataKey.split('.');
+          dynamic curr = hiddenRoot;
+          for (final part in parts) {
+            if (curr is Map && curr.containsKey(part)) {
+              curr = curr[part];
+              if (curr == true) return true; // parent flag
+            } else {
+              curr = null;
+              break;
+            }
+          }
+          if (curr == true) return true; // leaf flag
+        }
+      }
+    }
+    return false;
   }
 
   String get _displayLabel {
