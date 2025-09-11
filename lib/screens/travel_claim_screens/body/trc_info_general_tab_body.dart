@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/common/floating_add_button.dart';
 import 'package:truebpm/services/core_service.dart';
@@ -58,31 +59,80 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
 
   void _onChanged(String key, dynamic value) {
     bool hasAutoFillChanges = false;
+    // Snapshot previous list for diffing to find the single changed item
+    final prevListRaw = _moduleData['generalExpense'];
+    final List<Map<String, dynamic>> prevItems = (prevListRaw is List)
+        ? prevListRaw
+            .map((e) => e is Map<String, dynamic> ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+            .toList(growable: false)
+        : const [];
     
     setState(() {
       _moduleData[key] = value;
       
       // Auto-recalculate for generalExpense collection items
       if (key == 'generalExpense' && value is List) {
-        print('Processing generalExpense collection with ${value.length} items');
-        for (int i = 0; i < value.length; i++) {
-          final item = value[i];
-          if (item is Map<String, dynamic>) {
-            print('Processing item $i: ${item.keys}');
-            
-            // Handle auto-fill logic for travelRequest selection
-            if (_handleTravelRequestAutoFill(item)) {
+        // Ensure we work on independent item maps to avoid reference sharing between items
+        final List<Map<String, dynamic>> items = value
+            .map((e) => e is Map<String, dynamic> ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+            .toList(growable: true);
+        _moduleData['generalExpense'] = items;
+        print('Processing generalExpense collection with ${items.length} items');
+        
+        // Determine which item changed to avoid affecting others.
+        int? changedIndex;
+        if (prevItems.length == items.length) {
+          for (int i = 0; i < items.length; i++) {
+            if (!(i < prevItems.length && mapEquals(prevItems[i], items[i]))) {
+              if (changedIndex == null) {
+                changedIndex = i;
+              } else {
+                // More than one differs - ambiguous (e.g., reorder). Avoid auto-fill in this case.
+                changedIndex = null;
+                break;
+              }
+            }
+          }
+        } else if (items.length == prevItems.length + 1) {
+          // Added one new item - assume first differing index is the new/edited one
+          for (int i = 0; i < items.length; i++) {
+            if (!(i < prevItems.length && mapEquals(prevItems[i], items[i]))) {
+              changedIndex = i;
+              break;
+            }
+          }
+        } else {
+          // Removal or multiple structural changes - skip auto-fill
+          changedIndex = null;
+        }
+
+        bool mapEq(dynamic a, dynamic b) {
+          if (a is Map && b is Map) return mapEquals(a, b);
+          return a == b;
+        }
+
+        for (int i = 0; i < items.length; i++) {
+          final item = items[i];
+          final prevItem = (i < prevItems.length) ? prevItems[i] : null;
+
+          if (changedIndex != null && i == changedIndex) {
+            print('Processing changed item $i: ${item.keys}');
+
+            // Only run relevant auto-fills based on fields that changed
+            final bool travelChanged = !mapEq(prevItem?['travelRequest'], item['travelRequest']);
+            final bool locationChanged = !mapEq(prevItem?['locationObject'], item['locationObject']);
+            final bool typeChanged = !mapEq(prevItem?['expenseType'], item['expenseType']);
+
+            if (travelChanged && _handleTravelRequestAutoFill(item)) {
               hasAutoFillChanges = true;
               print('Auto-filled date for item $i');
             }
-            
-            // Handle auto-fill logic for locationObject selection  
-            if (_handleLocationAutoFill(item)) {
+            if ((locationChanged || typeChanged) && _handleLocationAutoFill(item)) {
               hasAutoFillChanges = true;
               print('Auto-filled total for item $i');
             }
-            
-            // Calculate totalAfterTax
+
+            // Calculate totalAfterTax for changed item
             final totalRaw = item['total'];
             double total = 0;
             if (totalRaw is int) total = totalRaw.toDouble();
@@ -97,11 +147,32 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
             } else if (item['tax'] is num) {
               rawTax = (item['tax'] as num).toDouble();
             }
-            // If tax already stored as fraction (0.1 = 10%), use directly; if stored as 10, convert by /100
             final double taxRate = rawTax <= 1 ? rawTax : rawTax / 100;
             final totalAfterDeductible = total - (total * (deductiblePercent / 100));
             final totalAfterTax = totalAfterDeductible - (totalAfterDeductible * taxRate);
             item['totalAfterTax'] = totalAfterTax.round();
+          } else {
+            // Do not auto-fill other items. Only ensure totalAfterTax exists if missing.
+            if (item['totalAfterTax'] == null) {
+              final totalRaw = item['total'];
+              double total = 0;
+              if (totalRaw is int) total = totalRaw.toDouble();
+              else if (totalRaw is double) total = totalRaw;
+              final deductibleRaw = item['deductible'];
+              double deductiblePercent = 0;
+              if (deductibleRaw is int) deductiblePercent = deductibleRaw.toDouble();
+              else if (deductibleRaw is double) deductiblePercent = deductibleRaw;
+              double rawTax = 0;
+              if (item['expenseType'] is Map && (item['expenseType']['tax'] is num)) {
+                rawTax = (item['expenseType']['tax'] as num).toDouble();
+              } else if (item['tax'] is num) {
+                rawTax = (item['tax'] as num).toDouble();
+              }
+              final double taxRate = rawTax <= 1 ? rawTax : rawTax / 100;
+              final totalAfterDeductible = total - (total * (deductiblePercent / 100));
+              final totalAfterTax = totalAfterDeductible - (totalAfterDeductible * taxRate);
+              item['totalAfterTax'] = totalAfterTax.round();
+            }
           }
         }
       }
@@ -493,11 +564,38 @@ class _TRCInfoGeneralTabBodyState extends CoreTabBodyState<TRCInfoGeneralTabBody
     final travelRequest = item['travelRequest'];
     if (travelRequest is Map<String, dynamic>) {
       final startDate = travelRequest['startDate'];
+      final endDate = travelRequest['endDate'];
       if (startDate != null) {
-        // Always auto-fill if travelRequest has startDate (user can change later)
-        print('Auto-filling date: $startDate (previous: ${item['date']})');
-        item['date'] = startDate;
-        return true; // Data was changed
+        final existing = item['date'];
+
+        // Helper to parse various date input types safely
+        DateTime? _parseDate(dynamic v) {
+          if (v == null) return null;
+          if (v is DateTime) return v;
+          if (v is String && v.isNotEmpty) {
+            try { return DateTime.parse(v); } catch (_) { return null; }
+          }
+          return null;
+        }
+
+        final existingDt = _parseDate(existing);
+        final startDt = _parseDate(startDate);
+        final endDt = _parseDate(endDate);
+
+        // Only auto-fill when empty, or when existing date is out of the current travelRequest range
+        final isEmpty = existing == null || (existing is String && existing.trim().isEmpty);
+        final outOfRange = existingDt != null && startDt != null && (
+          existingDt.isBefore(startDt) || (endDt != null && existingDt.isAfter(endDt))
+        );
+
+        if (isEmpty || outOfRange) {
+          final newDate = startDate;
+          if (existing != newDate) {
+            print('Auto-filling date: $newDate (previous: ${item['date']})');
+            item['date'] = newDate;
+            return true; // Data was changed
+          }
+        }
       }
     }
     return false; // No changes

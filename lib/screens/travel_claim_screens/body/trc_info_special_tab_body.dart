@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
@@ -51,25 +52,75 @@ class _TRCInfoSpecialTabBodyState extends CoreTabBodyState<TRCInfoSpecialTabBody
   }
 
   void _onChanged(String key, dynamic value) {
+    // Snapshot previous list for diffing
+    final prevListRaw = _moduleData['specialExpense'];
+    final List<Map<String, dynamic>> prevItems = (prevListRaw is List)
+        ? prevListRaw
+            .map((e) => e is Map<String, dynamic> ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+            .toList(growable: false)
+        : const [];
+
     setState(() {
       _moduleData[key] = value;
-      // If updating specialExpense collection we recompute derived fields (travelRequestCode default date helper)
+      // If updating specialExpense collection we recompute derived fields for only the changed item
       if (key == 'specialExpense' && value is List) {
-        for (final item in value) {
-          if (item is Map<String, dynamic>) {
-            // When travelRequestReason selected, expose travelRequestCode and default date helper
-            final reason = item['travelRequestReason'];
-            if (reason is Map<String, dynamic>) {
-              if (reason['travelRequestCode'] != null) {
-                item['travelRequestCode'] = reason['travelRequestCode'];
-              }
-              // Provide startDate/endDate as dynamic min/max and default date path
-              final startDate = reason['startDate'];
-              if (startDate != null) {
-                item['_defaultDate_date'] = startDate; // used by defaultDatePath
+        // Clone to avoid shared references
+        final List<Map<String, dynamic>> items = value
+            .map((e) => e is Map<String, dynamic> ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+            .toList(growable: true);
+        _moduleData['specialExpense'] = items;
+
+        // Find changed index
+        int? changedIndex;
+        if (prevItems.length == items.length) {
+          for (int i = 0; i < items.length; i++) {
+            if (!(i < prevItems.length && mapEquals(prevItems[i], items[i]))) {
+              if (changedIndex == null) {
+                changedIndex = i;
+              } else {
+                changedIndex = null; // multiple diffs, skip auto fill
+                break;
               }
             }
-            // Compute totalAfterTax (no deductible) when total or expenseType present
+          }
+        } else if (items.length == prevItems.length + 1) {
+          for (int i = 0; i < items.length; i++) {
+            if (!(i < prevItems.length && mapEquals(prevItems[i], items[i]))) {
+              changedIndex = i;
+              break;
+            }
+          }
+        } else {
+          changedIndex = null; // removals or reorders - avoid auto fill
+        }
+
+        bool mapEq(dynamic a, dynamic b) {
+          if (a is Map && b is Map) return mapEquals(a, b);
+          return a == b;
+        }
+
+        for (int i = 0; i < items.length; i++) {
+          final item = items[i];
+          final prevItem = (i < prevItems.length) ? prevItems[i] : null;
+
+          if (changedIndex != null && i == changedIndex) {
+            // Derive from travelRequestReason when it changed
+            final bool reasonChanged = !mapEq(prevItem?['travelRequestReason'], item['travelRequestReason']);
+            if (reasonChanged) {
+              final reason = item['travelRequestReason'];
+              if (reason is Map<String, dynamic>) {
+                if (reason['travelRequestCode'] != null) {
+                  item['travelRequestCode'] = reason['travelRequestCode'];
+                }
+                final startDate = reason['startDate'];
+                if (startDate != null) {
+                  // helper used if defaultDatePath points here
+                  item['_defaultDate_date'] = startDate;
+                }
+              }
+            }
+
+            // Compute totalAfterTax (no deductible) for changed item
             final totalRaw = item['total'];
             double total = 0;
             if (totalRaw is int) total = totalRaw.toDouble();
@@ -81,11 +132,24 @@ class _TRCInfoSpecialTabBodyState extends CoreTabBodyState<TRCInfoSpecialTabBody
               rawTax = (item['tax'] as num).toDouble();
             }
             final taxRate = rawTax <= 1 ? rawTax : rawTax / 100;
-            if (total > 0) {
-              final totalAfterTax = total - (total * taxRate);
+            final totalAfterTax = (total > 0) ? (total - (total * taxRate)) : 0;
+            item['totalAfterTax'] = totalAfterTax.round();
+          } else {
+            // Do not alter other items; only ensure totalAfterTax exists if missing
+            if (item['totalAfterTax'] == null) {
+              final totalRaw = item['total'];
+              double total = 0;
+              if (totalRaw is int) total = totalRaw.toDouble();
+              else if (totalRaw is double) total = totalRaw;
+              double rawTax = 0;
+              if (item['expenseType'] is Map && (item['expenseType']['tax'] is num)) {
+                rawTax = (item['expenseType']['tax'] as num).toDouble();
+              } else if (item['tax'] is num) {
+                rawTax = (item['tax'] as num).toDouble();
+              }
+              final taxRate = rawTax <= 1 ? rawTax : rawTax / 100;
+              final totalAfterTax = (total > 0) ? (total - (total * taxRate)) : 0;
               item['totalAfterTax'] = totalAfterTax.round();
-            } else {
-              item['totalAfterTax'] = 0;
             }
           }
         }
