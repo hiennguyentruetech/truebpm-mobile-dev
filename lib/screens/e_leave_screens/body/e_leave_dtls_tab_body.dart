@@ -120,23 +120,26 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
     if (start == null || end == null) return null;
 
     // Count working days (Mon-Fri), exclude Saturday and Sunday, inclusive range
-    final int workingDays = _countWorkingDays(start, end);
-    final double totalDays = workingDays.toDouble();
+  final int workingDays = _countWorkingDays(start, end);
+  double totalDays = workingDays.toDouble();
     
     // Calculate based on leaveTime type
     final leaveTimeId = leaveTime['id']?.toString();
     if (leaveTimeId == null) return totalDays;
     
-    switch (leaveTimeId) {
-      case 'D95FC623-A1D4-4E05-A93C-07BEE433C679': // Full day
-        return totalDays;
-      case '76022664-7E76-497B-A4DF-22CC5EAB7CA6': // AM
-        return totalDays * 0.5;
-      case 'AFB9171B-D653-4576-9C37-A5C01188400B': // PM
-        return totalDays * 0.5;
-      default:
-        return totalDays;
-    }
+    // Map known leaveTime IDs to factors
+    final Map<String, double> factors = const {
+      'D95FC623-A1D4-4E05-A93C-07BEE433C679': 1.0, // Full day
+      '76022664-7E76-497B-A4DF-22CC5EAB7CA6': 0.5, // AM
+      'AFB9171B-D653-4576-9C37-A5C01188400B': 0.5, // PM
+    };
+
+    final factor = factors[leaveTimeId] ?? 1.0;
+    totalDays = totalDays * factor;
+
+    // Normalize to 1 decimal place without rounding up unexpected values
+    // e.g., 2.5 stays 2.5, 1 becomes 1.0 for consistent display
+    return double.parse(totalDays.toStringAsFixed(1));
   }
 
   // NEW: Count working days between start and end inclusive, excluding Saturday/Sunday
@@ -625,7 +628,7 @@ class _ELeaveDetailsTabBodyState extends CoreTabBodyState<ELeaveDetailsTabBody> 
               'display': 'name',
               'required': true,
             },      
-            { 'key': 'totalDays', 'label': 'Total Days', 'type': 'number', 'disabled': true},
+            { 'key': 'totalDays', 'label': 'Total Days', 'type': 'number', 'decimalPlaces': 1, 'disabled': true},
             {
               'key': 'leaveType',
               'widget': 'select',
