@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+// Removed native PDF viewer to avoid native .so page size issues on Android 15+
 import 'package:open_filex/open_filex.dart';
 
 /// A comprehensive file viewer dialog that supports multiple file types
@@ -19,10 +19,9 @@ class FileViewerDialog {
     required Map<String, dynamic> fileInfo,
     required Function(BuildContext, String, Uint8List) onSaveToDevice,
   }) async {
-    final isOffice = () {
-      final c = _classifyMime(_resolveMime(fileType, fileName));
-      return c == 'word' || c == 'excel' || c == 'powerpoint';
-    }();
+  final classification = _classifyMime(_resolveMime(fileType, fileName));
+  final isOffice = classification == 'word' || classification == 'excel' || classification == 'powerpoint';
+  final isPdf = classification == 'pdf';
 
     final choice = await showDialog<String>(
       context: context,
@@ -101,7 +100,7 @@ class FileViewerDialog {
                     const SizedBox(height: 12),
                   ],
                   
-                  if (isOffice) ...[
+                  if (isOffice || isPdf) ...[
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -337,7 +336,8 @@ class FileViewerDialog {
 
   static bool _isViewableFileType(String fileType) {
     final category = _classifyMime(_resolveMime(fileType, null));
-    return category == 'image' || category == 'pdf' || category == 'text';
+  // Only allow in-app view for image and text. PDF will be opened with system apps.
+  return category == 'image' || category == 'text';
   }
 
   static String _getFileTypeDisplayName(String fileType, {String? fileName}) {
@@ -421,7 +421,8 @@ class FileViewerDialog {
       if (category == 'image') {
         await _showProfessionalImageViewer(context, fileName, bytes, fileInfo, onSaveToDevice);
       } else if (category == 'pdf') {
-        await _showProfessionalPdfViewer(context, fileName, bytes, fileInfo, onSaveToDevice);
+        // Open PDFs with installed apps instead of in-app viewing
+        await _openWithSystemApp(fileName, bytes, context);
       } else if (category == 'text') {
         await _showTextViewer(context, fileName, bytes, fileInfo, onSaveToDevice);
       } else if (category == 'word' || category == 'excel' || category == 'powerpoint') {
@@ -525,84 +526,6 @@ class FileViewerDialog {
     );
   }
 
-  static Future<void> _showProfessionalPdfViewer(
-    BuildContext context,
-    String fileName,
-    Uint8List bytes,
-    Map<String, dynamic> fileInfo,
-    Function(BuildContext, String, Uint8List) onSaveToDevice,
-  ) async {
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      await tempFile.writeAsBytes(bytes);
-
-      if (context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              appBar: AppBar(
-                title: Text(
-                  fileName,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                actions: [
-                  IconButton(
-                    onPressed: () => onSaveToDevice(context, fileName, bytes),
-                    icon: const Icon(Icons.download),
-                    tooltip: 'Download',
-                  ),
-                ],
-              ),
-              body: PDFView(
-                filePath: tempFile.path,
-                enableSwipe: true,
-                swipeHorizontal: false,
-                autoSpacing: false,
-                pageFling: true,
-                pageSnap: true,
-                defaultPage: 0,
-                fitPolicy: FitPolicy.BOTH,
-                preventLinkNavigation: false,
-                onRender: (pages) {
-                  // PDF rendered with $pages pages
-                },
-                onError: (error) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('PDF Error: $error'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                onPageError: (page, error) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('PDF Page $page Error: $error'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-              ),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error viewing PDF: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 
   static Future<void> _showTextViewer(
     BuildContext context,
@@ -808,3 +731,5 @@ class FileViewerDialog {
     );
   }
 }
+
+// PDF viewer uses flutter_pdfview native component
