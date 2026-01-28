@@ -1,41 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/models/dashboard_model.dart';
 
-/// Inbox Card Widget for Dashboard
+/// Inbox Card Widget for Dashboard - Web-style Design (Horizontal Scroll)
 class DashboardInboxCard extends StatelessWidget {
   final InboxDataItem item;
   final VoidCallback? onTap;
+  final int index;
 
-  const DashboardInboxCard({super.key, required this.item, this.onTap});
+  const DashboardInboxCard({
+    super.key,
+    required this.item,
+    this.onTap,
+    this.index = 0,
+  });
+
+  // Icon colors based on index (matching web design)
+  Color get _iconColor {
+    final colors = [
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFFF97316), // Orange
+      const Color(0xFF10B981), // Green
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF06B6D4), // Cyan
+    ];
+    return colors[index % colors.length];
+  }
+
+  Color get _iconBgColor {
+    final bgColors = [
+      const Color(0xFFEFF6FF), // Light Blue
+      const Color(0xFFFFF7ED), // Light Orange
+      const Color(0xFFECFDF5), // Light Green
+      const Color(0xFFF5F3FF), // Light Purple
+      const Color(0xFFFDF2F8), // Light Pink
+      const Color(0xFFECFEFF), // Light Cyan
+    ];
+    return bgColors[index % bgColors.length];
+  }
+
+  // Value color based on value (negative = blue, zero/positive = default)
+  Color get _valueColor {
+    // Safely check if value is negative
+    final numValue = item.value is num ? item.value as num : 0;
+    if (numValue < 0) {
+      return const Color(0xFF3B82F6); // Blue for negative
+    }
+    return _iconColor;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 160,
+      width: 180,
+      height: 130,
       margin: const EdgeInsets.only(right: 12),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: item.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(item.icon, color: item.color, size: 24),
+                // Icon + Title row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _iconBgColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(item.icon, color: _iconColor, size: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 12),
+                const Spacer(),
 
                 // Value
                 Text(
@@ -43,29 +111,20 @@ class DashboardInboxCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: item.color,
+                    color: _valueColor,
+                    letterSpacing: -0.5,
                   ),
                 ),
-
                 // Unit
                 if (item.unit != null)
                   Text(
                     item.unit!,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-
-                const SizedBox(height: 8),
-
-                // Title
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
               ],
             ),
           ),
@@ -75,7 +134,7 @@ class DashboardInboxCard extends StatelessWidget {
   }
 }
 
-/// Horizontal scrolling inbox list
+/// Horizontal scrolling inbox list with web-style design
 class DashboardInboxList extends StatelessWidget {
   final List<InboxDataItem> items;
   final int selectedYear;
@@ -94,89 +153,133 @@ class DashboardInboxList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header with year selector
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Overview',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-
-              // Year dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: selectedYear,
-                    isDense: true,
-                    icon: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: Colors.blue.shade600,
-                      size: 20,
-                    ),
-                    items: availableYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(
-                          year.toString(),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue, Colors.blue.shade600],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row: Label on left, Year selector on right
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Label on left
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.visibility_rounded,
+                        color: Colors.white.withOpacity(0.9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'My Watchlist',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        onYearChanged?.call(value);
-                      }
-                    },
+                      ),
+                    ],
                   ),
-                ),
+                  // Year selector on right
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: selectedYear,
+                        isDense: true,
+                        dropdownColor: Colors.blue.shade700,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        items: availableYears.map((year) {
+                          return DropdownMenuItem(
+                            value: year,
+                            child: Text(
+                              year.toString(),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            onYearChanged?.call(value);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
 
-        const SizedBox(height: 12),
+            // Inbox cards - horizontal scroll
+            SizedBox(
+              height: 140,
+              child: isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    )
+                  : items.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No data available',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        return DashboardInboxCard(
+                          item: items[index],
+                          index: index,
+                        );
+                      },
+                    ),
+            ),
 
-        // Inbox cards
-        SizedBox(
-          height: 180,
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : items.isEmpty
-              ? Center(
-                  child: Text(
-                    'No data available',
-                    style: TextStyle(color: Colors.grey.shade500),
-                  ),
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    return DashboardInboxCard(item: items[index]);
-                  },
-                ),
+            const SizedBox(height: 16),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

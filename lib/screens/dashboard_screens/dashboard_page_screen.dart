@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:truebpm/models/dashboard_model.dart';
 import 'package:truebpm/providers/dashboard_provider.dart';
 import 'package:truebpm/utils/session_handler.dart';
+import 'package:truebpm/widgets/common/floating_add_button.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_charts.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_widgets.dart';
 
@@ -55,6 +56,15 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         appBar: _buildAppBar(),
+        floatingActionButton: Consumer<DashboardProvider>(
+          builder: (context, provider, _) {
+            if (provider.allCharts.isEmpty) return const SizedBox.shrink();
+            return FloatingAddButton(
+              onPressed: () => _showAddChartDialog(provider),
+              size: 52,
+            );
+          },
+        ),
         body: Consumer<DashboardProvider>(
           builder: (context, provider, _) {
             if (provider.isLoading &&
@@ -75,9 +85,7 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
-
-                    // Inbox cards (horizontal scroll)
+                    // Inbox cards (horizontal scroll) - no gap from app bar
                     DashboardInboxList(
                       items: provider.inboxItems,
                       selectedYear: provider.selectedYear,
@@ -91,36 +99,17 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // Section header for charts
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Charts',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          // Add chart button
-                          if (provider.allCharts.isNotEmpty)
-                            TextButton.icon(
-                              onPressed: () => _showAddChartDialog(provider),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text('Add Chart'),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                              ),
-                            ),
-                        ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Charts',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
 
