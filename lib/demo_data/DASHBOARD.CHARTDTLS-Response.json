@@ -1,0 +1,153 @@
+{
+    "success": true,
+    "itemDetail": {
+        "id": "EB836177-8C06-4C96-A8C3-86EA63EF78B3",
+        "xAxis": [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        ],
+        "yAxis": [
+            {
+                "label": "Total Day",
+                "data": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "stack": null
+            }
+        ],
+        "type": "bar",
+        "layout": "vertical",
+        "label": "Annual E-Leave Overview",
+        "xAxisUnit": "Days",
+        "yAxisUnit": null,
+        "configChart": {
+            "xAxis": {
+                "tickSize": 6,
+                "height": 80,
+                "width": 0
+            },
+            "yAxis": {}
+        },
+        "filter": [
+            {
+                "axisQuery": "WITH UserRoles AS (\n    SELECT\n        CASE WHEN EXISTS (\n            -- VIP user\n            SELECT 1 FROM Core.[User] CU\n            WHERE CU.ID = @currentUser\n              AND CU.Code IN ('nguyensythanh', 'buikhanhtiep','nguyenkimanh')\n\n            UNION ALL\n\n            -- Department Admin\n            SELECT 1\n            FROM Core.Membership M\n                     JOIN Core.Department D ON D.ID = M.DepartmentId\n                     JOIN Core.Role R ON R.ID = M.RoleId\n            WHERE M.UserId = @currentUser\n              AND D.Code = 'DEPTS-10000'\n              AND R.Code = 'ROLES-10000'\n        ) THEN 1 ELSE 0 END AS IsSuperUser\n)\n-- Danh sách user\nSELECT\n    CAST(U.FullName AS NVARCHAR(200)) AS label,\n    CAST(U.ID AS NVARCHAR(36)) AS value\nFROM Core.[User] U\n         CROSS JOIN UserRoles UR\nWHERE\n    U.ID NOT IN (\n                 '4EDCE3A5-898E-46E1-9812-11FE5B8A16BC',\n                 '87C834D8-7329-4F75-92B8-12D2ED24B5D9',\n      '1C7C9420-C3E5-4287-A0DB-9347B13AA2F4'\n        )\n  AND U.IsActive = 1\n  AND (\n    -- SuperUser → thấy hết\n    UR.IsSuperUser = 1\n\n        -- User thường → thấy mình + cấp dưới\n        OR (UR.IsSuperUser = 0 AND (U.ID = @currentUser OR U.DirectManagerId = @currentUser))\n    )\n\nUNION ALL\n\n-- Dòng ALL nếu là SuperUser\nSELECT 'All', 'ALL'\nFROM UserRoles UR\nWHERE UR.IsSuperUser = 1\n\nORDER BY label",
+                "type": "dropdown",
+                "id": "9F61ED99-47EA-4683-A6A2-5DAE3C017BE3",
+                "options": [
+                    {
+                        "label": "Nguyen Thanh Hien",
+                        "value": "6F853C3B-4BA8-45F0-9A1A-6F522BE80D3A"
+                    }
+                ],
+                "label": "User",
+                "field": "@user"
+            },
+            {
+                "axisQuery": "SELECT\n    CAST(y AS NVARCHAR(4)) AS label,\n    CAST(y AS NVARCHAR(4)) AS value\nFROM (\n         SELECT YEAR = (YEAR(GETDATE()) - 10) + number\n         FROM master..spt_values\n         WHERE type = 'P'\n           AND number BETWEEN 0 AND ( (YEAR(GETDATE()) + 5) - (YEAR(GETDATE()) - 10) )\n     ) AS t(y)\nORDER BY value DESC",
+                "type": "dropdown",
+                "id": "A5FF289D-0FCF-47BF-9E0F-6490D1507446",
+                "options": [
+                    {
+                        "label": "2031",
+                        "value": "2031"
+                    },
+                    {
+                        "label": "2030",
+                        "value": "2030"
+                    },
+                    {
+                        "label": "2029",
+                        "value": "2029"
+                    },
+                    {
+                        "label": "2028",
+                        "value": "2028"
+                    },
+                    {
+                        "label": "2027",
+                        "value": "2027"
+                    },
+                    {
+                        "label": "2026",
+                        "value": "2026"
+                    },
+                    {
+                        "label": "2025",
+                        "value": "2025"
+                    },
+                    {
+                        "label": "2024",
+                        "value": "2024"
+                    },
+                    {
+                        "label": "2023",
+                        "value": "2023"
+                    },
+                    {
+                        "label": "2022",
+                        "value": "2022"
+                    },
+                    {
+                        "label": "2021",
+                        "value": "2021"
+                    },
+                    {
+                        "label": "2020",
+                        "value": "2020"
+                    },
+                    {
+                        "label": "2019",
+                        "value": "2019"
+                    },
+                    {
+                        "label": "2018",
+                        "value": "2018"
+                    },
+                    {
+                        "label": "2017",
+                        "value": "2017"
+                    },
+                    {
+                        "label": "2016",
+                        "value": "2016"
+                    }
+                ],
+                "label": "Year",
+                "field": "@newYear"
+            }
+        ],
+        "filterValues": {
+            "@user": "6F853C3B-4BA8-45F0-9A1A-6F522BE80D3A",
+            "user": "6F853C3B-4BA8-45F0-9A1A-6F522BE80D3A",
+            "@newYear": "2026",
+            "newyear": "2026"
+        }
+    },
+    "configs": {
+        "listColor": [],
+        "valueFormatter": "(number) => {\n  if (typeof number !== \"number\") return number;\n  return Number(number.toFixed(2)) + ' day';\n}"
+    },
+    "messageType": "success",
+    "message": ""
+}

@@ -1,0 +1,374 @@
+{
+    "success": true,
+    "chartConfigs": {
+        "data": [
+            {
+                "isMenu": true,
+                "id": 380,
+                "label": "Office",
+                "children": [
+                    {
+                        "isMenu": true,
+                        "id": 383,
+                        "label": "Eleave",
+                        "children": [
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10006",
+                                "yAxisUnit": null,
+                                "name": "Annual E-Leave Overview",
+                                "xAxisUnit": "Days",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "EB836177-8C06-4C96-A8C3-86EA63EF78B3",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10023",
+                                "yAxisUnit": null,
+                                "name": "Multi-Year E-Leave Overview",
+                                "xAxisUnit": "Days",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "1D9EA92E-FA91-4118-B58F-6A634B8216B9",
+                                "isActive": true,
+                                "isMenu": false
+                            }
+                        ]
+                    },
+                    {
+                        "isMenu": true,
+                        "id": 381,
+                        "label": "OT",
+                        "children": [
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10007",
+                                "yAxisUnit": null,
+                                "name": "Annual OT Overview",
+                                "xAxisUnit": "Hours",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "F0379703-FFA4-4B18-B929-4EE80A08C25E",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10024",
+                                "yAxisUnit": null,
+                                "name": "Multi-Year OT Overview",
+                                "xAxisUnit": "Days",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "5B27BCC1-C16F-4812-BECD-08CBF82B5198",
+                                "isActive": true,
+                                "isMenu": false
+                            }
+                        ]
+                    },
+                    {
+                        "isMenu": true,
+                        "id": 405,
+                        "label": "Travel Claim",
+                        "children": [
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10026",
+                                "yAxisUnit": null,
+                                "name": "Annual Travel Claim Overview",
+                                "xAxisUnit": "VND",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "206CC907-F769-48FB-B3E5-257EDB6199A9",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10027",
+                                "yAxisUnit": null,
+                                "name": "Multi-Year Travel Claim Overview",
+                                "xAxisUnit": "VND",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "46553FF1-FF63-4E42-9E18-900EED559483",
+                                "isActive": true,
+                                "isMenu": false
+                            }
+                        ]
+                    },
+                    {
+                        "isMenu": true,
+                        "id": 406,
+                        "label": "Travel Request",
+                        "children": [
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10015",
+                                "yAxisUnit": null,
+                                "name": "Annual Travel Request Overview",
+                                "xAxisUnit": "Turns",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "559C7806-1D30-4321-B9C6-266938BD3393",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10021",
+                                "yAxisUnit": null,
+                                "name": "Annual Travel Request Total Days Overview",
+                                "xAxisUnit": "Days",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "1296D596-396D-46BA-B1FD-C8693EB831B7",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10025",
+                                "yAxisUnit": null,
+                                "name": "Multi-Year Travel Request Overview ",
+                                "xAxisUnit": "Turns",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "57B52AD6-9CB4-470D-BCCF-F8EF63F1ADFE",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10028",
+                                "yAxisUnit": null,
+                                "name": "Multi-year Travel Request Total Days Overview",
+                                "xAxisUnit": "Days",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "C21BE4BB-C50B-4FB3-842C-CD93E776564C",
+                                "isActive": true,
+                                "isMenu": false
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "isMenu": true,
+                "id": 412,
+                "label": "Project Management",
+                "children": [
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10012",
+                        "yAxisUnit": null,
+                        "name": "Contract Ending Trend",
+                        "xAxisUnit": "Contract",
+                        "chartType": {
+                            "name": "Line Chart",
+                            "id": "DB39674F-C012-4489-9460-9D1BCF3B746F"
+                        },
+                        "id": "60536A10-345D-4A37-A304-47BE27FE2DCC",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10019",
+                        "yAxisUnit": "VND",
+                        "name": "Department Project Implementation",
+                        "xAxisUnit": "VND",
+                        "chartType": {
+                            "name": "Bar Chart",
+                            "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                        },
+                        "id": "35D0C338-F11D-4557-8057-A81D6AD9C4B0",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10013",
+                        "yAxisUnit": "VNĐ",
+                        "name": "Department Project Spends",
+                        "xAxisUnit": "VND",
+                        "chartType": {
+                            "name": "Bar Chart",
+                            "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                        },
+                        "id": "6C057452-3E36-4F29-91AC-83339064F197",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10018",
+                        "yAxisUnit": null,
+                        "name": "Department Project Type",
+                        "xAxisUnit": "Project",
+                        "chartType": {
+                            "name": "Pie Chart",
+                            "id": "F35E52B4-20B8-4207-969C-B1C2CA284DF1"
+                        },
+                        "id": "9AA813C6-CD30-4310-BB25-BD3283801E08",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10008",
+                        "yAxisUnit": null,
+                        "name": "Project Participation",
+                        "xAxisUnit": "Project",
+                        "chartType": {
+                            "name": "Bar Chart",
+                            "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                        },
+                        "id": "23CCAA3E-9A21-46DD-9B1E-A3FBC6A500E4",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10009",
+                        "yAxisUnit": null,
+                        "name": "Project Type Involed",
+                        "xAxisUnit": "Project",
+                        "chartType": {
+                            "name": "Pie Chart",
+                            "id": "F35E52B4-20B8-4207-969C-B1C2CA284DF1"
+                        },
+                        "id": "781D9E5A-503A-4EC9-B4FD-477E1A33D6FB",
+                        "isActive": true,
+                        "isMenu": false
+                    },
+                    {
+                        "isDefault": true,
+                        "code": "CHARTCF-10011",
+                        "yAxisUnit": null,
+                        "name": "Task Assigned",
+                        "xAxisUnit": "Task",
+                        "chartType": {
+                            "name": "Bar Chart",
+                            "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                        },
+                        "id": "6CD3F511-5E9C-449E-9541-05BC970068D9",
+                        "isActive": true,
+                        "isMenu": false
+                    }
+                ]
+            },
+            {
+                "isMenu": true,
+                "id": 403,
+                "label": "Salesforce",
+                "children": [
+                    {
+                        "isMenu": true,
+                        "id": 404,
+                        "label": "Opportunities",
+                        "children": [
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10022",
+                                "yAxisUnit": null,
+                                "name": "Department Sales Plan",
+                                "xAxisUnit": "VND",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "B6268DD6-A176-4C92-989C-A02DE3FB8494",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10014",
+                                "yAxisUnit": null,
+                                "name": "Individual Sales Plan",
+                                "xAxisUnit": "VND",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "DD85C8BE-5130-4808-B3DB-686D48321B92",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10017",
+                                "yAxisUnit": null,
+                                "name": "Opportunity Closing Trend",
+                                "xAxisUnit": "Opportunity",
+                                "chartType": {
+                                    "name": "Area Chart",
+                                    "id": "04A22FF4-BDA7-4A6E-B3CD-67143EA7870F"
+                                },
+                                "id": "C723E6D5-440F-4436-8AE6-40ED37B6F7F4",
+                                "isActive": true,
+                                "isMenu": false
+                            },
+                            {
+                                "isDefault": true,
+                                "code": "CHARTCF-10016",
+                                "yAxisUnit": "VNĐ",
+                                "name": "Opportunity Information",
+                                "xAxisUnit": "VND",
+                                "chartType": {
+                                    "name": "Bar Chart",
+                                    "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+                                },
+                                "id": "40A7C3EA-7B77-4B71-9070-BFE4C8BED0C0",
+                                "isActive": true,
+                                "isMenu": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "value": {
+            "isDefault": true,
+            "code": "CHARTCF-10006",
+            "yAxisUnit": null,
+            "menuPath": "Office\u001fEleave",
+            "menuIdPath": "380\u001f383",
+            "name": "Annual E-Leave Overview",
+            "xAxisUnit": "Days",
+            "chartType": {
+                "name": "Bar Chart",
+                "id": "3508359A-8CE6-443A-828A-09FBD19CDF54"
+            },
+            "menuId": 383,
+            "id": "EB836177-8C06-4C96-A8C3-86EA63EF78B3",
+            "isActive": true
+        }
+    },
+    "messageType": "success"
+}

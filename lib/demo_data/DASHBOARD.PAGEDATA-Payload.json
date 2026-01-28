@@ -1,0 +1,15 @@
+{
+    "user": {
+        "id": "4EDCE3A5-898E-46E1-9812-11FE5B8A16BC",
+        "code": "admintest_1",
+        "fullName": "  Company",
+        "phone": "909682278",
+        "email": "solomon@truetech.com.vn",
+        "personalEmail": null,
+        "position": "CEO",
+        "createdDate": "2023-03-17T15:17:45Z",
+        "managerFullName": null,
+        "roles": []
+    },
+    "moduleCode": "DASHBOARD"
+}

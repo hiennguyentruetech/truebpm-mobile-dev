@@ -2,8 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:truebpm/navigation/app_routes.dart';
 
 // Import screens for all stacks
-// Home Screens
-import 'package:truebpm/screens/home_screens/list_home_screen.dart';
+// Dashboard Screens
+import 'package:truebpm/screens/dashboard_screens/dashboard_page_screen.dart';
+
+// Home Screens (ListHomeScreen kept for detailHome route references)
+// import 'package:truebpm/screens/home_screens/list_home_screen.dart';
 import 'package:truebpm/screens/home_screens/detail_home_screen.dart';
 
 // E-Leave Screens
@@ -53,8 +56,11 @@ import 'package:truebpm/screens/menu_screens/management_screens/dataspy_screens/
 class StackRoutes {
   // Tất cả routes được định nghĩa chung trong 1 Map
   static final Map<String, Widget Function()> stackRoutes = {
+    // Dashboard Stack Routes
+    AppRoutes.dashboard: () => const DashboardPageScreen(),
+
     // Home Stack Routes
-    AppRoutes.home: () => const ListHomeScreen(),
+    AppRoutes.home: () => const DashboardPageScreen(), // Changed to Dashboard
     AppRoutes.detailHome: () => const DetailHomeScreen(),
 
     // E-Leave Stack Routes

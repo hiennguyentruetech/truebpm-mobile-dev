@@ -1,0 +1,19 @@
+{
+    "id": "EB836177-8C06-4C96-A8C3-86EA63EF78B3",
+    "user": {
+        "id": "6F853C3B-4BA8-45F0-9A1A-6F522BE80D3A",
+        "code": "nguyenthanhhien",
+        "fullName": "Nguyen Thanh Hien",
+        "phone": "0907444439",
+        "email": "nguyenthanhhien@truetech.com.vn",
+        "personalEmail": null,
+        "position": "Senior Application Developer",
+        "createdDate": "2023-08-25T11:00:50Z",
+        "managerFullName": "Nguyen Van Hong",
+        "roles": []
+    },
+    "filterValues": {
+        "@user": "6F853C3B-4BA8-45F0-9A1A-6F522BE80D3A",
+        "@newYear": "2026"
+    }
+}

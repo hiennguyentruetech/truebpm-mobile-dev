@@ -1,0 +1,96 @@
+{
+    "success": true,
+    "data": [
+        {
+            "unit": "day",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Number of remaining leave days",
+            "id": "DCE17BCB-582C-4616-98E7-CFE43DB56612",
+            "title": "[Eleave] Remaining",
+            "value": -6.5,
+            "key": "INBOXCF-10006"
+        },
+        {
+            "unit": "day",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total leave days in the selected year (calculated by overlapping days)",
+            "id": "CA60C031-9D90-4CAE-8194-34B2425034D6",
+            "title": "[Eleave] Total Days",
+            "value": 0,
+            "key": "INBOXCF-10004"
+        },
+        {
+            "unit": "records",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total approved overtime hours for the selected year",
+            "id": "9A61EDDA-5656-4D28-A334-9AC7ACC9BF49",
+            "title": "[Overtime] Approved",
+            "value": 0,
+            "key": "INBOXCF-10012"
+        },
+        {
+            "unit": "hours",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total number of overtime requests submitted by the employee",
+            "id": "E98D2260-0879-4421-ABFF-7BA706689409",
+            "title": "[Overtime] Total Hours",
+            "value": 0,
+            "key": "INBOXCF-10007"
+        },
+        {
+            "unit": "records",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Approved claims overlapping with the selected year",
+            "id": "C216E22B-C33B-4F51-81F4-4625940D5D39",
+            "title": "[Travel Claim] Approved",
+            "value": 0,
+            "key": "INBOXCF-10009"
+        },
+        {
+            "unit": "VNĐ",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total approved leave days in the selected year (based on overlapping days)",
+            "id": "BA488971-B6E9-48A7-857A-3784CF95B3B3",
+            "title": "[Travel Claim] Expense Total",
+            "value": "0",
+            "key": "INBOXCF-10008"
+        },
+        {
+            "unit": "day",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total approved travel requests for the selected year",
+            "id": "9D649841-36DC-4A20-8A93-A8C41E257337",
+            "title": "[Travel Request] Approved",
+            "value": 0,
+            "key": "INBOXCF-10010"
+        },
+        {
+            "unit": "days",
+            "isDefault": true,
+            "createdDate": null,
+            "description": "Total number of travel request days",
+            "id": "1807ECDA-3E63-48E2-9689-9CFADA6548A1",
+            "title": "[Travel Request] Total Days",
+            "value": 0,
+            "key": "INBOXCF-10011"
+        }
+    ],
+    "value": {
+        "unit": "day",
+        "isDefault": true,
+        "createdDate": null,
+        "description": "Number of remaining leave days",
+        "id": "DCE17BCB-582C-4616-98E7-CFE43DB56612",
+        "title": "[Eleave] Remaining",
+        "value": -6.5,
+        "key": "INBOXCF-10006"
+    },
+    "messageType": "success"
+}

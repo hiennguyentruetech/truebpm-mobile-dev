@@ -1,0 +1,25 @@
+{
+    "success": true,
+    "itemDetail": {
+        "data": [
+            {
+                "id": "EB836177-8C06-4C96-A8C3-86EA63EF78B3",
+                "name": "Annual E-Leave Overview"
+            },
+            {
+                "id": "6C057452-3E36-4F29-91AC-83339064F197",
+                "name": "Department Project Spends"
+            },
+            {
+                "id": "40A7C3EA-7B77-4B71-9070-BFE4C8BED0C0",
+                "name": "Opportunity Information"
+            }
+        ],
+        "value": {
+            "dashboardId": "C17C645D-1D9B-40C4-92EF-03B6E8171841",
+            "dashboardName": "Đây la chart config cho all user"
+        }
+    },
+    "messageType": "success",
+    "message": ""
+}

@@ -24,7 +24,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
   );
 
   final List<BottomNavItem> _navItems = const [
-    BottomNavItem(icon: Icons.home_rounded, label: 'Home'),
+    BottomNavItem(icon: Icons.home_rounded, label: 'Dashboard'),
     BottomNavItem(icon: Icons.task_alt_rounded, label: 'Task'),
     BottomNavItem(icon: Icons.flight_takeoff_rounded, label: 'Travel'),
     BottomNavItem(icon: Icons.event_busy_rounded, label: 'E-Leave'),

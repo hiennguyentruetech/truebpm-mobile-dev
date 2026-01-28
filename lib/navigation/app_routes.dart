@@ -4,6 +4,9 @@ class AppRoutes {
   splash =            '/splash',
   login =             '/login',
 
+  // Dashboard module routes
+  dashboard =         '/dashboard',
+
   // Home module routes
   home =              '/home',
   detailHome =        '/detailHome',
