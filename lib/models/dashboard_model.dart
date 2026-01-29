@@ -468,10 +468,18 @@ class ChartDetailData {
   /// Get chart type enum
   DashboardChartType get chartType {
     final typeLower = type.toLowerCase();
-    if (typeLower.contains('bar')) return DashboardChartType.bar;
+    // Pie/Donut charts - check multiple patterns
+    if (typeLower.contains('pie') ||
+        typeLower.contains('donut') ||
+        typeLower.contains('doughnut') ||
+        typeLower.contains('ring') ||
+        typeLower.contains('circle') ||
+        typeLower.contains('round')) {
+      return DashboardChartType.pie;
+    }
     if (typeLower.contains('line')) return DashboardChartType.line;
-    if (typeLower.contains('pie')) return DashboardChartType.pie;
     if (typeLower.contains('area')) return DashboardChartType.area;
+    if (typeLower.contains('bar')) return DashboardChartType.bar;
     return DashboardChartType.bar;
   }
 

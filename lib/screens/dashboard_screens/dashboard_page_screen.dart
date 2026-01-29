@@ -6,6 +6,7 @@ import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/common/floating_add_button.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_charts.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_widgets.dart';
+import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
 
 /// Dashboard Page Screen - Main dashboard with charts and inbox
 class DashboardPageScreen extends StatefulWidget {
@@ -99,27 +100,27 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
-                    // Section header for charts
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Charts',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    // // Section header for charts
+                    // const Padding(
+                    //   padding: EdgeInsets.symmetric(horizontal: 16),
+                    //   child: Text(
+                    //     'Charts',
+                    //     style: TextStyle(
+                    //       fontSize: 18,
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    // ),
 
-                    const SizedBox(height: 8),
+                    // const SizedBox(height: 8),
 
                     // Default charts
                     if (provider.displayedCharts.isEmpty &&
                         !provider.isLoadingCharts)
                       Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(7),
                         child: DashboardEmptyState(
                           message: 'No charts configured',
                           onRefresh: _refreshDashboard,
@@ -232,32 +233,21 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
     DisplayedChartItem chart,
     DashboardProvider provider,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Chart'),
-        content: Text('Are you sure you want to remove "${chart.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+    CustomConfirmDialog.showDelete(
+      context,
+      title: 'Remove Chart',
+      message: 'Are you sure you want to remove "${chart.name}" from dashboard?',
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      onConfirm: () {
+        provider.removeChart(chart.id);
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Removed "${chart.name}" from dashboard'),
+            behavior: SnackBarBehavior.floating,
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              provider.removeChart(chart.id);
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                SnackBar(
-                  content: Text('Removed "${chart.name}" from dashboard'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -372,6 +362,7 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
   Widget build(BuildContext context) {
     return DashboardChartCard(
       title: _chartData?.label ?? widget.chartName,
+      chartType: _chartData?.type, // Pass chart type for dynamic icon
       isLoading: _isLoading,
       filters: _chartData?.filters,
       currentFilterValues: _filterValues,
