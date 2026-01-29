@@ -52,17 +52,17 @@ class DashboardInboxCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 180,
-      height: 130,
-      margin: const EdgeInsets.only(right: 12),
+      width: 190,
+      height: 100,
+      margin: const EdgeInsets.only(right: 7),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(7),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -70,24 +70,25 @@ class DashboardInboxCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(7),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(7),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Icon + Title row
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: _iconBgColor,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Icon(item.icon, color: _iconColor, size: 16),
+                      child: Icon(item.icon, color: _iconColor, size: 14),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         item.title,
@@ -103,28 +104,33 @@ class DashboardInboxCard extends StatelessWidget {
                   ],
                 ),
 
-                const Spacer(),
-
-                // Value
-                Text(
-                  item.formattedValue,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: _valueColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                // Unit
-                if (item.unit != null)
-                  Text(
-                    item.unit!,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w500,
+                // Value + Unit
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      item.formattedValue,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _valueColor,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
+                    if (item.unit != null) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        item.unit!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -244,7 +250,7 @@ class DashboardInboxList extends StatelessWidget {
 
             // Inbox cards - horizontal scroll
             SizedBox(
-              height: 140,
+              height: 110,
               child: isLoading
                   ? Center(
                       child: CircularProgressIndicator(
@@ -276,7 +282,7 @@ class DashboardInboxList extends StatelessWidget {
                     ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
           ],
         ),
       ),
