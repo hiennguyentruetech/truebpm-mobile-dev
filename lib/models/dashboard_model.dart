@@ -1,6 +1,8 @@
 /// Dashboard Models
 /// Data models for Dashboard module with Chart support
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 // ============================================================================
@@ -42,16 +44,16 @@ class ChartConfigItem {
       name: json['name']?.toString() ?? json['label']?.toString() ?? '',
       xAxisUnit: json['xAxisUnit']?.toString(),
       yAxisUnit: json['yAxisUnit']?.toString(),
-      chartType: json['chartType'] != null 
-          ? ChartTypeInfo.fromJson(json['chartType']) 
+      chartType: json['chartType'] != null
+          ? ChartTypeInfo.fromJson(json['chartType'])
           : null,
       isDefault: json['isDefault'] == true,
       isActive: json['isActive'] == true,
       isMenu: json['isMenu'] == true,
       children: json['children'] != null
           ? (json['children'] as List)
-              .map((e) => ChartConfigItem.fromJson(e))
-              .toList()
+                .map((e) => ChartConfigItem.fromJson(e))
+                .toList()
           : null,
       label: json['label']?.toString(),
     );
@@ -94,10 +96,7 @@ class ChartTypeInfo {
   final String id;
   final String name;
 
-  ChartTypeInfo({
-    required this.id,
-    required this.name,
-  });
+  ChartTypeInfo({required this.id, required this.name});
 
   factory ChartTypeInfo.fromJson(Map<String, dynamic> json) {
     return ChartTypeInfo(
@@ -106,10 +105,7 @@ class ChartTypeInfo {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-  };
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
 
   /// Get chart type enum
   DashboardChartType get type {
@@ -123,12 +119,7 @@ class ChartTypeInfo {
 }
 
 /// Dashboard chart types
-enum DashboardChartType {
-  bar,
-  line,
-  pie,
-  area,
-}
+enum DashboardChartType { bar, line, pie, area }
 
 // ============================================================================
 // CHART CONFIGS RESPONSE
@@ -139,20 +130,17 @@ class ChartConfigsResponse {
   final List<ChartConfigItem> data;
   final ChartConfigItem? value;
 
-  ChartConfigsResponse({
-    required this.data,
-    this.value,
-  });
+  ChartConfigsResponse({required this.data, this.value});
 
   factory ChartConfigsResponse.fromJson(Map<String, dynamic> json) {
     return ChartConfigsResponse(
       data: json['data'] != null
           ? (json['data'] as List)
-              .map((e) => ChartConfigItem.fromJson(e))
-              .toList()
+                .map((e) => ChartConfigItem.fromJson(e))
+                .toList()
           : [],
-      value: json['value'] != null 
-          ? ChartConfigItem.fromJson(json['value']) 
+      value: json['value'] != null
+          ? ChartConfigItem.fromJson(json['value'])
           : null,
     );
   }
@@ -234,7 +222,8 @@ class InboxDataItem {
     if (titleLower.contains('travel claim') || titleLower.contains('expense')) {
       return Icons.receipt_long_rounded;
     }
-    if (titleLower.contains('travel request') || titleLower.contains('travel')) {
+    if (titleLower.contains('travel request') ||
+        titleLower.contains('travel')) {
       return Icons.flight_takeoff_rounded;
     }
     return Icons.analytics_rounded;
@@ -252,7 +241,8 @@ class InboxDataItem {
     if (titleLower.contains('travel claim') || titleLower.contains('expense')) {
       return Colors.purple;
     }
-    if (titleLower.contains('travel request') || titleLower.contains('travel')) {
+    if (titleLower.contains('travel request') ||
+        titleLower.contains('travel')) {
       return Colors.blue;
     }
     return Colors.teal;
@@ -268,10 +258,7 @@ class DefaultChartItem {
   final String id;
   final String name;
 
-  DefaultChartItem({
-    required this.id,
-    required this.name,
-  });
+  DefaultChartItem({required this.id, required this.name});
 
   factory DefaultChartItem.fromJson(Map<String, dynamic> json) {
     return DefaultChartItem(
@@ -300,8 +287,8 @@ class DashboardConfig {
       dashboardName: itemDetail['value']?['dashboardName']?.toString(),
       defaultCharts: itemDetail['data'] != null
           ? (itemDetail['data'] as List)
-              .map((e) => DefaultChartItem.fromJson(e))
-              .toList()
+                .map((e) => DefaultChartItem.fromJson(e))
+                .toList()
           : [],
     );
   }
@@ -341,10 +328,7 @@ class ChartFilterOption {
   final String label;
   final String value;
 
-  ChartFilterOption({
-    required this.label,
-    required this.value,
-  });
+  ChartFilterOption({required this.label, required this.value});
 
   factory ChartFilterOption.fromJson(Map<String, dynamic> json) {
     return ChartFilterOption(
@@ -378,14 +362,15 @@ class ChartFilter {
       type: json['type']?.toString() ?? 'dropdown',
       options: json['options'] != null
           ? (json['options'] as List)
-              .map((e) => ChartFilterOption.fromJson(e))
-              .toList()
+                .map((e) => ChartFilterOption.fromJson(e))
+                .toList()
           : [],
     );
   }
 
   /// Get default option (first in list)
-  ChartFilterOption? get defaultOption => options.isNotEmpty ? options.first : null;
+  ChartFilterOption? get defaultOption =>
+      options.isNotEmpty ? options.first : null;
 }
 
 /// Chart detail data from CHARTDTLS
@@ -421,7 +406,7 @@ class ChartDetailData {
   factory ChartDetailData.fromJson(Map<String, dynamic> json) {
     final itemDetail = json['itemDetail'] ?? json;
     final configs = json['configs'] ?? {};
-    
+
     // Parse list colors
     List<Color>? colors;
     if (configs['listColor'] != null && configs['listColor'] is List) {
@@ -432,7 +417,7 @@ class ChartDetailData {
         return Colors.blue;
       }).toList();
     }
-    
+
     return ChartDetailData(
       id: itemDetail['id']?.toString() ?? '',
       label: itemDetail['label']?.toString() ?? '',
@@ -443,15 +428,15 @@ class ChartDetailData {
           : [],
       yAxis: itemDetail['yAxis'] != null
           ? (itemDetail['yAxis'] as List)
-              .map((e) => ChartYAxisData.fromJson(e))
-              .toList()
+                .map((e) => ChartYAxisData.fromJson(e))
+                .toList()
           : [],
       xAxisUnit: itemDetail['xAxisUnit']?.toString(),
       yAxisUnit: itemDetail['yAxisUnit']?.toString(),
       filters: itemDetail['filter'] != null
           ? (itemDetail['filter'] as List)
-              .map((e) => ChartFilter.fromJson(e))
-              .toList()
+                .map((e) => ChartFilter.fromJson(e))
+                .toList()
           : [],
       filterValues: itemDetail['filterValues'] != null
           ? Map<String, String>.from(
@@ -486,15 +471,122 @@ class ChartDetailData {
   /// Check if chart is horizontal layout
   bool get isHorizontal => layout?.toLowerCase() == 'horizontal';
 
-  /// Get max Y value for chart scaling
-  double get maxYValue {
+  /// Get the raw max value from data
+  double get _rawMaxValue {
     double max = 0;
     for (var series in yAxis) {
       for (var value in series.data) {
         if (value > max) max = value.toDouble();
       }
     }
-    return max == 0 ? 10 : max * 1.1; // Add 10% padding
+    return max;
+  }
+
+  /// Calculate nice max Y value and interval for chart scaling
+  /// Uses "nice numbers" algorithm like MUIx Chart for professional appearance
+  (double maxY, double interval) get yAxisConfig {
+    final rawMax = _rawMaxValue;
+    if (rawMax == 0) return (10.0, 2.0);
+
+    // Calculate nice step size for approximately 5-6 divisions
+    final roughStep = rawMax / 5;
+    final magnitude = _magnitude(roughStep);
+    final niceStep = _niceNumber(roughStep, magnitude);
+
+    // Calculate nice max value
+    final niceMax = (rawMax / niceStep).ceil() * niceStep;
+
+    return (niceMax.toDouble(), niceStep.toDouble());
+  }
+
+  /// Get magnitude of a number (power of 10)
+  double _magnitude(double value) {
+    if (value == 0) return 1;
+    return pow(10, (log(value.abs()) / ln10).floor()).toDouble();
+  }
+
+  /// Round to nice number (1, 2, 5, 10, etc.)
+  double _niceNumber(double value, double magnitude) {
+    final normalized = value / magnitude;
+    if (normalized <= 1) return magnitude;
+    if (normalized <= 2) return 2 * magnitude;
+    if (normalized <= 5) return 5 * magnitude;
+    return 10 * magnitude;
+  }
+
+  /// Get max Y value for chart scaling (nice number)
+  double get maxYValue => yAxisConfig.$1;
+
+  /// Get Y axis interval for grid lines (nice number)
+  double get yAxisInterval => yAxisConfig.$2;
+
+  /// Get valueFormatter from configChart if available
+  String? get valueFormatter {
+    return configChart?['valueFormatter']?.toString();
+  }
+
+  /// Get formatted Y axis value
+  /// Supports JS-like valueFormatter from MUIx Chart config
+  String formatYAxisValue(double value) {
+    final formatter = valueFormatter;
+    if (formatter != null && formatter.isNotEmpty) {
+      // Parse simple formatter patterns like "(number) => number + ' day'"
+      return _applyFormatter(value, formatter);
+    }
+
+    // Default formatting
+    if (value == value.toInt()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  /// Apply formatter pattern to value
+  String _applyFormatter(double value, String formatter) {
+    // Handle common MUIx formatter patterns:
+    // "(number) => Number(number.toFixed(2)) + ' day'"
+    // "(number) => number + '%'"
+    // etc.
+
+    try {
+      // Check for suffix pattern: + ' something' or + " something"
+      final suffixRegex = RegExp(r"""\+\s*['"]([^'"]+)['"]""");
+      final suffixMatch = suffixRegex.firstMatch(formatter);
+      final suffix = suffixMatch?.group(1) ?? '';
+
+      // Check for toFixed pattern
+      final toFixedRegex = RegExp(r'toFixed\((\d+)\)');
+      final toFixedMatch = toFixedRegex.firstMatch(formatter);
+      final decimalPlaces = int.tryParse(toFixedMatch?.group(1) ?? '') ?? 0;
+
+      // Format the value
+      String formatted;
+      if (decimalPlaces > 0) {
+        formatted = value.toStringAsFixed(decimalPlaces);
+        // Remove trailing zeros
+        formatted = double.parse(formatted).toString();
+        if (formatted.endsWith('.0')) {
+          formatted = formatted.substring(0, formatted.length - 2);
+        }
+      } else if (value == value.toInt()) {
+        formatted = value.toInt().toString();
+      } else {
+        formatted = value.toStringAsFixed(1);
+      }
+
+      return '$formatted$suffix';
+    } catch (_) {
+      // Fallback to default formatting
+      if (value == value.toInt()) {
+        return value.toInt().toString();
+      }
+      return value.toStringAsFixed(1);
+    }
+  }
+
+  /// Get formatted tooltip value
+  String formatTooltipValue(double value) {
+    return formatYAxisValue(value);
   }
 
   /// Get total values for pie chart
@@ -555,11 +647,11 @@ class DashboardListResponse {
       success: json['success'] == true,
       data: json['data'] != null
           ? (json['data'] as List)
-              .map((e) => InboxDataItem.fromJson(e))
-              .toList()
+                .map((e) => InboxDataItem.fromJson(e))
+                .toList()
           : [],
-      defaultItem: json['value'] != null 
-          ? InboxDataItem.fromJson(json['value']) 
+      defaultItem: json['value'] != null
+          ? InboxDataItem.fromJson(json['value'])
           : null,
       messageType: json['messageType']?.toString(),
     );
