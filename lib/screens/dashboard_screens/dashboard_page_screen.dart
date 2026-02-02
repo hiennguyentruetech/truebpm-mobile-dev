@@ -4,6 +4,7 @@ import 'package:truebpm/models/dashboard_model.dart';
 import 'package:truebpm/providers/dashboard_provider.dart';
 import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/common/floating_add_button.dart';
+import 'package:truebpm/widgets/core/core_toast.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_charts.dart';
 import 'package:truebpm/widgets/dashboard/dashboard_widgets.dart';
 import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
@@ -206,24 +207,16 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
 
           // Check if chart already displayed
           if (provider.isChartDisplayed(chart.id)) {
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text('"${chart.name}" is already displayed'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.orange,
-              ),
+            CoreToast.warning(
+              this.context,
+              '"${chart.name}" is already displayed',
             );
             return;
           }
 
           // Add chart to dashboard
           provider.addChart(chart);
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(
-              content: Text('Added "${chart.name}" to dashboard'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          CoreToast.success(this.context, 'Added "${chart.name}" to dashboard');
         },
       ),
     );
@@ -236,17 +229,13 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
     CustomConfirmDialog.showDelete(
       context,
       title: 'Remove Chart',
-      message: 'Are you sure you want to remove "${chart.name}" from dashboard?',
+      message:
+          'Are you sure you want to remove "${chart.name}" from dashboard?',
       confirmText: 'Remove',
       cancelText: 'Cancel',
       onConfirm: () {
         provider.removeChart(chart.id);
-        ScaffoldMessenger.of(this.context).showSnackBar(
-          SnackBar(
-            content: Text('Removed "${chart.name}" from dashboard'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        CoreToast.info(this.context, 'Removed "${chart.name}" from dashboard');
       },
     );
   }
@@ -380,7 +369,7 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
   }
 }
 
-/// Bottom sheet for adding new chart or changing chart
+/// Bottom sheet for adding new chart or changing chart - Styled like CoreSelect DropdownDialog
 class _AddChartBottomSheet extends StatefulWidget {
   final List<ChartConfigItem> chartTree;
   final ValueChanged<ChartConfigItem> onChartSelected;
@@ -401,6 +390,7 @@ class _AddChartBottomSheet extends StatefulWidget {
 class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   final Map<String, bool> _expandedNodes = {};
 
   @override
@@ -423,75 +413,199 @@ class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Count total selectable charts (non-menu items)
+  int _countSelectableCharts(List<ChartConfigItem> items) {
+    int count = 0;
+    for (var item in items) {
+      if (!item.isMenu) {
+        count++;
+      }
+      if (item.children != null) {
+        count += _countSelectableCharts(item.children!);
+      }
+    }
+    return count;
   }
 
   @override
   Widget build(BuildContext context) {
+    final totalCharts = _countSelectableCharts(widget.chartTree);
+
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.8,
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              widget.title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-
-          // Search
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search charts...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+      child: Listener(
+        onPointerDown: (_) {
+          _searchFocusNode.unfocus();
+        },
+        child: Column(
+          children: [
+            // Beautiful header with gradient - same as CoreSelect DropdownDialog
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade600, Colors.blue.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.dashboard_customize_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$totalCharts charts available',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Material(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          const Divider(height: 1),
-
-          // Chart tree
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: widget.chartTree
-                  .map((item) => _buildTreeNode(item, 0))
-                  .toList(),
+            // Search field with elegant design - same as CoreSelect
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: TextFormField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                autofocus: false,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Search charts...',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Container(
+                    padding: const EdgeInsets.all(7),
+                    child: Icon(
+                      Icons.search_rounded,
+                      color: Colors.blue.shade400,
+                      size: 20,
+                    ),
+                  ),
+                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _searchController,
+                    builder: (context, value, child) {
+                      return value.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear_rounded,
+                                color: Colors.grey.shade400,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : const SizedBox.shrink();
+                    },
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    borderSide: BorderSide(
+                      color: Colors.blue.shade400,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 5,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+
+            // Chart tree with styled cards
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(10),
+                children: widget.chartTree
+                    .map((item) => _buildTreeNode(item, 0))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -519,110 +633,198 @@ class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
         widget.isChartDisplayed != null &&
         widget.isChartDisplayed!(item.id);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () {
-            if (item.isMenu && hasChildren) {
-              setState(() {
-                _expandedNodes[nodeKey] = !isExpanded;
-              });
-            } else if (!item.isMenu && !isAlreadyDisplayed) {
-              widget.onChartSelected(item);
-            }
-          },
-          child: Container(
-            padding: EdgeInsets.only(
-              left: 16 + (depth * 20),
-              right: 16,
-              top: 12,
-              bottom: 12,
+    // Menu node (folder)
+    if (item.isMenu) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Menu header with gradient
+          Container(
+            margin: EdgeInsets.only(
+              left: depth * 12.0,
+              top: depth == 0 ? 0 : 8,
+              bottom: 4,
             ),
-            decoration: isAlreadyDisplayed
-                ? BoxDecoration(color: Colors.grey.shade100)
-                : null,
+            child: InkWell(
+              onTap: hasChildren
+                  ? () {
+                      setState(() {
+                        _expandedNodes[nodeKey] = !isExpanded;
+                      });
+                    }
+                  : null,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.grey.shade100, Colors.grey.shade50],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isExpanded
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.keyboard_arrow_right_rounded,
+                      size: 20,
+                      color: Colors.grey.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.folder_rounded,
+                      size: 18,
+                      color: Colors.blue.shade400,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.displayName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                    if (hasChildren)
+                      AnimatedRotation(
+                        turns: isExpanded ? 0.25 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 22,
+                          color: Colors.blue.shade400,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Children
+          if (hasChildren && isExpanded)
+            ...item.children!.map((child) => _buildTreeNode(child, depth + 1)),
+        ],
+      );
+    }
+
+    // Chart item card - styled like CoreSelect option
+    return Container(
+      margin: EdgeInsets.only(left: depth * 12.0, bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isAlreadyDisplayed
+              ? null
+              : () {
+                  _searchFocusNode.unfocus();
+                  widget.onChartSelected(item);
+                },
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isAlreadyDisplayed ? Colors.grey.shade100 : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isAlreadyDisplayed
+                    ? Colors.grey.shade300
+                    : Colors.grey.shade200,
+                width: 1,
+              ),
+              boxShadow: [
+                if (!isAlreadyDisplayed)
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
             child: Row(
               children: [
-                if (item.isMenu && hasChildren)
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_down
-                        : Icons.keyboard_arrow_right,
-                    size: 20,
-                    color: Colors.grey.shade600,
-                  )
-                else if (!item.isMenu)
-                  Container(
-                    width: 24,
-                    height: 24,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: isAlreadyDisplayed
-                          ? Colors.grey.shade300
-                          : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      _getChartIcon(item.chartType?.type),
-                      size: 14,
-                      color: isAlreadyDisplayed
-                          ? Colors.grey.shade500
-                          : Colors.blue.shade600,
-                    ),
+                // Chart icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isAlreadyDisplayed
+                        ? Colors.grey.shade200
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: Icon(
+                    _getChartIcon(item.chartType?.type),
+                    size: 18,
+                    color: isAlreadyDisplayed
+                        ? Colors.grey.shade500
+                        : Colors.blue.shade600,
+                  ),
+                ),
+                const SizedBox(width: 12),
 
-                if (item.isMenu) const SizedBox(width: 8),
-
+                // Chart name
                 Expanded(
                   child: Text(
                     item.displayName,
                     style: TextStyle(
-                      fontSize: item.isMenu ? 14 : 15,
-                      fontWeight: item.isMenu
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                       color: isAlreadyDisplayed
                           ? Colors.grey.shade500
-                          : (item.isMenu
-                                ? Colors.grey.shade700
-                                : Colors.black87),
+                          : const Color(0xFF374151),
                     ),
                   ),
                 ),
 
-                if (!item.isMenu && isAlreadyDisplayed)
+                // Status indicator
+                if (isAlreadyDisplayed)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
+                      horizontal: 10,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'Displayed',
                       style: TextStyle(
                         fontSize: 11,
+                        fontWeight: FontWeight.w500,
                         color: Colors.grey.shade600,
                       ),
                     ),
                   )
-                else if (!item.isMenu)
-                  Icon(
-                    Icons.add_circle_outline,
-                    size: 20,
-                    color: Colors.blue.shade600,
+                else
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 16,
+                      color: Colors.blue.shade600,
+                    ),
                   ),
               ],
             ),
           ),
         ),
-
-        if (hasChildren && isExpanded)
-          ...item.children!.map((child) => _buildTreeNode(child, depth + 1)),
-      ],
+      ),
     );
   }
 
