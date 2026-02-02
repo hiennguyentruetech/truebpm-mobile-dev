@@ -163,11 +163,70 @@ class DashboardBarChart extends StatefulWidget {
 }
 
 class _DashboardBarChartState extends State<DashboardBarChart> {
-  int? _touchedBarIndex;
+  // For custom overlay tooltip
+  OverlayEntry? _tooltipOverlay;
+  final GlobalKey _chartKey = GlobalKey();
 
   ChartDetailData get data => widget.data;
   bool get showLegend => widget.showLegend;
   double get height => widget.height;
+
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
+  }
+
+  void _removeTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
+  }
+
+  void _showTooltip(int barIndex, Offset localPosition) {
+    _removeTooltip();
+
+    final RenderBox? renderBox =
+        _chartKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final globalPosition = renderBox.localToGlobal(localPosition);
+
+    // Get tooltip content
+    final xAxisLabel = data.xAxis[barIndex];
+    final seriesName = data.yAxis.isNotEmpty ? data.yAxis[0].label : '';
+    final value = data.yAxis.isNotEmpty && data.yAxis[0].data.length > barIndex
+        ? data.formatTooltipValue(data.yAxis[0].data[barIndex].toDouble())
+        : '0';
+
+    _tooltipOverlay = OverlayEntry(
+      builder: (context) => _CustomTooltipOverlay(
+        position: globalPosition,
+        xAxisLabel: xAxisLabel,
+        seriesName: seriesName,
+        value: value,
+      ),
+    );
+
+    Overlay.of(context).insert(_tooltipOverlay!);
+  }
+
+  void _handleBarTouch(FlTouchEvent event, BarTouchResponse? response) {
+    if (event is FlTapUpEvent ||
+        event is FlPanEndEvent ||
+        event is FlLongPressEnd ||
+        event is FlPointerExitEvent) {
+      _removeTooltip();
+    } else if (response != null && response.spot != null) {
+      final barIndex = response.spot!.touchedBarGroupIndex;
+      final localPos = event.localPosition;
+
+      if (localPos != null) {
+        _showTooltip(barIndex, localPos);
+      }
+    } else {
+      _removeTooltip();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,6 +245,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
         // Chart with data labels overlay
         SizedBox(
+          key: _chartKey,
           height: height,
           child: data.isHorizontal
               ? _buildHorizontalBarChartWithLabels()
@@ -216,11 +276,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
     return Stack(
       children: [
+        // Chart first (below in z-order)
         _buildVerticalBarChart(),
-        // Always show labels, but hide the touched bar's label
-        Positioned.fill(
-          child: _buildBarLabelsOverlay(hiddenBarIndex: _touchedBarIndex),
-        ),
+        // Labels always on top
+        Positioned.fill(child: _buildBarLabelsOverlay()),
       ],
     );
   }
@@ -319,38 +378,12 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         ),
         barTouchData: BarTouchData(
           enabled: true,
-          touchCallback: (FlTouchEvent event, barTouchResponse) {
-            setState(() {
-              if (event is FlTapUpEvent ||
-                  event is FlPanEndEvent ||
-                  event is FlLongPressEnd) {
-                _touchedBarIndex = null;
-              } else if (barTouchResponse != null &&
-                  barTouchResponse.spot != null) {
-                _touchedBarIndex = barTouchResponse.spot!.touchedBarGroupIndex;
-              } else {
-                _touchedBarIndex = null;
-              }
-            });
-          },
+          touchCallback: _handleBarTouch,
+          // Disable default tooltip, using custom overlay instead
           touchTooltipData: BarTouchTooltipData(
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            tooltipPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            tooltipRoundedRadius: 8,
-            getTooltipColor: (group) => Colors.grey.shade800,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final seriesName = data.yAxis.length > rodIndex
-                  ? data.yAxis[rodIndex].label
-                  : '';
-              return BarTooltipItem(
-                '${data.xAxis[groupIndex]}\n$seriesName: ${data.formatTooltipValue(rod.toY)}',
-                const TextStyle(color: Colors.white, fontSize: 12),
-              );
-            },
+            getTooltipColor: (group) => Colors.transparent,
+            tooltipPadding: EdgeInsets.zero,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) => null,
           ),
         ),
       ),
@@ -359,8 +392,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   }
 
   /// Build widget for data labels overlay on bar chart
-  /// [hiddenBarIndex] - if set, hide the label for this bar index (when tooltip is showing)
-  Widget _buildBarLabelsOverlay({int? hiddenBarIndex}) {
+  Widget _buildBarLabelsOverlay() {
     final maxY = data.maxYValue;
     const bottomTitlesHeight = 32.0;
     const leftTitlesWidth = 40.0;
@@ -375,9 +407,6 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         return Stack(
           clipBehavior: Clip.none,
           children: List.generate(barCount, (i) {
-            // Skip the touched bar's label to let tooltip show clearly
-            if (hiddenBarIndex == i) return const SizedBox.shrink();
-
             // Get the first series value for single series chart
             final value = data.yAxis.isNotEmpty && data.yAxis[0].data.length > i
                 ? data.yAxis[0].data[i].toDouble()
@@ -447,13 +476,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
     return Stack(
       children: [
+        // Chart first (below in z-order)
         _buildHorizontalBarChart(),
-        // Always show labels, but hide the touched bar's label
-        Positioned.fill(
-          child: _buildHorizontalBarLabelsOverlay(
-            hiddenBarIndex: _touchedBarIndex,
-          ),
-        ),
+        // Labels always on top
+        Positioned.fill(child: _buildHorizontalBarLabelsOverlay()),
       ],
     );
   }
@@ -559,44 +585,12 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
           ),
           barTouchData: BarTouchData(
             enabled: true,
-            touchCallback: (FlTouchEvent event, barTouchResponse) {
-              setState(() {
-                if (event is FlTapUpEvent ||
-                    event is FlPanEndEvent ||
-                    event is FlLongPressEnd) {
-                  _touchedBarIndex = null;
-                } else if (barTouchResponse != null &&
-                    barTouchResponse.spot != null) {
-                  _touchedBarIndex =
-                      barTouchResponse.spot!.touchedBarGroupIndex;
-                } else {
-                  _touchedBarIndex = null;
-                }
-              });
-            },
+            touchCallback: _handleBarTouch,
+            // Disable default tooltip, using custom overlay instead
             touchTooltipData: BarTouchTooltipData(
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              tooltipPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              tooltipMargin: 16,
-              tooltipRoundedRadius: 8,
-              direction: TooltipDirection.bottom,
-              rotateAngle: -90, // Rotate tooltip back to vertical
-              maxContentWidth: 150,
-              getTooltipColor: (group) => Colors.grey.shade800,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                final seriesName = data.yAxis.length > rodIndex
-                    ? data.yAxis[rodIndex].label
-                    : '';
-                final value = data.formatTooltipValue(rod.toY);
-                return BarTooltipItem(
-                  '${data.xAxis[groupIndex]}\n$seriesName: $value',
-                  const TextStyle(color: Colors.white, fontSize: 12),
-                );
-              },
+              getTooltipColor: (group) => Colors.transparent,
+              tooltipPadding: EdgeInsets.zero,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) => null,
             ),
           ),
         ),
@@ -606,7 +600,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   }
 
   /// Build widget for data labels overlay on horizontal bar chart
-  Widget _buildHorizontalBarLabelsOverlay({int? hiddenBarIndex}) {
+  Widget _buildHorizontalBarLabelsOverlay() {
     final maxY = data.maxYValue;
     const leftLabelsWidth = 50.0;
     const topLabelsHeight = 40.0;
@@ -621,9 +615,6 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         return Stack(
           clipBehavior: Clip.none,
           children: List.generate(barCount, (i) {
-            // Skip the touched bar's label to let tooltip show clearly
-            if (hiddenBarIndex == i) return const SizedBox.shrink();
-
             // Get the first series value for single series chart
             final value = data.yAxis.isNotEmpty && data.yAxis[0].data.length > i
                 ? data.yAxis[0].data[i].toDouble()
@@ -1220,5 +1211,85 @@ class DashboardChartWidget extends StatelessWidget {
           showLegend: showLegend,
         );
     }
+  }
+}
+
+/// Custom Tooltip Overlay Widget that renders on top of everything
+class _CustomTooltipOverlay extends StatelessWidget {
+  final Offset position;
+  final String xAxisLabel;
+  final String seriesName;
+  final String value;
+
+  const _CustomTooltipOverlay({
+    required this.position,
+    required this.xAxisLabel,
+    required this.seriesName,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
+    // Calculate tooltip position to keep it inside screen bounds
+    const tooltipWidth = 150.0;
+    const tooltipHeight = 60.0;
+    const padding = 16.0;
+
+    double left = position.dx - tooltipWidth / 2;
+    double top = position.dy - tooltipHeight - padding;
+
+    // Ensure tooltip stays within screen bounds
+    if (left < padding) left = padding;
+    if (left + tooltipWidth > screenSize.width - padding) {
+      left = screenSize.width - tooltipWidth - padding;
+    }
+    if (top < padding) {
+      // Show below the touch point if not enough space above
+      top = position.dy + padding;
+    }
+
+    return Positioned(
+      left: left,
+      top: top,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: tooltipWidth),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                xAxisLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$seriesName: $value',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
