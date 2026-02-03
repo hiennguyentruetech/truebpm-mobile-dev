@@ -182,14 +182,38 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     _tooltipOverlay = null;
   }
 
-  void _showTooltip(int barIndex, Offset localPosition) {
+  void _showTooltip(
+    int barIndex,
+    Offset localPosition, {
+    bool isHorizontal = false,
+  }) {
     _removeTooltip();
 
     final RenderBox? renderBox =
         _chartKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final globalPosition = renderBox.localToGlobal(localPosition);
+    final chartSize = renderBox.size;
+    Offset adjustedLocalPosition;
+    
+    if (isHorizontal) {
+      // For horizontal bar chart, calculate position based on bar index
+      // The chart is rotated 90 degrees, so bars are stacked vertically
+      final barCount = data.xAxis.length;
+      final topPadding = 40.0; // Reserved for top titles
+      final chartAreaHeight = chartSize.height - topPadding;
+      final barSpacing = chartAreaHeight / barCount;
+      
+      // Calculate Y position based on which bar was touched
+      final barY = topPadding + (barIndex * barSpacing) + (barSpacing / 2);
+      
+      // X position: use the touch X position directly (horizontal position on bar)
+      adjustedLocalPosition = Offset(localPosition.dy, barY);
+    } else {
+      adjustedLocalPosition = localPosition;
+    }
+
+    final globalPosition = renderBox.localToGlobal(adjustedLocalPosition);
 
     // Get tooltip content
     final xAxisLabel = data.xAxis[barIndex];
@@ -210,7 +234,11 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     Overlay.of(context).insert(_tooltipOverlay!);
   }
 
-  void _handleBarTouch(FlTouchEvent event, BarTouchResponse? response) {
+  void _handleBarTouch(
+    FlTouchEvent event,
+    BarTouchResponse? response, {
+    bool isHorizontal = false,
+  }) {
     if (event is FlTapUpEvent ||
         event is FlPanEndEvent ||
         event is FlLongPressEnd ||
@@ -221,7 +249,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
       final localPos = event.localPosition;
 
       if (localPos != null) {
-        _showTooltip(barIndex, localPos);
+        _showTooltip(barIndex, localPos, isHorizontal: isHorizontal);
       }
     } else {
       _removeTooltip();
@@ -585,7 +613,8 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
           ),
           barTouchData: BarTouchData(
             enabled: true,
-            touchCallback: _handleBarTouch,
+            touchCallback: (event, response) =>
+                _handleBarTouch(event, response, isHorizontal: true),
             // Disable default tooltip, using custom overlay instead
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (group) => Colors.transparent,
