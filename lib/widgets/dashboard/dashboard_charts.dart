@@ -413,6 +413,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         barTouchData: BarTouchData(
           enabled: true,
           touchCallback: _handleBarTouch,
+          touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           // Disable default tooltip, using custom overlay instead
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => Colors.transparent,
@@ -576,6 +577,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             barTouchData: BarTouchData(
               enabled: true,
               touchCallback: _handleBarTouch,
+              touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (group) => Colors.transparent,
                 tooltipPadding: EdgeInsets.zero,
@@ -804,6 +806,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             enabled: true,
             touchCallback: (event, response) =>
                 _handleBarTouch(event, response, isHorizontal: true),
+            touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             // Disable default tooltip, using custom overlay instead
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (group) => Colors.transparent,
