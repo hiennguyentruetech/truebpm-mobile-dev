@@ -330,41 +330,57 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Legend - using shared ChartLegend widget
-        if (showLegend && data.yAxis.isNotEmpty)
-          ChartLegend(
-            yAxis: data.yAxis,
-            listColor: data.listColor,
-            shape: LegendShape.square,
+    return Listener(
+      // Handle pointer events to ensure tooltip is hidden on swipe out
+      onPointerUp: (_) => _hideTooltipAndResetTouch(),
+      onPointerCancel: (_) => _hideTooltipAndResetTouch(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend - using shared ChartLegend widget
+          if (showLegend && data.yAxis.isNotEmpty)
+            ChartLegend(
+              yAxis: data.yAxis,
+              listColor: data.listColor,
+              shape: LegendShape.square,
+            ),
+
+          const SizedBox(height: 16),
+
+          // Chart with data labels overlay
+          SizedBox(
+            key: _chartKey,
+            height: height,
+            child: data.isHorizontal
+                ? _buildHorizontalBarChartWithLabels()
+                : _buildVerticalBarChartWithLabels(),
           ),
 
-        const SizedBox(height: 16),
-
-        // Chart with data labels overlay
-        SizedBox(
-          key: _chartKey,
-          height: height,
-          child: data.isHorizontal
-              ? _buildHorizontalBarChartWithLabels()
-              : _buildVerticalBarChartWithLabels(),
-        ),
-
-        // X-Axis label
-        if (data.xAxisUnit != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Center(
-              child: Text(
-                data.xAxisUnit!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          // X-Axis label
+          if (data.xAxisUnit != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: Text(
+                  data.xAxisUnit!,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
+  }
+  
+  /// Hide tooltip and reset touch state
+  void _hideTooltipAndResetTouch() {
+    _removeTooltip();
+    if (_touchedBarIndex != -1) {
+      setState(() {
+        _touchedBarIndex = -1;
+        _touchedRodIndex = -1;
+      });
+    }
   }
 
   /// Build vertical bar chart with data labels overlay
@@ -1192,41 +1208,54 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
     }
     // Don't remove tooltip in else case - only remove on explicit end events
   }
+  
+  /// Hide tooltip and reset touch state
+  void _hideTooltipAndResetTouch() {
+    _removeTooltip();
+    if (_touchedXIndex != -1) {
+      setState(() => _touchedXIndex = -1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Legend - using shared ChartLegend widget
-        if (widget.showLegend && data.yAxis.isNotEmpty)
-          ChartLegend(
-            yAxis: data.yAxis,
-            listColor: data.listColor,
-            shape: LegendShape.line, // Line shape for line chart
+    return Listener(
+      // Handle pointer events to ensure tooltip is hidden on swipe out
+      onPointerUp: (_) => _hideTooltipAndResetTouch(),
+      onPointerCancel: (_) => _hideTooltipAndResetTouch(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend - using shared ChartLegend widget
+          if (widget.showLegend && data.yAxis.isNotEmpty)
+            ChartLegend(
+              yAxis: data.yAxis,
+              listColor: data.listColor,
+              shape: LegendShape.line, // Line shape for line chart
+            ),
+
+          const SizedBox(height: 16),
+
+          // Chart
+          SizedBox(
+            key: _chartKey,
+            height: widget.height,
+            child: _buildLineChart(),
           ),
 
-        const SizedBox(height: 16),
-
-        // Chart
-        SizedBox(
-          key: _chartKey,
-          height: widget.height,
-          child: _buildLineChart(),
-        ),
-
-        // X-Axis label
-        if (data.xAxisUnit != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Center(
-              child: Text(
-                data.xAxisUnit!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          // X-Axis label
+          if (data.xAxisUnit != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: Text(
+                  data.xAxisUnit!,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1483,41 +1512,54 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
     }
     // Don't remove tooltip in else case - only remove on explicit end events
   }
+  
+  /// Hide tooltip and reset touch state
+  void _hideTooltipAndResetTouch() {
+    _removeTooltip();
+    if (_touchedXIndex != -1) {
+      setState(() => _touchedXIndex = -1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Legend - using shared ChartLegend widget
-        if (widget.showLegend && data.yAxis.isNotEmpty)
-          ChartLegend(
-            yAxis: data.yAxis,
-            listColor: data.listColor,
-            shape: LegendShape.square, // Square shape for area chart
+    return Listener(
+      // Handle pointer events to ensure tooltip is hidden on swipe out
+      onPointerUp: (_) => _hideTooltipAndResetTouch(),
+      onPointerCancel: (_) => _hideTooltipAndResetTouch(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend - using shared ChartLegend widget
+          if (widget.showLegend && data.yAxis.isNotEmpty)
+            ChartLegend(
+              yAxis: data.yAxis,
+              listColor: data.listColor,
+              shape: LegendShape.square, // Square shape for area chart
+            ),
+
+          const SizedBox(height: 16),
+
+          // Chart
+          SizedBox(
+            key: _chartKey,
+            height: widget.height,
+            child: _buildAreaChart(),
           ),
 
-        const SizedBox(height: 16),
-
-        // Chart
-        SizedBox(
-          key: _chartKey,
-          height: widget.height,
-          child: _buildAreaChart(),
-        ),
-
-        // X-Axis label
-        if (data.xAxisUnit != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Center(
-              child: Text(
-                data.xAxisUnit!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          // X-Axis label
+          if (data.xAxisUnit != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: Text(
+                  data.xAxisUnit!,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1784,24 +1826,37 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
     }
     // Don't remove tooltip in else case - only remove on explicit end events
   }
+  
+  /// Hide tooltip and reset touch state
+  void _hideTooltipAndResetTouch() {
+    _removeTooltip();
+    if (_touchedIndex != -1) {
+      setState(() => _touchedIndex = -1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Legend - using shared PieChartLegend widget
-        if (widget.showLegend) _buildPieLegend(),
+    return Listener(
+      // Handle pointer events to ensure tooltip is hidden on swipe out
+      onPointerUp: (_) => _hideTooltipAndResetTouch(),
+      onPointerCancel: (_) => _hideTooltipAndResetTouch(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend - using shared PieChartLegend widget
+          if (widget.showLegend) _buildPieLegend(),
 
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // Chart
-        SizedBox(
-          key: _chartKey,
-          height: widget.height,
-          child: _buildPieChart(),
-        ),
-      ],
+          // Chart
+          SizedBox(
+            key: _chartKey,
+            height: widget.height,
+            child: _buildPieChart(),
+          ),
+        ],
+      ),
     );
   }
 
