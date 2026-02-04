@@ -604,6 +604,22 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         final barCount = data.xAxis.length;
         final barSpacing = chartWidth / barCount;
 
+        // Pre-calculate: Check if ANY label is long (> 3 chars)
+        // If any label is long, rotate ALL labels for consistency
+        bool anyLabelIsLong = false;
+        for (int i = 0; i < barCount; i++) {
+          final value = data.yAxis.isNotEmpty && data.yAxis[0].data.length > i
+              ? data.yAxis[0].data[i].toDouble()
+              : 0.0;
+          if (value == 0) continue;
+          
+          final labelText = _formatBarLabel(value);
+          if (labelText.length > 3) {
+            anyLabelIsLong = true;
+            break;
+          }
+        }
+
         return Stack(
           clipBehavior: Clip.none,
           children: List.generate(barCount, (i) {
@@ -626,16 +642,16 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             // Get formatted label text
             final labelText = _formatBarLabel(value);
             
-            // Smart rotation: only rotate if text is long (> 3 chars)
-            final shouldRotate = labelText.length > 3;
+            // Use consistent rotation: if ANY label is long, rotate ALL labels
+            final shouldRotate = anyLabelIsLong;
             
             // Size depends on rotation
             final labelSize = shouldRotate ? 36.0 : 30.0;
 
-            // Calculate label position - reduced padding
+            // Calculate label position - adequate padding to prevent overlap for rotated long labels
             final labelTop = isLabelInside
-                ? chartAreaHeight - barPixelHeight + 4 // Inside bar, closer to top
-                : chartAreaHeight - barPixelHeight - (shouldRotate ? labelSize : 16) - 2; // Above bar, closer
+                ? chartAreaHeight - barPixelHeight + 2 // Inside bar, minimal padding from top
+                : chartAreaHeight - barPixelHeight - (shouldRotate ? 32.0 : 16) - 2; // Above bar, sufficient padding for rotated labels
 
             // Center the label on bar
             final labelLeft = leftTitlesWidth + (i * barSpacing) + (barSpacing / 2) - (labelSize / 2);
