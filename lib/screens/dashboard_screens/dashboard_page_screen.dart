@@ -217,9 +217,26 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
           // Add chart to dashboard
           provider.addChart(chart);
           CoreToast.success(this.context, 'Added "${chart.name}" to dashboard');
+          
+          // Auto scroll to bottom after adding chart
+          _scrollToBottom();
         },
       ),
     );
+  }
+
+  /// Scroll to bottom of the list to show newly added chart
+  void _scrollToBottom() {
+    // Wait for the new chart to be rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _confirmRemoveChart(
@@ -298,15 +315,68 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
       filterValues: _filterValues.isNotEmpty ? _filterValues : null,
     );
 
-    if (mounted) {
+    if (mounted && data != null) {
+      // Validate filter values against available options
+      final validatedFilters = _validateFilterValues(data);
+      
+      // Check if any filter values were corrected
+      final needsReload = !_areFilterValuesEqual(data.filterValues, validatedFilters);
+      
+      if (needsReload) {
+        // Filter values were corrected, reload with valid values
+        setState(() {
+          _filterValues = validatedFilters;
+        });
+        // Reload data with corrected filter values
+        _onFilterChanged(validatedFilters);
+      } else {
+        setState(() {
+          _chartData = data;
+          _isLoading = false;
+          _filterValues = Map.from(data.filterValues);
+        });
+      }
+    } else if (mounted) {
       setState(() {
         _chartData = data;
         _isLoading = false;
-        if (data != null) {
-          _filterValues = Map.from(data.filterValues);
-        }
       });
     }
+  }
+
+  /// Validate filter values against available filter options
+  /// Returns corrected filter values where invalid values are replaced with first option
+  Map<String, String> _validateFilterValues(ChartDetailData data) {
+    final Map<String, String> validatedFilters = {};
+    
+    for (final filter in data.filters) {
+      final currentValue = data.filterValues[filter.field] ?? '';
+      
+      // Check if current value exists in filter options
+      final isValidValue = filter.options.any((opt) => opt.value == currentValue);
+      
+      if (isValidValue) {
+        // Value is valid, keep it
+        validatedFilters[filter.field] = currentValue;
+      } else if (filter.options.isNotEmpty) {
+        // Value is not in options, use first option as default
+        validatedFilters[filter.field] = filter.options.first.value;
+      } else {
+        // No options available, keep original value
+        validatedFilters[filter.field] = currentValue;
+      }
+    }
+    
+    return validatedFilters;
+  }
+
+  /// Compare two filter value maps for equality
+  bool _areFilterValuesEqual(Map<String, String> a, Map<String, String> b) {
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (a[key] != b[key]) return false;
+    }
+    return true;
   }
 
   Future<void> _onFilterChanged(Map<String, String> newFilters) async {
