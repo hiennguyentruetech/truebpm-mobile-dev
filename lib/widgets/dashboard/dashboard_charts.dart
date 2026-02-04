@@ -217,7 +217,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
     // Get tooltip content
     final xAxisLabel = data.xAxis[barIndex];
-    
+
     // Use unified stacked-style tooltip for all chart types
     _tooltipOverlay = OverlayEntry(
       builder: (context) => _CustomStackedTooltipOverlay(
@@ -413,7 +413,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         barTouchData: BarTouchData(
           enabled: true,
           touchCallback: _handleBarTouch,
-          touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          touchExtraThreshold: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 12,
+          ),
           // Disable default tooltip, using custom overlay instead
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => Colors.transparent,
@@ -435,20 +438,23 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Calculate responsive bar width
-        final chartWidth = constraints.maxWidth - 60; // Subtract left titles space
+        final chartWidth =
+            constraints.maxWidth - 60; // Subtract left titles space
         final xAxisCount = data.xAxis.length;
         final rodsPerGroup = stackNames.length;
-        
+
         // Calculate available space per group
         final groupSpacing = 12.0;
         final totalGroupSpacing = groupSpacing * (xAxisCount - 1);
-        final availableWidthPerGroup = (chartWidth - totalGroupSpacing) / xAxisCount;
-        
+        final availableWidthPerGroup =
+            (chartWidth - totalGroupSpacing) / xAxisCount;
+
         // Calculate bar width based on available space and number of rods
         final barsSpacing = 2.0;
         final totalBarsSpacing = barsSpacing * (rodsPerGroup - 1);
-        var barWidth = (availableWidthPerGroup - totalBarsSpacing) / rodsPerGroup;
-        
+        var barWidth =
+            (availableWidthPerGroup - totalBarsSpacing) / rodsPerGroup;
+
         // Clamp bar width to reasonable limits
         barWidth = barWidth.clamp(8.0, 32.0);
 
@@ -509,7 +515,9 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             }
           }
 
-          barGroups.add(BarChartGroupData(x: xIndex, barRods: rods, barsSpace: barsSpacing));
+          barGroups.add(
+            BarChartGroupData(x: xIndex, barRods: rods, barsSpace: barsSpacing),
+          );
         }
 
         return BarChart(
@@ -568,7 +576,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
                     }
                     return Text(
                       data.formatYAxisValue(value),
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                      ),
                     );
                   },
                 ),
@@ -577,7 +588,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             barTouchData: BarTouchData(
               enabled: true,
               touchCallback: _handleBarTouch,
-              touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              touchExtraThreshold: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 12,
+              ),
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (group) => Colors.transparent,
                 tooltipPadding: EdgeInsets.zero,
@@ -612,7 +626,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
               ? data.yAxis[0].data[i].toDouble()
               : 0.0;
           if (value == 0) continue;
-          
+
           final labelText = _formatBarLabel(value);
           if (labelText.length > 3) {
             anyLabelIsLong = true;
@@ -638,23 +652,32 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             // >= 25% of max: label inside bar
             // < 25% of max: label above bar
             final isLabelInside = barHeightRatio >= 0.25;
-            
+
             // Get formatted label text
             final labelText = _formatBarLabel(value);
-            
+
             // Use consistent rotation: if ANY label is long, rotate ALL labels
             final shouldRotate = anyLabelIsLong;
-            
+
             // Size depends on rotation
             final labelSize = shouldRotate ? 36.0 : 30.0;
 
             // Calculate label position - adequate padding to prevent overlap for rotated long labels
             final labelTop = isLabelInside
-                ? chartAreaHeight - barPixelHeight + 2 // Inside bar, minimal padding from top
-                : chartAreaHeight - barPixelHeight - (shouldRotate ? 32.0 : 16) - 2; // Above bar, sufficient padding for rotated labels
+                ? chartAreaHeight -
+                      barPixelHeight +
+                      2 // Inside bar, minimal padding from top
+                : chartAreaHeight -
+                      barPixelHeight -
+                      (shouldRotate ? 32.0 : 16) -
+                      2; // Above bar, sufficient padding for rotated labels
 
             // Center the label on bar
-            final labelLeft = leftTitlesWidth + (i * barSpacing) + (barSpacing / 2) - (labelSize / 2);
+            final labelLeft =
+                leftTitlesWidth +
+                (i * barSpacing) +
+                (barSpacing / 2) -
+                (labelSize / 2);
 
             return Positioned(
               top: labelTop,
@@ -671,7 +694,9 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
                               labelText,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: isLabelInside ? Colors.white : Colors.grey.shade700,
+                                color: isLabelInside
+                                    ? Colors.white
+                                    : Colors.grey.shade700,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -681,7 +706,9 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
                             labelText,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: isLabelInside ? Colors.white : Colors.grey.shade700,
+                              color: isLabelInside
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -822,7 +849,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             enabled: true,
             touchCallback: (event, response) =>
                 _handleBarTouch(event, response, isHorizontal: true),
-            touchExtraThreshold: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            touchExtraThreshold: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 12,
+            ),
             // Disable default tooltip, using custom overlay instead
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (group) => Colors.transparent,
@@ -969,7 +999,9 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
-    } else if (response != null && response.lineBarSpots != null && response.lineBarSpots!.isNotEmpty) {
+    } else if (response != null &&
+        response.lineBarSpots != null &&
+        response.lineBarSpots!.isNotEmpty) {
       final spot = response.lineBarSpots!.first;
       final xIndex = spot.x.toInt();
       final localPos = event.localPosition;
@@ -1123,7 +1155,8 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
           touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (touchedSpot) => Colors.transparent,
             tooltipPadding: EdgeInsets.zero,
-            getTooltipItems: (touchedSpots) => touchedSpots.map((s) => null).toList(),
+            getTooltipItems: (touchedSpots) =>
+                touchedSpots.map((s) => null).toList(),
           ),
         ),
       ),
@@ -1193,7 +1226,9 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
-    } else if (response != null && response.lineBarSpots != null && response.lineBarSpots!.isNotEmpty) {
+    } else if (response != null &&
+        response.lineBarSpots != null &&
+        response.lineBarSpots!.isNotEmpty) {
       final spot = response.lineBarSpots!.first;
       final xIndex = spot.x.toInt();
       final localPos = event.localPosition;
@@ -1356,7 +1391,8 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
           touchTooltipData: LineTouchTooltipData(
             getTooltipColor: (touchedSpot) => Colors.transparent,
             tooltipPadding: EdgeInsets.zero,
-            getTooltipItems: (touchedSpots) => touchedSpots.map((s) => null).toList(),
+            getTooltipItems: (touchedSpots) =>
+                touchedSpots.map((s) => null).toList(),
           ),
         ),
       ),
@@ -1410,12 +1446,15 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
 
     final globalPosition = renderBox.localToGlobal(localPosition);
     final label = _getLabelForIndex(sectionIndex);
-    
+
     // Get value from yAxis
-    final value = data.yAxis.isNotEmpty && data.yAxis.first.data.length > sectionIndex
+    final value =
+        data.yAxis.isNotEmpty && data.yAxis.first.data.length > sectionIndex
         ? data.yAxis.first.data[sectionIndex].toDouble()
         : 0.0;
-    final color = data.listColor?.elementAtOrNull(sectionIndex) ?? ChartColors.getColor(sectionIndex);
+    final color =
+        data.listColor?.elementAtOrNull(sectionIndex) ??
+        ChartColors.getColor(sectionIndex);
     final formattedValue = data.formatTooltipValue(value);
 
     _tooltipOverlay = OverlayEntry(
@@ -1646,20 +1685,21 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final seriesItems = <Widget>[];
-    
+
     // Build list of all series with their values
     for (int i = 0; i < data.yAxis.length; i++) {
       final series = data.yAxis[i];
       final value = series.data.length > xIndex
           ? series.data[xIndex].toDouble()
           : 0.0;
-      
+
       // Skip series with zero value
       if (value == 0) continue;
-      
-      final color = data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
+
+      final color =
+          data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
       final formattedValue = data.formatTooltipValue(value);
-      
+
       seriesItems.add(
         Padding(
           padding: const EdgeInsets.only(top: 6),
@@ -1679,11 +1719,13 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                series.label,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
+              Flexible(
+                child: Text(
+                  series.label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1702,12 +1744,12 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
     }
 
     // Calculate tooltip width based on content - use intrinsic width
-    const minTooltipWidth = 180.0;
-    const maxTooltipWidth = 280.0;
-    final tooltipHeight = 40.0 + (seriesItems.length * 28.0);
+    const maxTooltipWidth = 320.0;
+    final tooltipHeight =
+        40.0 + (seriesItems.length * 32.0); // Increased height for wrapped text
     const padding = 16.0;
 
-    double left = position.dx - minTooltipWidth / 2;
+    double left = position.dx - 100; // Approximate center, will adjust
     double top = position.dy - tooltipHeight - padding;
 
     // Ensure tooltip stays within screen bounds
@@ -1725,50 +1767,49 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
       top: top,
       child: Material(
         color: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(
-            minWidth: minTooltipWidth,
-            maxWidth: maxTooltipWidth,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade800,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with xAxis label
-              Container(
-                padding: const EdgeInsets.only(bottom: 6),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
+        child: IntrinsicWidth(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with xAxis label
+                Container(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    xAxisLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                child: Text(
-                  xAxisLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              // Series list
-              ...seriesItems,
-            ],
+                // Series list
+                ...seriesItems,
+              ],
+            ),
           ),
         ),
       ),
@@ -1794,12 +1835,11 @@ class _CustomPieTooltipOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
-    const minTooltipWidth = 150.0;
-    const maxTooltipWidth = 250.0;
-    const tooltipHeight = 60.0;
+    const maxTooltipWidth = 320.0;
+    const tooltipHeight = 70.0;
     const padding = 16.0;
 
-    double left = position.dx - minTooltipWidth / 2;
+    double left = position.dx - 100; // Approximate center, will adjust
     double top = position.dy - tooltipHeight - padding;
 
     // Ensure tooltip stays within screen bounds
@@ -1816,52 +1856,57 @@ class _CustomPieTooltipOverlay extends StatelessWidget {
       top: top,
       child: Material(
         color: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(
-            minWidth: minTooltipWidth,
-            maxWidth: maxTooltipWidth,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade800,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
+        child: IntrinsicWidth(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    softWrap: true,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
