@@ -243,7 +243,11 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
       return;
     }
     
-    _removeTooltip();
+    // Remove old tooltip if showing for different bar
+    if (_tooltipOverlay != null) {
+      _tooltipOverlay!.remove();
+      _tooltipOverlay = null;
+    }
     _currentTooltipBarIndex = barIndex;
 
     final RenderBox? renderBox =
@@ -319,15 +323,9 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
           _touchedRodIndex = rodIndex;
         });
       }
-    } else {
-      _removeTooltip();
-      if (_touchedBarIndex != -1) {
-        setState(() {
-          _touchedBarIndex = -1;
-          _touchedRodIndex = -1;
-        });
-      }
     }
+    // Don't remove tooltip in else case - only remove on explicit end events
+    // This prevents flickering when touch starts but hasn't hit a bar yet
   }
 
   @override
@@ -1142,7 +1140,11 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
       return;
     }
     
-    _removeTooltip();
+    // Remove old tooltip if showing for different index
+    if (_tooltipOverlay != null) {
+      _tooltipOverlay!.remove();
+      _tooltipOverlay = null;
+    }
     _currentTooltipXIndex = xIndex;
 
     final RenderBox? renderBox =
@@ -1187,9 +1189,8 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
       if (_touchedXIndex != xIndex) {
         setState(() => _touchedXIndex = xIndex);
       }
-    } else {
-      _removeTooltip();
     }
+    // Don't remove tooltip in else case - only remove on explicit end events
   }
 
   @override
@@ -1429,7 +1430,11 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
       return;
     }
     
-    _removeTooltip();
+    // Remove old tooltip if showing for different index
+    if (_tooltipOverlay != null) {
+      _tooltipOverlay!.remove();
+      _tooltipOverlay = null;
+    }
     _currentTooltipXIndex = xIndex;
 
     final RenderBox? renderBox =
@@ -1475,12 +1480,8 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
       if (localPos != null) {
         _showTooltip(xIndex, localPos);
       }
-    } else {
-      _removeTooltip();
-      if (_touchedXIndex != -1) {
-        setState(() => _touchedXIndex = -1);
-      }
     }
+    // Don't remove tooltip in else case - only remove on explicit end events
   }
 
   @override
@@ -1687,6 +1688,9 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
   
   // Touch highlight - track which section is being touched
   int _touchedIndex = -1;
+  
+  // Track current tooltip section to prevent re-animation
+  int _currentTooltipIndex = -1;
 
   ChartDetailData get data => widget.data;
   bool get isDonut => widget.isDonut;
@@ -1714,10 +1718,21 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
   void _removeTooltip() {
     _tooltipOverlay?.remove();
     _tooltipOverlay = null;
+    _currentTooltipIndex = -1;
   }
 
   void _showPieTooltip(int sectionIndex, Offset localPosition) {
-    _removeTooltip();
+    // If tooltip is already showing for this section, don't re-create
+    if (_currentTooltipIndex == sectionIndex && _tooltipOverlay != null) {
+      return;
+    }
+    
+    // Remove old tooltip if showing for different section
+    if (_tooltipOverlay != null) {
+      _tooltipOverlay!.remove();
+      _tooltipOverlay = null;
+    }
+    _currentTooltipIndex = sectionIndex;
 
     final RenderBox? renderBox =
         _chartKey.currentContext?.findRenderObject() as RenderBox?;
@@ -1766,12 +1781,8 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
           setState(() => _touchedIndex = sectionIndex);
         }
       }
-    } else {
-      _removeTooltip();
-      if (_touchedIndex != -1) {
-        setState(() => _touchedIndex = -1);
-      }
     }
+    // Don't remove tooltip in else case - only remove on explicit end events
   }
 
   @override
