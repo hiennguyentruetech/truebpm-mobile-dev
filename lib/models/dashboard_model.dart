@@ -471,12 +471,46 @@ class ChartDetailData {
   /// Check if chart is horizontal layout
   bool get isHorizontal => layout?.toLowerCase() == 'horizontal';
 
+  /// Check if chart is stacked layout
+  bool get isStacked => layout?.toLowerCase() == 'stacked';
+
+  /// Get unique stack groups from yAxis
+  /// Returns a map of stackName -> list of series indices
+  Map<String, List<int>> get stackGroups {
+    final Map<String, List<int>> groups = {};
+    for (int i = 0; i < yAxis.length; i++) {
+      final stackName = yAxis[i].stack ?? 'default';
+      groups.putIfAbsent(stackName, () => []).add(i);
+    }
+    return groups;
+  }
+
   /// Get the raw max value from data
   double get _rawMaxValue {
     double max = 0;
-    for (var series in yAxis) {
-      for (var value in series.data) {
-        if (value > max) max = value.toDouble();
+
+    if (isStacked) {
+      // For stacked charts, calculate max per stack group
+      final groups = stackGroups;
+      for (int xIndex = 0; xIndex < xAxis.length; xIndex++) {
+        for (var stackName in groups.keys) {
+          final seriesIndices = groups[stackName]!;
+          double stackTotal = 0;
+          for (var seriesIndex in seriesIndices) {
+            if (seriesIndex < yAxis.length &&
+                xIndex < yAxis[seriesIndex].data.length) {
+              stackTotal += yAxis[seriesIndex].data[xIndex].toDouble();
+            }
+          }
+          if (stackTotal > max) max = stackTotal;
+        }
+      }
+    } else {
+      // For grouped charts, find individual max
+      for (var series in yAxis) {
+        for (var value in series.data) {
+          if (value > max) max = value.toDouble();
+        }
       }
     }
     return max;
@@ -521,7 +555,17 @@ class ChartDetailData {
   double get yAxisInterval => yAxisConfig.$2;
 
   /// Get valueFormatter from configChart if available
+  /// Checks configChart.yAxis.valueFormatter first, then root valueFormatter
   String? get valueFormatter {
+    // Check yAxis config first (for Y axis formatting)
+    final yAxisConfig = configChart?['yAxis'];
+    if (yAxisConfig != null && yAxisConfig is Map) {
+      final yAxisFormatter = yAxisConfig['valueFormatter']?.toString();
+      if (yAxisFormatter != null && yAxisFormatter.isNotEmpty) {
+        return yAxisFormatter;
+      }
+    }
+    // Fallback to root valueFormatter
     return configChart?['valueFormatter']?.toString();
   }
 
@@ -546,9 +590,15 @@ class ChartDetailData {
     // Handle common MUIx formatter patterns:
     // "(number) => Number(number.toFixed(2)) + ' day'"
     // "(number) => number + '%'"
+    // "new Intl.NumberFormat('en-US',{notation:'compact'}).format"
     // etc.
 
     try {
+      // Check for Intl.NumberFormat with compact notation
+      if (formatter.contains('notation') && formatter.contains('compact')) {
+        return _formatCompactNumber(value);
+      }
+
       // Check for suffix pattern: + ' something' or + " something"
       final suffixRegex = RegExp(r"""\+\s*['"]([^'"]+)['"]""");
       final suffixMatch = suffixRegex.firstMatch(formatter);
@@ -584,9 +634,114 @@ class ChartDetailData {
     }
   }
 
+  /// Format number in compact notation (like Intl.NumberFormat with notation:'compact')
+  /// Examples: 1000 -> 1K, 1000000 -> 1M, 1000000000 -> 1B
+  String _formatCompactNumber(double value) {
+    if (value == 0) return '0';
+
+    final absValue = value.abs();
+    final sign = value < 0 ? '-' : '';
+
+    String formatted;
+    if (absValue >= 1e9) {
+      formatted =
+          '${(absValue / 1e9).toStringAsFixed(absValue % 1e9 == 0 ? 0 : 1)}B';
+    } else if (absValue >= 1e6) {
+      formatted =
+          '${(absValue / 1e6).toStringAsFixed(absValue % 1e6 == 0 ? 0 : 1)}M';
+    } else if (absValue >= 1e3) {
+      formatted =
+          '${(absValue / 1e3).toStringAsFixed(absValue % 1e3 == 0 ? 0 : 1)}K';
+    } else {
+      formatted = absValue == absValue.toInt()
+          ? absValue.toInt().toString()
+          : absValue.toStringAsFixed(1);
+    }
+
+    // Remove unnecessary .0
+    formatted = formatted
+        .replaceAll('.0K', 'K')
+        .replaceAll('.0M', 'M')
+        .replaceAll('.0B', 'B');
+
+    return '$sign$formatted';
+  }
+
   /// Get formatted tooltip value
+  /// Shows full value with thousand separators and currency suffix
+  /// Does NOT round - shows exact value with decimals if present
   String formatTooltipValue(double value) {
-    return formatYAxisValue(value);
+    final formatter = valueFormatter;
+    
+    // Format with thousand separators (using dots like Vietnamese format)
+    // Keep decimals if present, don't round
+    String formatted = _formatDoubleWithThousandSeparator(value);
+    
+    // Extract currency/suffix from formatter if available
+    String suffix = '';
+    if (formatter != null) {
+      // Check for currency patterns like 'VND', 'USD', etc.
+      final currencyRegex = RegExp(r"['\x22]([A-Z]{3})['\x22]|currency:\s*['\x22]([A-Z]{3})['\x22]");
+      final currencyMatch = currencyRegex.firstMatch(formatter);
+      if (currencyMatch != null) {
+        suffix = ' ${currencyMatch.group(1) ?? currencyMatch.group(2) ?? ''}';
+      } else {
+        // Check for suffix pattern: + ' something' or + " something"
+        final suffixRegex = RegExp(r"\+\s*['\x22]([^'\x22]+)['\x22]");
+        final suffixMatch = suffixRegex.firstMatch(formatter);
+        if (suffixMatch != null) {
+          suffix = ' ${suffixMatch.group(1) ?? ''}';
+        }
+      }
+    }
+    
+    return '$formatted$suffix';
+  }
+  
+  /// Format double with thousand separator, preserving decimals
+  String _formatDoubleWithThousandSeparator(double value) {
+    // Check if value has decimal part
+    if (value == value.toInt()) {
+      return _formatWithThousandSeparator(value.toInt());
+    }
+    
+    // Split into integer and decimal parts
+    final parts = value.toString().split('.');
+    final intPart = int.parse(parts[0]);
+    final decimalPart = parts.length > 1 ? parts[1] : '';
+    
+    // Format integer part with separators
+    final formattedInt = _formatWithThousandSeparator(intPart.abs());
+    final sign = intPart < 0 ? '-' : '';
+    
+    // Combine with decimal (limit to 2 decimal places for display)
+    if (decimalPart.isNotEmpty) {
+      final truncatedDecimal = decimalPart.length > 2 ? decimalPart.substring(0, 2) : decimalPart;
+      // Remove trailing zeros
+      final cleanDecimal = truncatedDecimal.replaceAll(RegExp(r'0+$'), '');
+      if (cleanDecimal.isNotEmpty) {
+        return '$sign$formattedInt,$cleanDecimal';
+      }
+    }
+    return '$sign$formattedInt';
+  }
+  
+  /// Format number with thousand separator (dot)
+  String _formatWithThousandSeparator(int value) {
+    final str = value.abs().toString();
+    final buffer = StringBuffer();
+    int count = 0;
+    
+    for (int i = str.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(str[i]);
+      count++;
+    }
+    
+    final result = buffer.toString().split('').reversed.join();
+    return value < 0 ? '-$result' : result;
   }
 
   /// Get total values for pie chart

@@ -195,7 +195,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
     final chartSize = renderBox.size;
     Offset adjustedLocalPosition;
-    
+
     if (isHorizontal) {
       // For horizontal bar chart, calculate position based on bar index
       // The chart is rotated 90 degrees, so bars are stacked vertically
@@ -203,10 +203,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
       final topPadding = 40.0; // Reserved for top titles
       final chartAreaHeight = chartSize.height - topPadding;
       final barSpacing = chartAreaHeight / barCount;
-      
+
       // Calculate Y position based on which bar was touched
       final barY = topPadding + (barIndex * barSpacing) + (barSpacing / 2);
-      
+
       // X position: use the touch X position directly (horizontal position on bar)
       adjustedLocalPosition = Offset(localPosition.dy, barY);
     } else {
@@ -217,17 +217,14 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
     // Get tooltip content
     final xAxisLabel = data.xAxis[barIndex];
-    final seriesName = data.yAxis.isNotEmpty ? data.yAxis[0].label : '';
-    final value = data.yAxis.isNotEmpty && data.yAxis[0].data.length > barIndex
-        ? data.formatTooltipValue(data.yAxis[0].data[barIndex].toDouble())
-        : '0';
-
+    
+    // Use unified stacked-style tooltip for all chart types
     _tooltipOverlay = OverlayEntry(
-      builder: (context) => _CustomTooltipOverlay(
+      builder: (context) => _CustomStackedTooltipOverlay(
         position: globalPosition,
         xAxisLabel: xAxisLabel,
-        seriesName: seriesName,
-        value: value,
+        data: data,
+        xIndex: barIndex,
       ),
     );
 
@@ -313,6 +310,15 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   }
 
   Widget _buildVerticalBarChart() {
+    // Use stacked chart if layout is stacked
+    if (data.isStacked) {
+      return _buildStackedVerticalBarChart();
+    }
+    return _buildGroupedVerticalBarChart();
+  }
+
+  /// Build grouped vertical bar chart (multiple bars side by side)
+  Widget _buildGroupedVerticalBarChart() {
     final barGroups = <BarChartGroupData>[];
     final barWidth = data.yAxis.length > 1 ? 12.0 : 20.0;
 
@@ -419,6 +425,170 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     );
   }
 
+  /// Build stacked vertical bar chart
+  /// Groups series by their 'stack' property and stacks them on top of each other
+  Widget _buildStackedVerticalBarChart() {
+    final stackGroups = data.stackGroups;
+    final stackNames = stackGroups.keys.toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate responsive bar width
+        final chartWidth = constraints.maxWidth - 60; // Subtract left titles space
+        final xAxisCount = data.xAxis.length;
+        final rodsPerGroup = stackNames.length;
+        
+        // Calculate available space per group
+        final groupSpacing = 12.0;
+        final totalGroupSpacing = groupSpacing * (xAxisCount - 1);
+        final availableWidthPerGroup = (chartWidth - totalGroupSpacing) / xAxisCount;
+        
+        // Calculate bar width based on available space and number of rods
+        final barsSpacing = 2.0;
+        final totalBarsSpacing = barsSpacing * (rodsPerGroup - 1);
+        var barWidth = (availableWidthPerGroup - totalBarsSpacing) / rodsPerGroup;
+        
+        // Clamp bar width to reasonable limits
+        barWidth = barWidth.clamp(8.0, 32.0);
+
+        final barGroups = <BarChartGroupData>[];
+
+        for (int xIndex = 0; xIndex < data.xAxis.length; xIndex++) {
+          final rods = <BarChartRodData>[];
+
+          // Create one rod per stack group
+          for (int stackIdx = 0; stackIdx < stackNames.length; stackIdx++) {
+            final stackName = stackNames[stackIdx];
+            final seriesIndices = stackGroups[stackName]!;
+
+            // Build stacked sections for this rod
+            final rodStackItems = <BarChartRodStackItem>[];
+            double currentY = 0;
+
+            for (int i = 0; i < seriesIndices.length; i++) {
+              final seriesIndex = seriesIndices[i];
+              final value = data.yAxis[seriesIndex].data.length > xIndex
+                  ? data.yAxis[seriesIndex].data[xIndex].toDouble()
+                  : 0.0;
+
+              if (value > 0) {
+                final color =
+                    data.listColor?.elementAtOrNull(seriesIndex) ??
+                    ChartColors.getColor(seriesIndex);
+
+                rodStackItems.add(
+                  BarChartRodStackItem(currentY, currentY + value, color),
+                );
+                currentY += value;
+              }
+            }
+
+            // Only create rod if there's data
+            if (currentY > 0 || seriesIndices.isNotEmpty) {
+              // Get color for single-series stack
+              final primaryColor = seriesIndices.isNotEmpty
+                  ? (data.listColor?.elementAtOrNull(seriesIndices.first) ??
+                        ChartColors.getColor(seriesIndices.first))
+                  : ChartColors.getColor(stackIdx);
+
+              rods.add(
+                BarChartRodData(
+                  toY: currentY,
+                  color: rodStackItems.length == 1
+                      ? primaryColor
+                      : Colors.transparent,
+                  rodStackItems: rodStackItems.length > 1 ? rodStackItems : [],
+                  width: barWidth,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
+                ),
+              );
+            }
+          }
+
+          barGroups.add(BarChartGroupData(x: xIndex, barRods: rods, barsSpace: barsSpacing));
+        }
+
+        return BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceEvenly,
+            groupsSpace: groupSpacing,
+            maxY: data.maxYValue,
+            minY: 0,
+            barGroups: barGroups,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: data.yAxisInterval,
+              getDrawingHorizontalLine: (value) =>
+                  FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+            ),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              show: true,
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < data.xAxis.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          data.xAxis[index],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  reservedSize: 32,
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  interval: data.yAxisInterval,
+                  getTitlesWidget: (value, meta) {
+                    if (value == meta.min || value == meta.max) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text(
+                      data.formatYAxisValue(value),
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                    );
+                  },
+                ),
+              ),
+            ),
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchCallback: _handleBarTouch,
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipColor: (group) => Colors.transparent,
+                tooltipPadding: EdgeInsets.zero,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) => null,
+              ),
+            ),
+          ),
+          swapAnimationDuration: const Duration(milliseconds: 250),
+        );
+      },
+    );
+  }
+
   /// Build widget for data labels overlay on bar chart
   Widget _buildBarLabelsOverlay() {
     final maxY = data.maxYValue;
@@ -450,33 +620,54 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             // >= 25% of max: label inside bar
             // < 25% of max: label above bar
             final isLabelInside = barHeightRatio >= 0.25;
+            
+            // Get formatted label text
+            final labelText = _formatBarLabel(value);
+            
+            // Smart rotation: only rotate if text is long (> 3 chars)
+            final shouldRotate = labelText.length > 3;
+            
+            // Size depends on rotation
+            final labelSize = shouldRotate ? 36.0 : 30.0;
 
-            // Calculate label position
+            // Calculate label position - reduced padding
             final labelTop = isLabelInside
-                ? chartAreaHeight -
-                      barPixelHeight +
-                      5 // Inside bar, 5px from top
-                : chartAreaHeight - barPixelHeight - 18; // Above bar
+                ? chartAreaHeight - barPixelHeight + 4 // Inside bar, closer to top
+                : chartAreaHeight - barPixelHeight - (shouldRotate ? labelSize : 16) - 2; // Above bar, closer
 
-            final labelLeft =
-                leftTitlesWidth + (i * barSpacing) + (barSpacing / 2) - 15;
+            // Center the label on bar
+            final labelLeft = leftTitlesWidth + (i * barSpacing) + (barSpacing / 2) - (labelSize / 2);
 
             return Positioned(
               top: labelTop,
               left: labelLeft,
               child: IgnorePointer(
                 child: SizedBox(
-                  width: 30,
-                  child: Text(
-                    _formatBarLabel(value),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isLabelInside
-                          ? Colors.white
-                          : Colors.grey.shade700,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  width: labelSize,
+                  height: shouldRotate ? labelSize : 16,
+                  child: Center(
+                    child: shouldRotate
+                        ? RotatedBox(
+                            quarterTurns: -1, // Rotate 90° for long text
+                            child: Text(
+                              labelText,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isLabelInside ? Colors.white : Colors.grey.shade700,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            labelText,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isLabelInside ? Colors.white : Colors.grey.shade700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -487,12 +678,10 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     );
   }
 
-  /// Format bar label value (compact format)
+  /// Format bar label value (compact format like Y-axis)
   String _formatBarLabel(double value) {
-    if (value == value.toInt()) {
-      return value.toInt().toString();
-    }
-    return value.toStringAsFixed(1);
+    // Use compact format for bar labels (same as Y-axis)
+    return data.formatYAxisValue(value);
   }
 
   /// Build horizontal bar chart with data labels overlay
@@ -700,7 +889,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 }
 
 /// Line Chart Widget using fl_chart
-class DashboardLineChart extends StatelessWidget {
+class DashboardLineChart extends StatefulWidget {
   final ChartDetailData data;
   final bool showLegend;
   final double height;
@@ -713,12 +902,74 @@ class DashboardLineChart extends StatelessWidget {
   });
 
   @override
+  State<DashboardLineChart> createState() => _DashboardLineChartState();
+}
+
+class _DashboardLineChartState extends State<DashboardLineChart> {
+  final GlobalKey _chartKey = GlobalKey();
+  OverlayEntry? _tooltipOverlay;
+
+  ChartDetailData get data => widget.data;
+
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
+  }
+
+  void _removeTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
+  }
+
+  void _showTooltip(int xIndex, Offset localPosition) {
+    _removeTooltip();
+
+    final RenderBox? renderBox =
+        _chartKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final globalPosition = renderBox.localToGlobal(localPosition);
+    final xAxisLabel = data.xAxis.length > xIndex ? data.xAxis[xIndex] : '';
+
+    _tooltipOverlay = OverlayEntry(
+      builder: (context) => _CustomStackedTooltipOverlay(
+        position: globalPosition,
+        xAxisLabel: xAxisLabel,
+        data: data,
+        xIndex: xIndex,
+      ),
+    );
+
+    Overlay.of(context).insert(_tooltipOverlay!);
+  }
+
+  void _handleLineTouch(FlTouchEvent event, LineTouchResponse? response) {
+    if (event is FlTapUpEvent ||
+        event is FlPanEndEvent ||
+        event is FlLongPressEnd ||
+        event is FlPointerExitEvent) {
+      _removeTooltip();
+    } else if (response != null && response.lineBarSpots != null && response.lineBarSpots!.isNotEmpty) {
+      final spot = response.lineBarSpots!.first;
+      final xIndex = spot.x.toInt();
+      final localPos = event.localPosition;
+
+      if (localPos != null) {
+        _showTooltip(xIndex, localPos);
+      }
+    } else {
+      _removeTooltip();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend - using shared ChartLegend widget
-        if (showLegend && data.yAxis.isNotEmpty)
+        if (widget.showLegend && data.yAxis.isNotEmpty)
           ChartLegend(
             yAxis: data.yAxis,
             listColor: data.listColor,
@@ -728,7 +979,11 @@ class DashboardLineChart extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Chart
-        SizedBox(height: height, child: _buildLineChart()),
+        SizedBox(
+          key: _chartKey,
+          height: widget.height,
+          child: _buildLineChart(),
+        ),
 
         // X-Axis label
         if (data.xAxisUnit != null)
@@ -844,26 +1099,12 @@ class DashboardLineChart extends StatelessWidget {
         ),
         lineTouchData: LineTouchData(
           enabled: true,
+          touchCallback: _handleLineTouch,
+          // Disable default tooltip, use custom overlay
           touchTooltipData: LineTouchTooltipData(
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            tooltipPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            tooltipRoundedRadius: 8,
-            getTooltipColor: (touchedSpot) => Colors.grey.shade800,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((spot) {
-                final seriesName = data.yAxis.length > spot.barIndex
-                    ? data.yAxis[spot.barIndex].label
-                    : '';
-                return LineTooltipItem(
-                  '$seriesName: ${data.formatTooltipValue(spot.y)}',
-                  const TextStyle(color: Colors.white, fontSize: 12),
-                );
-              }).toList();
-            },
+            getTooltipColor: (touchedSpot) => Colors.transparent,
+            tooltipPadding: EdgeInsets.zero,
+            getTooltipItems: (touchedSpots) => touchedSpots.map((s) => null).toList(),
           ),
         ),
       ),
@@ -872,7 +1113,7 @@ class DashboardLineChart extends StatelessWidget {
 }
 
 /// Area Chart Widget using fl_chart
-class DashboardAreaChart extends StatelessWidget {
+class DashboardAreaChart extends StatefulWidget {
   final ChartDetailData data;
   final bool showLegend;
   final double height;
@@ -885,12 +1126,74 @@ class DashboardAreaChart extends StatelessWidget {
   });
 
   @override
+  State<DashboardAreaChart> createState() => _DashboardAreaChartState();
+}
+
+class _DashboardAreaChartState extends State<DashboardAreaChart> {
+  final GlobalKey _chartKey = GlobalKey();
+  OverlayEntry? _tooltipOverlay;
+
+  ChartDetailData get data => widget.data;
+
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
+  }
+
+  void _removeTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
+  }
+
+  void _showTooltip(int xIndex, Offset localPosition) {
+    _removeTooltip();
+
+    final RenderBox? renderBox =
+        _chartKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final globalPosition = renderBox.localToGlobal(localPosition);
+    final xAxisLabel = data.xAxis.length > xIndex ? data.xAxis[xIndex] : '';
+
+    _tooltipOverlay = OverlayEntry(
+      builder: (context) => _CustomStackedTooltipOverlay(
+        position: globalPosition,
+        xAxisLabel: xAxisLabel,
+        data: data,
+        xIndex: xIndex,
+      ),
+    );
+
+    Overlay.of(context).insert(_tooltipOverlay!);
+  }
+
+  void _handleLineTouch(FlTouchEvent event, LineTouchResponse? response) {
+    if (event is FlTapUpEvent ||
+        event is FlPanEndEvent ||
+        event is FlLongPressEnd ||
+        event is FlPointerExitEvent) {
+      _removeTooltip();
+    } else if (response != null && response.lineBarSpots != null && response.lineBarSpots!.isNotEmpty) {
+      final spot = response.lineBarSpots!.first;
+      final xIndex = spot.x.toInt();
+      final localPos = event.localPosition;
+
+      if (localPos != null) {
+        _showTooltip(xIndex, localPos);
+      }
+    } else {
+      _removeTooltip();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend - using shared ChartLegend widget
-        if (showLegend && data.yAxis.isNotEmpty)
+        if (widget.showLegend && data.yAxis.isNotEmpty)
           ChartLegend(
             yAxis: data.yAxis,
             listColor: data.listColor,
@@ -900,7 +1203,11 @@ class DashboardAreaChart extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Chart
-        SizedBox(height: height, child: _buildAreaChart()),
+        SizedBox(
+          key: _chartKey,
+          height: widget.height,
+          child: _buildAreaChart(),
+        ),
 
         // X-Axis label
         if (data.xAxisUnit != null)
@@ -1025,26 +1332,12 @@ class DashboardAreaChart extends StatelessWidget {
         ),
         lineTouchData: LineTouchData(
           enabled: true,
+          touchCallback: _handleLineTouch,
+          // Disable default tooltip, use custom overlay
           touchTooltipData: LineTouchTooltipData(
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            tooltipPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            tooltipRoundedRadius: 8,
-            getTooltipColor: (touchedSpot) => Colors.grey.shade800,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((spot) {
-                final seriesName = data.yAxis.length > spot.barIndex
-                    ? data.yAxis[spot.barIndex].label
-                    : '';
-                return LineTooltipItem(
-                  '$seriesName: ${data.formatTooltipValue(spot.y)}',
-                  const TextStyle(color: Colors.white, fontSize: 12),
-                );
-              }).toList();
-            },
+            getTooltipColor: (touchedSpot) => Colors.transparent,
+            tooltipPadding: EdgeInsets.zero,
+            getTooltipItems: (touchedSpots) => touchedSpots.map((s) => null).toList(),
           ),
         ),
       ),
@@ -1053,7 +1346,7 @@ class DashboardAreaChart extends StatelessWidget {
 }
 
 /// Pie/Donut Chart Widget using fl_chart
-class DashboardPieChart extends StatelessWidget {
+class DashboardPieChart extends StatefulWidget {
   final ChartDetailData data;
   final bool showLegend;
   final double height;
@@ -1068,17 +1361,91 @@ class DashboardPieChart extends StatelessWidget {
   });
 
   @override
+  State<DashboardPieChart> createState() => _DashboardPieChartState();
+}
+
+class _DashboardPieChartState extends State<DashboardPieChart> {
+  final GlobalKey _chartKey = GlobalKey();
+  OverlayEntry? _tooltipOverlay;
+
+  ChartDetailData get data => widget.data;
+  bool get isDonut => widget.isDonut;
+
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
+  }
+
+  void _removeTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
+  }
+
+  void _showPieTooltip(int sectionIndex, Offset localPosition) {
+    _removeTooltip();
+
+    final RenderBox? renderBox =
+        _chartKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final globalPosition = renderBox.localToGlobal(localPosition);
+    final label = _getLabelForIndex(sectionIndex);
+    
+    // Get value from yAxis
+    final value = data.yAxis.isNotEmpty && data.yAxis.first.data.length > sectionIndex
+        ? data.yAxis.first.data[sectionIndex].toDouble()
+        : 0.0;
+    final color = data.listColor?.elementAtOrNull(sectionIndex) ?? ChartColors.getColor(sectionIndex);
+    final formattedValue = data.formatTooltipValue(value);
+
+    _tooltipOverlay = OverlayEntry(
+      builder: (context) => _CustomPieTooltipOverlay(
+        position: globalPosition,
+        label: label,
+        value: formattedValue,
+        color: color,
+      ),
+    );
+
+    Overlay.of(context).insert(_tooltipOverlay!);
+  }
+
+  void _handlePieTouch(FlTouchEvent event, PieTouchResponse? response) {
+    if (event is FlTapUpEvent ||
+        event is FlPanEndEvent ||
+        event is FlLongPressEnd ||
+        event is FlPointerExitEvent) {
+      _removeTooltip();
+    } else if (response != null && response.touchedSection != null) {
+      final sectionIndex = response.touchedSection!.touchedSectionIndex;
+      if (sectionIndex >= 0) {
+        final localPos = event.localPosition;
+        if (localPos != null) {
+          _showPieTooltip(sectionIndex, localPos);
+        }
+      }
+    } else {
+      _removeTooltip();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend - using shared PieChartLegend widget
-        if (showLegend) _buildPieLegend(),
+        if (widget.showLegend) _buildPieLegend(),
 
         const SizedBox(height: 16),
 
         // Chart
-        SizedBox(height: height, child: _buildPieChart()),
+        SizedBox(
+          key: _chartKey,
+          height: widget.height,
+          child: _buildPieChart(),
+        ),
       ],
     );
   }
@@ -1190,9 +1557,7 @@ class DashboardPieChart extends StatelessWidget {
         sectionsSpace: 2,
         pieTouchData: PieTouchData(
           enabled: true,
-          touchCallback: (FlTouchEvent event, pieTouchResponse) {
-            // Handle touch events if needed
-          },
+          touchCallback: _handlePieTouch,
         ),
       ),
     );
@@ -1243,36 +1608,93 @@ class DashboardChartWidget extends StatelessWidget {
   }
 }
 
-/// Custom Tooltip Overlay Widget that renders on top of everything
-class _CustomTooltipOverlay extends StatelessWidget {
+/// Custom Stacked Tooltip Overlay Widget
+/// Shows all series values for a specific x-axis item
+class _CustomStackedTooltipOverlay extends StatelessWidget {
   final Offset position;
   final String xAxisLabel;
-  final String seriesName;
-  final String value;
+  final ChartDetailData data;
+  final int xIndex;
 
-  const _CustomTooltipOverlay({
+  const _CustomStackedTooltipOverlay({
     required this.position,
     required this.xAxisLabel,
-    required this.seriesName,
-    required this.value,
+    required this.data,
+    required this.xIndex,
   });
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final seriesItems = <Widget>[];
+    
+    // Build list of all series with their values
+    for (int i = 0; i < data.yAxis.length; i++) {
+      final series = data.yAxis[i];
+      final value = series.data.length > xIndex
+          ? series.data[xIndex].toDouble()
+          : 0.0;
+      
+      // Skip series with zero value
+      if (value == 0) continue;
+      
+      final color = data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
+      final formattedValue = data.formatTooltipValue(value);
+      
+      seriesItems.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                series.label,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                formattedValue,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-    // Calculate tooltip position to keep it inside screen bounds
-    const tooltipWidth = 150.0;
-    const tooltipHeight = 60.0;
+    // Calculate tooltip width based on content - use intrinsic width
+    const minTooltipWidth = 180.0;
+    const maxTooltipWidth = 280.0;
+    final tooltipHeight = 40.0 + (seriesItems.length * 28.0);
     const padding = 16.0;
 
-    double left = position.dx - tooltipWidth / 2;
+    double left = position.dx - minTooltipWidth / 2;
     double top = position.dy - tooltipHeight - padding;
 
     // Ensure tooltip stays within screen bounds
     if (left < padding) left = padding;
-    if (left + tooltipWidth > screenSize.width - padding) {
-      left = screenSize.width - tooltipWidth - padding;
+    if (left + maxTooltipWidth > screenSize.width - padding) {
+      left = screenSize.width - maxTooltipWidth - padding;
     }
     if (top < padding) {
       // Show below the touch point if not enough space above
@@ -1285,16 +1707,19 @@ class _CustomTooltipOverlay extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: tooltipWidth),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          constraints: const BoxConstraints(
+            minWidth: minTooltipWidth,
+            maxWidth: maxTooltipWidth,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.grey.shade800,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -1302,18 +1727,120 @@ class _CustomTooltipOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with xAxis label
+              Container(
+                padding: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  xAxisLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              // Series list
+              ...seriesItems,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom Pie Chart Tooltip Overlay
+class _CustomPieTooltipOverlay extends StatelessWidget {
+  final Offset position;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _CustomPieTooltipOverlay({
+    required this.position,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
+    const minTooltipWidth = 150.0;
+    const maxTooltipWidth = 250.0;
+    const tooltipHeight = 60.0;
+    const padding = 16.0;
+
+    double left = position.dx - minTooltipWidth / 2;
+    double top = position.dy - tooltipHeight - padding;
+
+    // Ensure tooltip stays within screen bounds
+    if (left < padding) left = padding;
+    if (left + maxTooltipWidth > screenSize.width - padding) {
+      left = screenSize.width - maxTooltipWidth - padding;
+    }
+    if (top < padding) {
+      top = position.dy + padding;
+    }
+
+    return Positioned(
+      left: left,
+      top: top,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(
+            minWidth: minTooltipWidth,
+            maxWidth: maxTooltipWidth,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
               Text(
-                xAxisLabel,
+                label,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                value,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$seriesName: $value',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ],
           ),
