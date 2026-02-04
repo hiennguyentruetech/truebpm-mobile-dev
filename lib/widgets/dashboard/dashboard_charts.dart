@@ -834,7 +834,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
                   return RotatedBox(
                     quarterTurns: -1,
                     child: Text(
-                      data.formatYAxisValue(value),
+                      data.formatXAxisValue(value),
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.grey.shade600,

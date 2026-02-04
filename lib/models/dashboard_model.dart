@@ -569,10 +569,41 @@ class ChartDetailData {
     return configChart?['valueFormatter']?.toString();
   }
 
+  /// Get xAxis valueFormatter from configChart if available
+  /// Checks configChart.xAxis.valueFormatter first, then root valueFormatter
+  String? get xAxisValueFormatter {
+    // Check xAxis config first (for X axis formatting)
+    final xAxisConfig = configChart?['xAxis'];
+    if (xAxisConfig != null && xAxisConfig is Map) {
+      final xAxisFormatter = xAxisConfig['valueFormatter']?.toString();
+      if (xAxisFormatter != null && xAxisFormatter.isNotEmpty) {
+        return xAxisFormatter;
+      }
+    }
+    // Fallback to root valueFormatter
+    return configChart?['valueFormatter']?.toString();
+  }
+
   /// Get formatted Y axis value
   /// Supports JS-like valueFormatter from MUIx Chart config
   String formatYAxisValue(double value) {
     final formatter = valueFormatter;
+    if (formatter != null && formatter.isNotEmpty) {
+      // Parse simple formatter patterns like "(number) => number + ' day'"
+      return _applyFormatter(value, formatter);
+    }
+
+    // Default formatting
+    if (value == value.toInt()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  /// Get formatted X axis value (for horizontal charts)
+  /// Supports JS-like valueFormatter from MUIx Chart config
+  String formatXAxisValue(double value) {
+    final formatter = xAxisValueFormatter;
     if (formatter != null && formatter.isNotEmpty) {
       // Parse simple formatter patterns like "(number) => number + ' day'"
       return _applyFormatter(value, formatter);
