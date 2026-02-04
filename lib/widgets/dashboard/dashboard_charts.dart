@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:truebpm/models/dashboard_model.dart';
 
-/// Chart color palette
+/// Chart color palette with enhanced visual effects
 class ChartColors {
   static const List<Color> defaultColors = [
     Color(0xFF2196F3), // Blue
@@ -19,6 +19,32 @@ class ChartColors {
 
   static Color getColor(int index) {
     return defaultColors[index % defaultColors.length];
+  }
+
+  /// Get gradient for bar chart with subtle shine effect
+  static LinearGradient getBarGradient(Color baseColor, {bool isHorizontal = false}) {
+    final lighterColor = Color.lerp(baseColor, Colors.white, 0.25)!;
+    final darkerColor = Color.lerp(baseColor, Colors.black, 0.1)!;
+    
+    if (isHorizontal) {
+      return LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [darkerColor, baseColor, lighterColor],
+        stops: const [0.0, 0.6, 1.0],
+      );
+    }
+    return LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: [darkerColor, baseColor, lighterColor],
+      stops: const [0.0, 0.6, 1.0],
+    );
+  }
+
+  /// Get shadow color for glow effect
+  static Color getShadowColor(Color baseColor) {
+    return baseColor.withOpacity(0.4);
   }
 }
 
@@ -166,10 +192,34 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   // For custom overlay tooltip
   OverlayEntry? _tooltipOverlay;
   final GlobalKey _chartKey = GlobalKey();
+  
+  // Animation trigger
+  bool _showChart = false;
+  
+  // Touch highlight tracking
+  int _touchedBarIndex = -1;
+  int _touchedRodIndex = -1;
+  
+  // Track current tooltip bar index to prevent re-animation
+  int _currentTooltipBarIndex = -1;
 
   ChartDetailData get data => widget.data;
   bool get showLegend => widget.showLegend;
   double get height => widget.height;
+  
+  /// Animation multiplier: 0.0 when hidden, 1.0 when showing
+  double get _animationMultiplier => _showChart ? 1.0 : 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger animation after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _showChart = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -180,6 +230,7 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   void _removeTooltip() {
     _tooltipOverlay?.remove();
     _tooltipOverlay = null;
+    _currentTooltipBarIndex = -1;
   }
 
   void _showTooltip(
@@ -187,7 +238,13 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
     Offset localPosition, {
     bool isHorizontal = false,
   }) {
+    // If tooltip is already showing for this bar, don't re-create (prevents re-animation)
+    if (_currentTooltipBarIndex == barIndex && _tooltipOverlay != null) {
+      return;
+    }
+    
     _removeTooltip();
+    _currentTooltipBarIndex = barIndex;
 
     final RenderBox? renderBox =
         _chartKey.currentContext?.findRenderObject() as RenderBox?;
@@ -241,15 +298,35 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
+      if (_touchedBarIndex != -1) {
+        setState(() {
+          _touchedBarIndex = -1;
+          _touchedRodIndex = -1;
+        });
+      }
     } else if (response != null && response.spot != null) {
       final barIndex = response.spot!.touchedBarGroupIndex;
+      final rodIndex = response.spot!.touchedRodDataIndex;
       final localPos = event.localPosition;
 
       if (localPos != null) {
         _showTooltip(barIndex, localPos, isHorizontal: isHorizontal);
       }
+      
+      if (_touchedBarIndex != barIndex || _touchedRodIndex != rodIndex) {
+        setState(() {
+          _touchedBarIndex = barIndex;
+          _touchedRodIndex = rodIndex;
+        });
+      }
     } else {
       _removeTooltip();
+      if (_touchedBarIndex != -1) {
+        setState(() {
+          _touchedBarIndex = -1;
+          _touchedRodIndex = -1;
+        });
+      }
     }
   }
 
@@ -320,32 +397,45 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
   /// Build grouped vertical bar chart (multiple bars side by side)
   Widget _buildGroupedVerticalBarChart() {
     final barGroups = <BarChartGroupData>[];
-    final barWidth = data.yAxis.length > 1 ? 12.0 : 20.0;
+    final barWidth = data.yAxis.length > 1 ? 14.0 : 22.0;
 
     for (int i = 0; i < data.xAxis.length; i++) {
       final rods = <BarChartRodData>[];
+      final isTouchedGroup = i == _touchedBarIndex;
 
       for (int j = 0; j < data.yAxis.length; j++) {
         final value = data.yAxis[j].data.length > i
-            ? data.yAxis[j].data[i].toDouble()
+            ? data.yAxis[j].data[i].toDouble() * _animationMultiplier
             : 0.0;
-        final color =
+        final baseColor =
             data.listColor?.elementAtOrNull(j) ?? ChartColors.getColor(j);
+        
+        // Touch highlight: brighten the touched bar
+        final isTouchedRod = isTouchedGroup && j == _touchedRodIndex;
+        final color = isTouchedRod 
+            ? Color.lerp(baseColor, Colors.white, 0.2)! 
+            : baseColor;
+        final rodWidth = isTouchedRod ? barWidth + 4 : barWidth;
 
         rods.add(
           BarChartRodData(
             toY: value,
-            color: color,
-            width: barWidth,
+            gradient: ChartColors.getBarGradient(color),
+            width: rodWidth,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(4),
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(6),
+            ),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: data.maxYValue,
+              color: isTouchedGroup ? Colors.grey.shade200 : Colors.grey.shade100,
             ),
           ),
         );
       }
 
-      barGroups.add(BarChartGroupData(x: i, barRods: rods, barsSpace: 4));
+      barGroups.add(BarChartGroupData(x: i, barRods: rods, barsSpace: 6));
     }
 
     return BarChart(
@@ -359,7 +449,11 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
           drawVerticalLine: false,
           horizontalInterval: data.yAxisInterval,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+              FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
+                dashArray: [5, 3],
+              ),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -425,7 +519,8 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
           ),
         ),
       ),
-      swapAnimationDuration: const Duration(milliseconds: 250),
+      swapAnimationDuration: const Duration(milliseconds: 400),
+      swapAnimationCurve: Curves.easeInOutCubic,
     );
   }
 
@@ -462,11 +557,13 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
         for (int xIndex = 0; xIndex < data.xAxis.length; xIndex++) {
           final rods = <BarChartRodData>[];
+          final isTouchedGroup = xIndex == _touchedBarIndex;
 
           // Create one rod per stack group
           for (int stackIdx = 0; stackIdx < stackNames.length; stackIdx++) {
             final stackName = stackNames[stackIdx];
             final seriesIndices = stackGroups[stackName]!;
+            final isTouchedRod = isTouchedGroup && stackIdx == _touchedRodIndex;
 
             // Build stacked sections for this rod
             final rodStackItems = <BarChartRodStackItem>[];
@@ -474,17 +571,27 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
             for (int i = 0; i < seriesIndices.length; i++) {
               final seriesIndex = seriesIndices[i];
-              final value = data.yAxis[seriesIndex].data.length > xIndex
+              final rawValue = data.yAxis[seriesIndex].data.length > xIndex
                   ? data.yAxis[seriesIndex].data[xIndex].toDouble()
                   : 0.0;
+              final value = rawValue * _animationMultiplier;
 
               if (value > 0) {
-                final color =
+                final baseColor =
                     data.listColor?.elementAtOrNull(seriesIndex) ??
                     ChartColors.getColor(seriesIndex);
+                // Brighten color when touched
+                final color = isTouchedRod 
+                    ? Color.lerp(baseColor, Colors.white, 0.2)! 
+                    : baseColor;
 
                 rodStackItems.add(
-                  BarChartRodStackItem(currentY, currentY + value, color),
+                  BarChartRodStackItem(
+                    currentY,
+                    currentY + value,
+                    color,
+                    BorderSide.none,
+                  ),
                 );
                 currentY += value;
               }
@@ -493,22 +600,35 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             // Only create rod if there's data
             if (currentY > 0 || seriesIndices.isNotEmpty) {
               // Get color for single-series stack
-              final primaryColor = seriesIndices.isNotEmpty
+              final basePrimaryColor = seriesIndices.isNotEmpty
                   ? (data.listColor?.elementAtOrNull(seriesIndices.first) ??
                         ChartColors.getColor(seriesIndices.first))
                   : ChartColors.getColor(stackIdx);
+              final primaryColor = isTouchedRod 
+                  ? Color.lerp(basePrimaryColor, Colors.white, 0.2)! 
+                  : basePrimaryColor;
+              
+              final rodWidth = isTouchedRod ? barWidth + 4 : barWidth;
 
               rods.add(
                 BarChartRodData(
                   toY: currentY,
+                  gradient: rodStackItems.length == 1
+                      ? ChartColors.getBarGradient(primaryColor)
+                      : null,
                   color: rodStackItems.length == 1
-                      ? primaryColor
+                      ? null
                       : Colors.transparent,
                   rodStackItems: rodStackItems.length > 1 ? rodStackItems : [],
-                  width: barWidth,
+                  width: rodWidth,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(4),
-                    topRight: Radius.circular(4),
+                    topLeft: Radius.circular(6),
+                    topRight: Radius.circular(6),
+                  ),
+                  backDrawRodData: BackgroundBarChartRodData(
+                    show: true,
+                    toY: data.maxYValue,
+                    color: isTouchedGroup ? Colors.grey.shade200 : Colors.grey.shade100,
                   ),
                 ),
               );
@@ -532,7 +652,11 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
               drawVerticalLine: false,
               horizontalInterval: data.yAxisInterval,
               getDrawingHorizontalLine: (value) =>
-                  FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+                  FlLine(
+                    color: Colors.grey.shade200,
+                    strokeWidth: 1,
+                    dashArray: [5, 3],
+                  ),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -599,7 +723,8 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
               ),
             ),
           ),
-          swapAnimationDuration: const Duration(milliseconds: 250),
+          swapAnimationDuration: const Duration(milliseconds: 400),
+          swapAnimationCurve: Curves.easeInOutCubic,
         );
       },
     );
@@ -748,32 +873,45 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
 
   Widget _buildHorizontalBarChart() {
     final barGroups = <BarChartGroupData>[];
-    final barWidth = 16.0;
+    final barWidth = 18.0;
 
     for (int i = 0; i < data.xAxis.length; i++) {
       final rods = <BarChartRodData>[];
+      final isTouchedGroup = i == _touchedBarIndex;
 
       for (int j = 0; j < data.yAxis.length; j++) {
         final value = data.yAxis[j].data.length > i
-            ? data.yAxis[j].data[i].toDouble()
+            ? data.yAxis[j].data[i].toDouble() * _animationMultiplier
             : 0.0;
-        final color =
+        final baseColor =
             data.listColor?.elementAtOrNull(j) ?? ChartColors.getColor(j);
+        
+        // Touch highlight: brighten the touched bar
+        final isTouchedRod = isTouchedGroup && j == _touchedRodIndex;
+        final color = isTouchedRod 
+            ? Color.lerp(baseColor, Colors.white, 0.2)! 
+            : baseColor;
+        final rodWidth = isTouchedRod ? barWidth + 4 : barWidth;
 
         rods.add(
           BarChartRodData(
             toY: value,
-            color: color,
-            width: barWidth,
+            gradient: ChartColors.getBarGradient(color, isHorizontal: true),
+            width: rodWidth,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(4),
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(6),
+            ),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: data.maxYValue,
+              color: isTouchedGroup ? Colors.grey.shade200 : Colors.grey.shade100,
             ),
           ),
         );
       }
 
-      barGroups.add(BarChartGroupData(x: i, barRods: rods, barsSpace: 4));
+      barGroups.add(BarChartGroupData(x: i, barRods: rods, barsSpace: 6));
     }
 
     return RotatedBox(
@@ -789,7 +927,11 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             drawVerticalLine: false,
             horizontalInterval: data.yAxisInterval,
             getDrawingHorizontalLine: (value) =>
-                FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+                FlLine(
+                  color: Colors.grey.shade200,
+                  strokeWidth: 1,
+                  dashArray: [5, 3],
+                ),
           ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -861,7 +1003,8 @@ class _DashboardBarChartState extends State<DashboardBarChart> {
             ),
           ),
         ),
-        swapAnimationDuration: const Duration(milliseconds: 250),
+        swapAnimationDuration: const Duration(milliseconds: 400),
+        swapAnimationCurve: Curves.easeInOutCubic,
       ),
     );
   }
@@ -957,8 +1100,29 @@ class DashboardLineChart extends StatefulWidget {
 class _DashboardLineChartState extends State<DashboardLineChart> {
   final GlobalKey _chartKey = GlobalKey();
   OverlayEntry? _tooltipOverlay;
+  
+  // Animation trigger
+  bool _showChart = false;
+  
+  // Touch tracking
+  int _touchedXIndex = -1;
+  int _currentTooltipXIndex = -1;
 
   ChartDetailData get data => widget.data;
+  
+  /// Animation multiplier: 0.0 when hidden, 1.0 when showing
+  double get _animationMultiplier => _showChart ? 1.0 : 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger animation after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _showChart = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -969,10 +1133,17 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
   void _removeTooltip() {
     _tooltipOverlay?.remove();
     _tooltipOverlay = null;
+    _currentTooltipXIndex = -1;
   }
 
   void _showTooltip(int xIndex, Offset localPosition) {
+    // If tooltip is already showing for this index, don't re-create
+    if (_currentTooltipXIndex == xIndex && _tooltipOverlay != null) {
+      return;
+    }
+    
     _removeTooltip();
+    _currentTooltipXIndex = xIndex;
 
     final RenderBox? renderBox =
         _chartKey.currentContext?.findRenderObject() as RenderBox?;
@@ -999,6 +1170,9 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
+      if (_touchedXIndex != -1) {
+        setState(() => _touchedXIndex = -1);
+      }
     } else if (response != null &&
         response.lineBarSpots != null &&
         response.lineBarSpots!.isNotEmpty) {
@@ -1008,6 +1182,10 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
 
       if (localPos != null) {
         _showTooltip(xIndex, localPos);
+      }
+      
+      if (_touchedXIndex != xIndex) {
+        setState(() => _touchedXIndex = xIndex);
       }
     } else {
       _removeTooltip();
@@ -1061,28 +1239,47 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
           data.listColor?.elementAtOrNull(j) ?? ChartColors.getColor(j);
 
       for (int i = 0; i < series.data.length; i++) {
-        spots.add(FlSpot(i.toDouble(), series.data[i].toDouble()));
+        spots.add(FlSpot(i.toDouble(), series.data[i].toDouble() * _animationMultiplier));
       }
 
       lineBars.add(
         LineChartBarData(
           spots: spots,
-          isCurved: false,
+          isCurved: true,
+          curveSmoothness: 0.25,
           color: color,
-          barWidth: 2,
+          barWidth: 3,
           isStrokeCapRound: true,
+          shadow: Shadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) {
+              final isTouched = index == _touchedXIndex;
               return FlDotCirclePainter(
-                radius: 4,
-                color: Colors.white,
-                strokeWidth: 2,
-                strokeColor: color,
+                radius: isTouched ? 8 : 5,
+                color: isTouched ? color : Colors.white,
+                strokeWidth: isTouched ? 3 : 2.5,
+                strokeColor: isTouched ? Colors.white : color,
               );
             },
           ),
-          belowBarData: BarAreaData(show: false),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                color.withOpacity(0.2),
+                color.withOpacity(0.05),
+                color.withOpacity(0.0),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
         ),
       );
     }
@@ -1097,7 +1294,11 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
           drawVerticalLine: false,
           horizontalInterval: data.yAxisInterval,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+              FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
+                dashArray: [5, 3],
+              ),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -1160,6 +1361,8 @@ class _DashboardLineChartState extends State<DashboardLineChart> {
           ),
         ),
       ),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
     );
   }
 }
@@ -1184,8 +1387,29 @@ class DashboardAreaChart extends StatefulWidget {
 class _DashboardAreaChartState extends State<DashboardAreaChart> {
   final GlobalKey _chartKey = GlobalKey();
   OverlayEntry? _tooltipOverlay;
+  
+  // Animation trigger
+  bool _showChart = false;
+  
+  // Touch tracking
+  int _touchedXIndex = -1;
+  int _currentTooltipXIndex = -1;
 
   ChartDetailData get data => widget.data;
+  
+  /// Animation multiplier: 0.0 when hidden, 1.0 when showing
+  double get _animationMultiplier => _showChart ? 1.0 : 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger animation after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _showChart = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -1196,10 +1420,17 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
   void _removeTooltip() {
     _tooltipOverlay?.remove();
     _tooltipOverlay = null;
+    _currentTooltipXIndex = -1;
   }
 
   void _showTooltip(int xIndex, Offset localPosition) {
+    // If tooltip is already showing for this index, don't re-create
+    if (_currentTooltipXIndex == xIndex && _tooltipOverlay != null) {
+      return;
+    }
+    
     _removeTooltip();
+    _currentTooltipXIndex = xIndex;
 
     final RenderBox? renderBox =
         _chartKey.currentContext?.findRenderObject() as RenderBox?;
@@ -1226,6 +1457,9 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
+      if (_touchedXIndex != -1) {
+        setState(() => _touchedXIndex = -1);
+      }
     } else if (response != null &&
         response.lineBarSpots != null &&
         response.lineBarSpots!.isNotEmpty) {
@@ -1233,11 +1467,19 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
       final xIndex = spot.x.toInt();
       final localPos = event.localPosition;
 
+      // Update touched index if changed
+      if (_touchedXIndex != xIndex) {
+        setState(() => _touchedXIndex = xIndex);
+      }
+
       if (localPos != null) {
         _showTooltip(xIndex, localPos);
       }
     } else {
       _removeTooltip();
+      if (_touchedXIndex != -1) {
+        setState(() => _touchedXIndex = -1);
+      }
     }
   }
 
@@ -1288,35 +1530,46 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
           data.listColor?.elementAtOrNull(j) ?? ChartColors.getColor(j);
 
       for (int i = 0; i < series.data.length; i++) {
-        spots.add(FlSpot(i.toDouble(), series.data[i].toDouble()));
+        spots.add(FlSpot(i.toDouble(), series.data[i].toDouble() * _animationMultiplier));
       }
 
       lineBars.add(
         LineChartBarData(
           spots: spots,
           isCurved: true,
-          curveSmoothness: 0.3,
+          curveSmoothness: 0.35,
           color: color,
-          barWidth: 2,
+          barWidth: 3,
           isStrokeCapRound: true,
+          shadow: Shadow(
+            color: color.withOpacity(0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) {
+              // Touch highlight effect
+              final isTouched = index == _touchedXIndex;
               return FlDotCirclePainter(
-                radius: 3,
-                color: Colors.white,
-                strokeWidth: 2,
-                strokeColor: color,
+                radius: isTouched ? 8 : 4,
+                color: isTouched ? color : Colors.white,
+                strokeWidth: isTouched ? 3 : 2.5,
+                strokeColor: isTouched ? Colors.white : color,
               );
             },
           ),
           belowBarData: BarAreaData(
             show: true,
-            color: color.withOpacity(0.3),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [color.withOpacity(0.4), color.withOpacity(0.0)],
+              colors: [
+                color.withOpacity(0.35),
+                color.withOpacity(0.15),
+                color.withOpacity(0.0),
+              ],
+              stops: const [0.0, 0.5, 1.0],
             ),
           ),
         ),
@@ -1333,7 +1586,11 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
           drawVerticalLine: false,
           horizontalInterval: data.yAxisInterval,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
+              FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
+                dashArray: [5, 3],
+              ),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -1396,6 +1653,8 @@ class _DashboardAreaChartState extends State<DashboardAreaChart> {
           ),
         ),
       ),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
     );
   }
 }
@@ -1422,9 +1681,29 @@ class DashboardPieChart extends StatefulWidget {
 class _DashboardPieChartState extends State<DashboardPieChart> {
   final GlobalKey _chartKey = GlobalKey();
   OverlayEntry? _tooltipOverlay;
+  
+  // Animation trigger
+  bool _showChart = false;
+  
+  // Touch highlight - track which section is being touched
+  int _touchedIndex = -1;
 
   ChartDetailData get data => widget.data;
   bool get isDonut => widget.isDonut;
+  
+  /// Animation multiplier for radius: 0.0 when hidden, 1.0 when showing
+  double get _radiusMultiplier => _showChart ? 1.0 : 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger animation after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _showChart = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -1475,6 +1754,7 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
         event is FlLongPressEnd ||
         event is FlPointerExitEvent) {
       _removeTooltip();
+      setState(() => _touchedIndex = -1);
     } else if (response != null && response.touchedSection != null) {
       final sectionIndex = response.touchedSection!.touchedSectionIndex;
       if (sectionIndex >= 0) {
@@ -1482,9 +1762,15 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
         if (localPos != null) {
           _showPieTooltip(sectionIndex, localPos);
         }
+        if (_touchedIndex != sectionIndex) {
+          setState(() => _touchedIndex = sectionIndex);
+        }
       }
     } else {
       _removeTooltip();
+      if (_touchedIndex != -1) {
+        setState(() => _touchedIndex = -1);
+      }
     }
   }
 
@@ -1570,24 +1856,39 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
     // For pie chart, usually xAxis contains labels and yAxis[0] contains values
     if (data.yAxis.isNotEmpty) {
       final series = data.yAxis.first;
+      
+      // Base radius with animation
+      final baseRadius = (isDonut ? 65.0 : 85.0) * _radiusMultiplier;
 
       for (int i = 0; i < series.data.length; i++) {
         final value = series.data[i].toDouble();
         final color =
             data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
+        
+        // Touch highlight: increase radius when touched
+        final isTouched = i == _touchedIndex;
+        final radius = isTouched ? baseRadius + 10 : baseRadius;
 
         sections.add(
           PieChartSectionData(
             value: value,
-            color: color,
-            title: value > 0 ? value.toStringAsFixed(0) : '',
-            titleStyle: const TextStyle(
-              fontSize: 12,
+            color: isTouched ? color : color.withOpacity(isTouched || _touchedIndex == -1 ? 1.0 : 0.6),
+            title: value > 0 && _radiusMultiplier > 0.5 ? value.toStringAsFixed(0) : '',
+            titleStyle: TextStyle(
+              fontSize: isTouched ? 14 : 12,
               fontWeight: FontWeight.bold,
               color: Colors.white,
+              shadows: const [
+                Shadow(
+                  color: Colors.black26,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
-            radius: isDonut ? 60 : 80,
-            showTitle: value > 0,
+            radius: radius,
+            showTitle: value > 0 && _radiusMultiplier > 0.5,
+            badgePositionPercentageOffset: 0.98,
           ),
         );
       }
@@ -1611,13 +1912,16 @@ class _DashboardPieChartState extends State<DashboardPieChart> {
     return PieChart(
       PieChartData(
         sections: _buildSections(),
-        centerSpaceRadius: isDonut ? 50 : 0,
-        sectionsSpace: 2,
+        centerSpaceRadius: isDonut ? 55 : 0,
+        sectionsSpace: 3,
         pieTouchData: PieTouchData(
           enabled: true,
           touchCallback: _handlePieTouch,
         ),
+        startDegreeOffset: -90,
       ),
+      swapAnimationDuration: const Duration(milliseconds: 500),
+      swapAnimationCurve: Curves.easeInOutCubic,
     );
   }
 }
@@ -1666,9 +1970,9 @@ class DashboardChartWidget extends StatelessWidget {
   }
 }
 
-/// Custom Stacked Tooltip Overlay Widget
+/// Custom Stacked Tooltip Overlay Widget with Animation
 /// Shows all series values for a specific x-axis item
-class _CustomStackedTooltipOverlay extends StatelessWidget {
+class _CustomStackedTooltipOverlay extends StatefulWidget {
   final Offset position;
   final String xAxisLabel;
   final ChartDetailData data;
@@ -1682,23 +1986,64 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
   });
 
   @override
+  State<_CustomStackedTooltipOverlay> createState() => _CustomStackedTooltipOverlayState();
+}
+
+class _CustomStackedTooltipOverlayState extends State<_CustomStackedTooltipOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final seriesItems = <Widget>[];
 
     // Build list of all series with their values
-    for (int i = 0; i < data.yAxis.length; i++) {
-      final series = data.yAxis[i];
-      final value = series.data.length > xIndex
-          ? series.data[xIndex].toDouble()
+    for (int i = 0; i < widget.data.yAxis.length; i++) {
+      final series = widget.data.yAxis[i];
+      final value = series.data.length > widget.xIndex
+          ? series.data[widget.xIndex].toDouble()
           : 0.0;
 
       // Skip series with zero value
       if (value == 0) continue;
 
       final color =
-          data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
-      final formattedValue = data.formatTooltipValue(value);
+          widget.data.listColor?.elementAtOrNull(i) ?? ChartColors.getColor(i);
+      final formattedValue = widget.data.formatTooltipValue(value);
 
       seriesItems.add(
         Padding(
@@ -1710,15 +2055,22 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Container(
-                  width: 8,
-                  height: 8,
+                  width: 10,
+                  height: 10,
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.4),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Flexible(
                 child: Text(
                   series.label,
@@ -1749,8 +2101,8 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
         40.0 + (seriesItems.length * 32.0); // Increased height for wrapped text
     const padding = 16.0;
 
-    double left = position.dx - 100; // Approximate center, will adjust
-    double top = position.dy - tooltipHeight - padding;
+    double left = widget.position.dx - 100; // Approximate center, will adjust
+    double top = widget.position.dy - tooltipHeight - padding;
 
     // Ensure tooltip stays within screen bounds
     if (left < padding) left = padding;
@@ -1759,56 +2111,92 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
     }
     if (top < padding) {
       // Show below the touch point if not enough space above
-      top = position.dy + padding;
+      top = widget.position.dy + padding;
     }
 
     return Positioned(
       left: left,
       top: top,
-      child: Material(
-        color: Colors.transparent,
-        child: IntrinsicWidth(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade800,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with xAxis label
-                Container(
-                  padding: const EdgeInsets.only(bottom: 6),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            alignment: Alignment.bottomCenter,
+            child: Material(
+              color: Colors.transparent,
+              child: IntrinsicWidth(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.grey.shade800,
+                        Colors.grey.shade900,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
+                    ],
                   ),
-                  child: Text(
-                    xAxisLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with xAxis label
+                      Container(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.xAxisLabel,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Series list
+                      ...seriesItems,
+                    ],
                   ),
                 ),
-                // Series list
-                ...seriesItems,
-              ],
+              ),
             ),
           ),
         ),
@@ -1817,8 +2205,8 @@ class _CustomStackedTooltipOverlay extends StatelessWidget {
   }
 }
 
-/// Custom Pie Chart Tooltip Overlay
-class _CustomPieTooltipOverlay extends StatelessWidget {
+/// Custom Pie Chart Tooltip Overlay with Animation
+class _CustomPieTooltipOverlay extends StatefulWidget {
   final Offset position;
   final String label;
   final String value;
@@ -1832,6 +2220,47 @@ class _CustomPieTooltipOverlay extends StatelessWidget {
   });
 
   @override
+  State<_CustomPieTooltipOverlay> createState() => _CustomPieTooltipOverlayState();
+}
+
+class _CustomPieTooltipOverlayState extends State<_CustomPieTooltipOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
@@ -1839,8 +2268,8 @@ class _CustomPieTooltipOverlay extends StatelessWidget {
     const tooltipHeight = 70.0;
     const padding = 16.0;
 
-    double left = position.dx - 100; // Approximate center, will adjust
-    double top = position.dy - tooltipHeight - padding;
+    double left = widget.position.dx - 100; // Approximate center, will adjust
+    double top = widget.position.dy - tooltipHeight - padding;
 
     // Ensure tooltip stays within screen bounds
     if (left < padding) left = padding;
@@ -1848,64 +2277,97 @@ class _CustomPieTooltipOverlay extends StatelessWidget {
       left = screenSize.width - maxTooltipWidth - padding;
     }
     if (top < padding) {
-      top = position.dy + padding;
+      top = widget.position.dy + padding;
     }
 
     return Positioned(
       left: left,
       top: top,
-      child: Material(
-        color: Colors.transparent,
-        child: IntrinsicWidth(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade800,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            alignment: Alignment.bottomCenter,
+            child: Material(
+              color: Colors.transparent,
+              child: IntrinsicWidth(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: maxTooltipWidth),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.grey.shade800,
+                        Colors.grey.shade900,
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.color.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withOpacity(0.2),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: widget.color,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.color.withOpacity(0.5),
+                              blurRadius: 6,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          widget.label,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                          softWrap: true,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        widget.value,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    softWrap: true,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
