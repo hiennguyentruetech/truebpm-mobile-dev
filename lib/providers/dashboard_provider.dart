@@ -178,8 +178,8 @@ class DashboardProvider extends ChangeNotifier {
     logger.i('Added chart ${chart.name} to dashboard');
     notifyListeners();
 
-    // Load chart data
-    loadChartDetail(chart.id);
+    // Load chart data in next microtask to avoid double notifyListeners in same frame
+    Future.microtask(() => loadChartDetail(chart.id));
   }
 
   /// Remove a chart from displayed charts
@@ -204,8 +204,8 @@ class DashboardProvider extends ChangeNotifier {
       logger.i('Replaced chart at index $index with ${newChart.name}');
       notifyListeners();
 
-      // Load new chart data
-      loadChartDetail(newChart.id);
+      // Invalidate cache for old chart and load new chart data in next microtask
+      Future.microtask(() => loadChartDetail(newChart.id, forceReload: true));
     }
   }
 
@@ -331,6 +331,7 @@ class DashboardProvider extends ChangeNotifier {
     if (year == _selectedYear) return;
 
     _selectedYear = year;
+    notifyListeners(); // Notify ngay để UI cập nhật selected year
     await _loadInboxData(onSessionExpired: onSessionExpired);
   }
 

@@ -29,11 +29,20 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
   void initState() {
     super.initState();
     _provider = DashboardProvider();
+    // Explicit listener để đảm bảo UI rebuild trong release mode
+    _provider.addListener(_onProviderChanged);
     _initializeDashboard();
+  }
+
+  void _onProviderChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _provider.removeListener(_onProviderChanged);
     _scrollController.dispose();
     _provider.dispose();
     super.dispose();
@@ -195,28 +204,34 @@ class _DashboardPageScreenState extends State<DashboardPageScreen> {
   }
 
   void _showAddChartDialog(DashboardProvider provider) {
+    if (!mounted) return;
+    final parentContext = context;
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _AddChartBottomSheet(
+      builder: (sheetContext) => _AddChartBottomSheet(
         chartTree: provider.chartConfigTree,
         isChartDisplayed: (chartId) => provider.isChartDisplayed(chartId),
         onChartSelected: (chart) {
-          Navigator.pop(context);
+          Navigator.pop(sheetContext);
 
           // Check if chart already displayed
           if (provider.isChartDisplayed(chart.id)) {
-            CoreToast.warning(
-              this.context,
-              '"${chart.name}" is already displayed',
-            );
+            if (mounted) {
+              CoreToast.warning(
+                parentContext,
+                '"${chart.name}" is already displayed',
+              );
+            }
             return;
           }
 
           // Add chart to dashboard
           provider.addChart(chart);
-          CoreToast.success(this.context, 'Added "${chart.name}" to dashboard');
+          if (mounted) {
+            CoreToast.success(parentContext, 'Added "${chart.name}" to dashboard');
+          }
           
           // Auto scroll to bottom after adding chart
           _scrollToBottom();
@@ -299,20 +314,23 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
   @override
   void didUpdateWidget(covariant _ChartCardWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload if chart changed
-    if (oldWidget.chartId != widget.chartId) {
+    // Reload if chart changed (e.g., after replaceChart)
+    if (oldWidget.chartId != widget.chartId ||
+        oldWidget.chartName != widget.chartName) {
       _currentChartId = widget.chartId;
       _filterValues = {};
-      _loadChartData();
+      _chartData = null;
+      _loadChartData(forceReload: true);
     }
   }
 
-  Future<void> _loadChartData() async {
+  Future<void> _loadChartData({bool forceReload = false}) async {
     setState(() => _isLoading = true);
 
     final data = await widget.provider.loadChartDetail(
       _currentChartId,
       filterValues: _filterValues.isNotEmpty ? _filterValues : null,
+      forceReload: forceReload,
     );
 
     if (mounted && data != null) {
@@ -399,18 +417,22 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
   }
 
   void _showChartSelectorDialog() {
+    if (!mounted) return;
+    final currentContext = context;
     showModalBottomSheet(
-      context: context,
+      context: currentContext,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _AddChartBottomSheet(
+      builder: (sheetContext) => _AddChartBottomSheet(
         chartTree: widget.chartTree,
         isChartDisplayed: (chartId) =>
             widget.provider.isChartDisplayed(chartId) &&
             chartId != _currentChartId,
         onChartSelected: (chart) {
-          Navigator.pop(context);
-          widget.onReplaceChart?.call(chart);
+          Navigator.pop(sheetContext);
+          if (mounted) {
+            widget.onReplaceChart?.call(chart);
+          }
         },
         title: 'Change Chart',
       ),
@@ -427,7 +449,7 @@ class _ChartCardWrapperState extends State<_ChartCardWrapper> {
       currentFilterValues: _filterValues,
       onFilterChanged: _onFilterChanged,
       onRemove: widget.onRemove,
-      onRefresh: _loadChartData,
+      onRefresh: () => _loadChartData(forceReload: true),
       onChangeChart: _showChartSelectorDialog,
       chart: _chartData != null
           ? DashboardChartWidget(data: _chartData!)
@@ -512,8 +534,9 @@ class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Listener(
-        onPointerDown: (_) {
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
           _searchFocusNode.unfocus();
         },
         child: Column(
@@ -723,6 +746,7 @@ class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
                       });
                     }
                   : null,
+              splashFactory: InkRipple.splashFactory,
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -796,8 +820,13 @@ class _AddChartBottomSheetState extends State<_AddChartBottomSheet> {
           onTap: isAlreadyDisplayed
               ? null
               : () {
-                  _searchFocusNode.unfocus();
-                  widget.onChartSelected(item);
+                  FocusScope.of(context).unfocus();
+                  // Delay để đảm bảo keyboard dismiss xong trước khi navigate
+                  Future.microtask(() {
+                    if (mounted) {
+                      widget.onChartSelected(item);
+                    }
+                  });
                 },
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(

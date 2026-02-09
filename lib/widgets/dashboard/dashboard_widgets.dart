@@ -619,18 +619,16 @@ class _ActionIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        child: Tooltip(
-          message: tooltip,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            child: Icon(icon, color: color.withOpacity(0.7), size: 20),
-          ),
-        ),
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: color.withOpacity(0.7), size: 20),
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        splashRadius: 18,
       ),
     );
   }
