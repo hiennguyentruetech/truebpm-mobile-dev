@@ -2,7 +2,7 @@ name: truebpm
 description: "This is a mobile application for the TrueBPM project"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.2+8
+version: 1.1.0+10
 
 environment:
   sdk: ^3.8.0
@@ -44,6 +44,9 @@ dependencies:
   open_filex: ^4.4.0
   uuid: ^4.5.1
   fl_chart: ^0.69.2
+  firebase_core: ^3.12.1
+  firebase_messaging: ^15.2.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

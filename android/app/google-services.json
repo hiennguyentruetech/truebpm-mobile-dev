@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742772881078",
+    "project_id": "fcmnotification-2f535",
+    "storage_bucket": "fcmnotification-2f535.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742772881078:android:b479092b96485ad8015817",
+        "android_client_info": {
+          "package_name": "com.truetech.truebpm.solomon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1tb69UNkoHsqadcvW-mLaTikdudEppXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

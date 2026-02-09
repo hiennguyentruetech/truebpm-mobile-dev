@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:truebpm/firebase_options.dart';
 import 'package:truebpm/navigation/navigation_service.dart';
 import 'package:truebpm/navigation/app_pages.dart';
 import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/styles/theme.dart';
 import 'package:truebpm/services/storage_service.dart';
+import 'package:truebpm/services/firebase_messaging_service.dart';
 import 'package:truebpm/di/service_locator.dart';
 import 'package:truebpm/utils/global_store.dart';
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     
     // Set preferred orientations to portrait only
     await SystemChrome.setPreferredOrientations([
@@ -28,6 +36,13 @@ void main() async {
     // logger.i("Setting up dependencies...");
     await setupDependencies();
     // logger.i("Dependencies setup completed");
+    
+    // Initialize Firebase Messaging (non-blocking, app vẫn chạy nếu FCM fail)
+    try {
+      await FirebaseMessagingService().initialize();
+    } catch (e) {
+      logger.e("Firebase Messaging initialization failed: $e");
+    }
     
     // logger.i("Starting Flutter app...");
     runApp(Main());
