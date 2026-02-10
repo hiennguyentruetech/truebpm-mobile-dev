@@ -22,7 +22,7 @@ class MenuService {
       }
 
       final user = UserModel.fromJson(jsonDecode(userJsonStr));
-      final url = '${hosts.coreUrl}MENU.SHOW?userId=${user.id}&applicationId=304';
+      final url = '${hosts.coreUrl}MENU.SHOW?userId=${user.id}&applicationId=${hosts.applicationId}';
 
       // Get cookies from saved login (if any) - compatible with how AuthService saves cookies
       List<String> cookies = [];
