@@ -11,6 +11,7 @@ class HostStrings {
   final String systemUrl;
   final String bpmUrl;
   final String coreUrl;
+  final String flexAPIUrl;
 
   HostStrings({
     // this.main                           = 'http://192.168.177.35:8386/',
@@ -24,5 +25,6 @@ class HostStrings {
   })  : bonitaUrl                       = '${main}bonita/',
         systemUrl                       = '$main$coreService${appConstants.appNameParams}/API/system/',
         bpmUrl                          = '$main$portalService${appConstants.appNameParams}/task-list/API/bpm/',
-        coreUrl                         = '$main$coreService${appConstants.appNameParams}/API/extension/';
+        coreUrl                         = '$main$coreService${appConstants.appNameParams}/API/extension/',
+        flexAPIUrl                      = '${main}bonita/api/';
 }

@@ -77,6 +77,9 @@ class AppRoutes {
   dataSpy = '/dataSpy',
   detailDataSpy = '/detailDataSpy',
 
+  // Notification routes
+  notification =      '/notification',
+
   // Main tab route
   mainTab =           '/mainTab';
 }

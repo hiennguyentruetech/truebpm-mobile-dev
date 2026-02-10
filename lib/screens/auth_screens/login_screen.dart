@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/utils/global_store.dart';
 import 'package:truebpm/services/services.dart';
+import 'package:truebpm/services/device_token_service.dart';
 import 'package:truebpm/navigation/navigation_service.dart';
 import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/di/service_locator.dart';
@@ -152,6 +153,9 @@ class LoginScreenState extends State<LoginScreen>
         }
         context.hideLoading();
 
+        // Save device token silently (fire-and-forget) - không block UI
+        _saveDeviceTokenSilently(cookies: result.cookies);
+
         _navigateToMainScreen();
       } else {
         context.hideLoading();
@@ -209,6 +213,9 @@ class LoginScreenState extends State<LoginScreen>
           }
         }
 
+        // Save device token silently (fire-and-forget) - không block UI
+        _saveDeviceTokenSilently(cookies: result.cookies);
+
         _navigateToMainScreen();
       } else {
         _setErrorMessage(result.message ?? appStrings.loginFailed);
@@ -239,6 +246,21 @@ class LoginScreenState extends State<LoginScreen>
     if (mounted) {
       NavigationService.replaceWith(AppRoutes.mainTab);
     }
+  }
+
+  /// Lưu device token (FCM) lên server ngầm sau khi login thành công.
+  /// Fire-and-forget: không block UI, không show message lỗi.
+  void _saveDeviceTokenSilently({List<String>? cookies}) {
+    _authService.getSavedUserInfo().then((userInfo) {
+      if (userInfo != null && userInfo.id.isNotEmpty) {
+        DeviceTokenService.instance.saveDeviceToken(
+          userId: userInfo.id,
+          cookies: cookies,
+        );
+      }
+    }).catchError((_) {
+      // Ignore - chạy ngầm
+    });
   }
 
   @override

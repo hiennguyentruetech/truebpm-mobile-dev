@@ -132,6 +132,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
                           isSelected: widget.currentIndex == index,
                           onTap: () => widget.onTap(index),
                           index: index,
+                          badgeCount: item.badgeCount,
                         ),
                       ),
                     ),
@@ -149,10 +150,12 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar>
 class BottomNavItem {
   final IconData icon;
   final String label;
+  final int badgeCount;
 
   const BottomNavItem({
     required this.icon,
     required this.label,
+    this.badgeCount = 0,
   });
 }
 
@@ -162,6 +165,7 @@ class SimpleBottomNavItem extends StatefulWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final int index;
+  final int badgeCount;
 
   const SimpleBottomNavItem({
     super.key,
@@ -170,6 +174,7 @@ class SimpleBottomNavItem extends StatefulWidget {
     required this.isSelected,
     required this.onTap,
     required this.index,
+    this.badgeCount = 0,
   });
 
   @override
@@ -243,15 +248,54 @@ class _SimpleBottomNavItemState extends State<SimpleBottomNavItem>
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icon - fixed size
-                  Container(
+                  // Icon - fixed size with badge
+                  SizedBox(
                     height: 24,
-                    width: 24,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      widget.icon,
-                      color: widget.isSelected ? Colors.blue : Colors.grey[600],
-                      size: widget.isSelected ? 25 : 22,
+                    width: 30,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Center(
+                          child: Icon(
+                            widget.icon,
+                            color: widget.isSelected ? Colors.blue : Colors.grey[600],
+                            size: widget.isSelected ? 25 : 22,
+                          ),
+                        ),
+                        if (widget.badgeCount > 0)
+                          Positioned(
+                            top: -4,
+                            right: -6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white, width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  widget.badgeCount > 99 ? '99+' : '${widget.badgeCount}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.0,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 2),

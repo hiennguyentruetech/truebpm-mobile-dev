@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truebpm/firebase_options.dart';
+import 'package:truebpm/services/device_token_service.dart';
 
 final _logger = Logger();
 
@@ -72,7 +75,8 @@ class FirebaseMessagingService {
       _messaging.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
         _logger.i('FCM Token refreshed: $newToken');
-        // TODO: Gửi token mới lên server
+        // Gửi token mới lên server (ngầm)
+        _saveRefreshedTokenToServer();
       });
 
       // Lắng nghe foreground messages
@@ -257,5 +261,24 @@ class FirebaseMessagingService {
     } catch (e) {
       _logger.e('Error unsubscribing from topic $topic: $e');
     }
+  }
+
+  /// Gửi token mới lên server khi token refresh (ngầm, fire-and-forget).
+  /// Lấy userId từ SharedPreferences (user_info đã lưu sau login).
+  void _saveRefreshedTokenToServer() {
+    SharedPreferences.getInstance().then((prefs) {
+      final userJsonStr = prefs.getString('user_info');
+      if (userJsonStr != null) {
+        try {
+          final userMap = jsonDecode(userJsonStr);
+          final userId = userMap['id']?.toString();
+          if (userId != null && userId.isNotEmpty) {
+            DeviceTokenService.instance.saveDeviceToken(userId: userId);
+          }
+        } catch (_) {}
+      }
+    }).catchError((_) {
+      // Ignore - chạy ngầm
+    });
   }
 }
