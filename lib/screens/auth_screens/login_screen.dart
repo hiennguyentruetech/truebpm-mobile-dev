@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:truebpm/utils/global_store.dart';
 import 'package:truebpm/services/services.dart';
 import 'package:truebpm/services/device_token_service.dart';
+import 'package:truebpm/services/pending_notification_action.dart';
 import 'package:truebpm/navigation/navigation_service.dart';
 import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/di/service_locator.dart';
@@ -245,6 +246,14 @@ class LoginScreenState extends State<LoginScreen>
   void _navigateToMainScreen() {
     if (mounted) {
       NavigationService.replaceWith(AppRoutes.mainTab);
+
+      // Sau khi navigate sang MainTabScreen, check & execute pending notification action
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = NavigationService.navigatorKey.currentContext;
+        if (ctx != null) {
+          PendingNotificationAction.executePending(ctx);
+        }
+      });
     }
   }
 

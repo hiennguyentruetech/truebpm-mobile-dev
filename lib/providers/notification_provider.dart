@@ -137,6 +137,7 @@ class NotificationProvider extends ChangeNotifier {
         notificationConfigId: item.notificationConfigId,
         isShowTemplate: item.isShowTemplate,
         notificationTemplate: item.notificationTemplate,
+        recordId: item.recordId,
       );
       notifyListeners();
 

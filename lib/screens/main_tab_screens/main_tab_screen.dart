@@ -11,14 +11,15 @@ import 'package:truebpm/navigation/stack_navigator/notification_stack_navigator.
 import 'package:truebpm/providers/notification_provider.dart';
 
 class MainTabScreen extends StatefulWidget {
-  const MainTabScreen({super.key});
+  final int initialTabIndex;
+  const MainTabScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<MainTabScreen> createState() => _MainTabScreenState();
 }
 
 class _MainTabScreenState extends State<MainTabScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex = widget.initialTabIndex;
   late NotificationProvider _notificationProvider;
 
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(

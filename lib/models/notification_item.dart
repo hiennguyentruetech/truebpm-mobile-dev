@@ -13,6 +13,7 @@ class NotificationItem {
   final String? notificationConfigId;
   final bool? isShowTemplate;
   final String? notificationTemplate;
+  final String? recordId;
 
   NotificationItem({
     required this.id,
@@ -28,6 +29,7 @@ class NotificationItem {
     this.notificationConfigId,
     this.isShowTemplate,
     this.notificationTemplate,
+    this.recordId,
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class NotificationItem {
       notificationConfigId: json['notificationConfigId'],
       isShowTemplate: json['isShowTemplate'],
       notificationTemplate: json['notificationTemplate'],
+      recordId: json['recordId'],
     );
   }
 
@@ -63,6 +66,7 @@ class NotificationItem {
       'notificationConfigId': notificationConfigId,
       'isShowTemplate': isShowTemplate,
       'notificationTemplate': notificationTemplate,
+      'recordId': recordId,
     };
   }
 
@@ -126,7 +130,21 @@ class NotificationItem {
       'project-management-page': 'PRJMGT',
     };
 
-    return pageToModuleCode[page];
+    // Nếu page nằm trong map → trả về module code
+    if (pageToModuleCode.containsKey(page)) {
+      return pageToModuleCode[page];
+    }
+
+    // Trường hợp task-list: extract module code từ query param 'code'
+    // e.g. "task-list?code=ELEAVE-10133" → "ELEAVE"
+    if (page == 'task-list') {
+      final code = targetRecordCode; // e.g. "ELEAVE-10133"
+      if (code != null && code.contains('-')) {
+        return code.split('-').first; // "ELEAVE"
+      }
+    }
+
+    return null;
   }
 
   /// Get relative time string from createdDate

@@ -3,11 +3,16 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truebpm/firebase_options.dart';
 import 'package:truebpm/services/device_token_service.dart';
+import 'package:truebpm/services/pending_notification_action.dart';
+import 'package:truebpm/navigation/navigation_service.dart';
+import 'package:truebpm/navigation/notification_navigation_service.dart';
+import 'package:truebpm/screens/main_tab_screens/main_tab_screen.dart';
 
 final _logger = Logger();
 
@@ -146,7 +151,9 @@ class FirebaseMessagingService {
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         _logger.i('Local notification tapped: ${response.payload}');
-        // TODO: Xử lý khi user tap notification
+        if (response.payload != null && response.payload!.isNotEmpty) {
+          _handleLocalNotificationTap(response.payload!);
+        }
       },
     );
   }
@@ -206,6 +213,9 @@ class FirebaseMessagingService {
 
     // Hiển thị local notification khi app đang mở (chỉ Android cần, iOS tự hiển thị)
     if (notification != null) {
+      // Encode data thành JSON string để truyền qua payload
+      final payloadJson = jsonEncode(message.data);
+
       _localNotifications.show(
         notification.hashCode,
         notification.title,
@@ -225,22 +235,176 @@ class FirebaseMessagingService {
             presentSound: true,
           ),
         ),
-        payload: message.data.toString(),
+        payload: payloadJson,
       );
     }
   }
 
-  /// Xử lý khi user tap notification
+  /// Xử lý khi user tap push notification (app từ background/terminated)
   void _handleNotificationTap(RemoteMessage message) {
-    _logger.i('Notification tapped:');
+    _logger.i('🔔 Notification tapped:');
     _logger.i('  Title: ${message.notification?.title}');
     _logger.i('  Data: ${message.data}');
 
-    // TODO: Navigate đến screen tương ứng dựa trên message.data
-    // Ví dụ:
-    // final type = message.data['type'];
-    // final id = message.data['id'];
-    // NavigationService.navigatorKey.currentState?.pushNamed('/details', arguments: id);
+    _navigateFromFcmData(message.data);
+  }
+
+  /// Xử lý khi user tap local notification (foreground)
+  void _handleLocalNotificationTap(String payload) {
+    _logger.i('🔔 Local notification tapped, payload: $payload');
+
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      _navigateFromFcmData(data.map((k, v) => MapEntry(k, v.toString())));
+    } catch (e) {
+      _logger.e('Error parsing local notification payload: $e');
+    }
+  }
+
+  /// Logic chung: parse FCM data → navigate hoặc save pending action
+  Future<void> _navigateFromFcmData(Map<String, dynamic> data) async {
+    try {
+      final targetUrl = data['targetUrl'] as String?;
+      final notificationType = data['notificationType'] as String?;
+
+      // Parse recordId từ notificationIds (JSON string chứa recordId)
+      String? recordId;
+      final notificationIdsStr = data['notificationIds'] as String?;
+      if (notificationIdsStr != null && notificationIdsStr.isNotEmpty) {
+        try {
+          final idsData = jsonDecode(notificationIdsStr);
+          if (idsData is Map<String, dynamic>) {
+            recordId = idsData['recordId']?.toString();
+          }
+        } catch (_) {
+          _logger.w('⚠️ Cannot parse notificationIds: $notificationIdsStr');
+        }
+      }
+
+      // Parse moduleCode từ targetUrl (giống NotificationItem.targetModuleCode)
+      String? moduleCode;
+      if (targetUrl != null && targetUrl.isNotEmpty) {
+        moduleCode = _parseModuleCodeFromUrl(targetUrl);
+      }
+
+      _logger.i('📋 FCM data parsed: moduleCode=$moduleCode, recordId=$recordId, type=$notificationType, targetUrl=$targetUrl');
+
+      // Kiểm tra user đã login chưa
+      final isLoggedIn = await _isUserLoggedIn();
+
+      if (notificationType == 'STATUS_CHANGE' && moduleCode != null && recordId != null) {
+        // STATUS_CHANGE → navigate đến detail (giống onTap item trong list)
+        final isTaskList = targetUrl?.contains('task-list') == true;
+
+        if (isLoggedIn) {
+          _logger.i('🚀 STATUS_CHANGE → navigate directly to detail');
+          final context = NavigationService.navigatorKey.currentContext;
+          if (context != null) {
+            await NotificationNavigationService.navigateDirectly(
+              context,
+              moduleCode: moduleCode,
+              recordId: recordId,
+              fromTaskScreen: isTaskList,
+            );
+          } else {
+            _logger.w('⚠️ No context available for navigation');
+          }
+        } else {
+          _logger.i('📌 User NOT logged in → save pending action');
+          await PendingNotificationAction.save(
+            moduleCode: moduleCode,
+            recordId: recordId,
+            targetUrl: targetUrl ?? '',
+            notificationType: 'STATUS_CHANGE',
+          );
+        }
+      } else if (notificationType == 'INFORMATION') {
+        // INFORMATION → navigate đến Notify tab để user xem popup từ list
+        if (isLoggedIn) {
+          _logger.i('📋 INFORMATION → navigate to Notify tab');
+          _navigateToNotifyTab();
+        } else {
+          _logger.i('📌 User NOT logged in → save pending action (INFORMATION)');
+          await PendingNotificationAction.save(
+            moduleCode: '',
+            recordId: '',
+            targetUrl: targetUrl ?? '',
+            notificationType: 'INFORMATION',
+          );
+        }
+      } else {
+        _logger.i('ℹ️ Skip navigation: type=$notificationType, moduleCode=$moduleCode, recordId=$recordId');
+      }
+    } catch (e, stack) {
+      _logger.e('Error handling FCM navigation: $e\n$stack');
+    }
+  }
+
+  /// Parse module code từ targetUrl
+  /// e.g. ".../e-leave-page?code=ELEAVE-10125" → "ELEAVE"
+  /// e.g. ".../task-list?code=ELEAVE-10133" → "ELEAVE"
+  String? _parseModuleCodeFromUrl(String url) {
+    const pageToModuleCode = {
+      'e-leave-page': 'ELEAVE',
+      'quotation-page': 'QUTATI',
+      'ot-registration-page': 'OVTIME',
+      'car-booking-page': 'CARBKG',
+      'travel-request-page': 'TRAREQ',
+      'travel-claim-page': 'TRACLA',
+      'product-page': 'PRD',
+      'customer-page': 'CTM',
+      'weekly-report-page': 'WKLRPT',
+      'opportunities-page': 'OPP',
+      'project-management-page': 'PRJMGT',
+    };
+
+    try {
+      final uri = Uri.parse(url);
+      final segments = uri.pathSegments;
+      if (segments.isNotEmpty) {
+        final page = segments.last;
+
+        // Direct page mapping
+        if (pageToModuleCode.containsKey(page)) {
+          return pageToModuleCode[page];
+        }
+
+        // task-list: extract module code từ query param 'code'
+        // e.g. "task-list?code=ELEAVE-10133" → "ELEAVE"
+        if (page == 'task-list') {
+          final code = uri.queryParameters['code'];
+          if (code != null && code.contains('-')) {
+            return code.split('-').first;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Navigate đến Notify tab (tab index 4) trong MainTabScreen
+  void _navigateToNotifyTab() {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const MainTabScreen(initialTabIndex: 4),
+        ),
+      );
+    } else {
+      _logger.w('⚠️ No context available for navigation to Notify tab');
+    }
+  }
+
+  /// Kiểm tra user đã login chưa bằng cách check user_info trong SharedPreferences
+  Future<bool> _isUserLoggedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userInfo = prefs.getString('user_info');
+      return userInfo != null && userInfo.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Subscribe vào topic

@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/models/notification_item.dart';
 import 'package:truebpm/navigation/task_navigation_config.dart';
-import 'package:truebpm/navigation/task_navigation_service.dart';
 import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
-import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/utils/global_store.dart';
 
 /// Service xử lý navigation từ notification đến màn hình chi tiết module
 class NotificationNavigationService {
   /// Navigate từ notification STATUS_CHANGE
-  /// Parse targetUrl để xác định module và code, sau đó navigate đến detail screen
+  /// Dùng recordId (ID thực của record) để navigate trực tiếp
   static Future<void> navigateFromNotification(
     BuildContext context,
     NotificationItem notification,
@@ -17,155 +15,89 @@ class NotificationNavigationService {
     if (!notification.isStatusChange) return;
 
     final moduleCode = notification.targetModuleCode;
-    final recordCode = notification.targetRecordCode;
+    final recordId = notification.recordId;
 
-    if (moduleCode == null || recordCode == null) {
-      logger.w('⚠️ Cannot parse module/code from notification targetUrl: ${notification.targetUrl}');
+    if (moduleCode == null) {
+      logger.w('⚠️ Cannot parse moduleCode from targetUrl: ${notification.targetUrl}');
       return;
     }
 
-    // Check if targetUrl points to task-list → navigate to task module
-    if (notification.isTaskListTarget) {
-      await _navigateToTaskDetail(context, moduleCode, recordCode);
-    } else {
-      await _navigateToModuleDetail(context, moduleCode, recordCode);
+    if (recordId == null || recordId.isEmpty) {
+      logger.w('⚠️ No recordId for notification: ${notification.id}');
+      _showErrorSnackBar(context, 'Cannot open this record');
+      return;
     }
+
+    // task-list → navigate sang detail với fromTaskScreen=true
+    // non-task-list → navigate sang module detail với fromTaskScreen=false
+    final fromTask = notification.isTaskListTarget;
+    await _navigateToDetail(context, moduleCode, recordId, fromTask);
   }
 
-  /// Navigate to module detail screen (STATUS_CHANGE, non-task)
-  static Future<void> _navigateToModuleDetail(
+  /// Navigate trực tiếp bằng moduleCode + recordId (không cần lookup API)
+  /// Dùng chung cho cả onTap notification item và FCM push tap
+  static Future<void> navigateDirectly(
+    BuildContext context, {
+    required String moduleCode,
+    required String recordId,
+    bool fromTaskScreen = false,
+  }) async {
+    await _navigateToDetail(context, moduleCode, recordId, fromTaskScreen);
+  }
+
+  /// Core navigation logic
+  /// Notification navigate luôn tạo screen trực tiếp (không gọi TaskNavigationService)
+  /// vì từ notification không có taskId → _fetchPagedData sẽ gây lỗi 500
+  static Future<void> _navigateToDetail(
     BuildContext context,
     String moduleCode,
-    String recordCode,
+    String recordId,
+    bool fromTaskScreen,
   ) async {
     try {
-      // Show loading
       _showLoadingDialog(context);
 
-      // Lookup listItem by code using fetchListData to get id
-      final listItemData = await _lookupListItem(moduleCode, recordCode);
+      final config = TaskNavigationConfig(
+        moduleCode: moduleCode,
+        listItemId: recordId,
+        taskId: '',
+        fromTaskScreen: fromTaskScreen,
+      );
 
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
-      }
-
-      if (listItemData == null) {
-        logger.w('⚠️ Could not find item with code: $recordCode in module: $moduleCode');
-        if (context.mounted) {
-          _showErrorSnackBar(context, 'Could not find record $recordCode');
-        }
-        return;
-      }
-
-      if (!context.mounted) return;
-
-      // Use TaskScreenFactory to get the correct detail screen
+      // Tạo detail screen trực tiếp — KHÔNG gọi TaskNavigationService
+      // vì notification không có taskId → fetchPagedData sẽ gây 500 error
       final moduleType = TaskModuleType.fromCode(moduleCode);
       final Widget detailScreen;
 
       if (moduleType == TaskModuleType.generic) {
         detailScreen = GenericDetailCoreScreen(
           moduleCode: moduleCode,
-          listItem: listItemData,
+          listItem: {'id': recordId},
           initialTabCode: 'DTLS',
+          fromTaskScreen: fromTaskScreen,
         );
       } else {
-        final config = TaskNavigationConfig(
-          moduleCode: moduleCode,
-          listItemId: listItemData['id']?.toString() ?? '',
-          taskId: '',
-          fromTaskScreen: false,
-        );
         detailScreen = TaskScreenFactory.createScreen(config);
       }
+
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
+      }
+
+      if (!context.mounted) return;
 
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => detailScreen),
       );
     } catch (e) {
-      logger.e('❌ Error navigating to module detail: $e');
+      logger.e('❌ Error navigating to detail: $e');
       if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
+        // Dismiss loading nếu còn
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
         _showErrorSnackBar(context, 'Error loading record');
       }
-    }
-  }
-
-  /// Navigate to task detail screen (targetUrl contains "task-list")
-  static Future<void> _navigateToTaskDetail(
-    BuildContext context,
-    String moduleCode,
-    String recordCode,
-  ) async {
-    try {
-      _showLoadingDialog(context);
-
-      final listItemData = await _lookupListItem(moduleCode, recordCode);
-
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
-      }
-
-      if (listItemData == null) {
-        if (context.mounted) {
-          _showErrorSnackBar(context, 'Could not find record $recordCode');
-        }
-        return;
-      }
-
-      if (!context.mounted) return;
-
-      // Navigate using TaskNavigationService
-      await TaskNavigationService.navigateWithConfig(
-        context,
-        TaskNavigationConfig(
-          moduleCode: moduleCode,
-          listItemId: listItemData['id']?.toString() ?? '',
-          taskId: '',
-          fromTaskScreen: true,
-        ),
-        skipFetchPaged: false,
-      );
-    } catch (e) {
-      logger.e('❌ Error navigating to task detail: $e');
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        _showErrorSnackBar(context, 'Error loading task');
-      }
-    }
-  }
-
-  /// Lookup a list item by code from the server API
-  /// Returns listItem map with at least {'id': ..., 'code': ...}
-  static Future<Map<String, dynamic>?> _lookupListItem(
-    String moduleCode,
-    String recordCode,
-  ) async {
-    try {
-      // Use the core list API with filter by code
-      final result = await CoreService.instance.fetchListData(
-        moduleCode,
-        {
-          'filterInput': recordCode,
-          'moduleCode': moduleCode,
-          'tabModuleCode': 'LST',
-          'pagination': {'index': 0, 'numberOfResults': 1},
-        },
-      );
-
-      if (result != null && result['listItem'] is List) {
-        final items = result['listItem'] as List;
-        if (items.isNotEmpty) {
-          final item = items[0] as Map<String, dynamic>;
-          return item;
-        }
-      }
-
-      // Fallback: try with code directly as id
-      return {'code': recordCode};
-    } catch (e) {
-      logger.e('Error looking up list item: $e');
-      return {'code': recordCode};
     }
   }
 
