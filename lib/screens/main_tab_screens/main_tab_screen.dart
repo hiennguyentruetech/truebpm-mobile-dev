@@ -49,7 +49,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
   List<BottomNavItem> _buildNavItems() {
     return [
       const BottomNavItem(icon: Icons.home_rounded, label: 'Home'),
-      const BottomNavItem(icon: Icons.task_alt_rounded, label: 'Task'),
+      const BottomNavItem(icon: Icons.task_alt_rounded, label: 'Tasks'),
       const BottomNavItem(icon: Icons.flight_takeoff_rounded, label: 'Travel'),
       const BottomNavItem(icon: Icons.event_busy_rounded, label: 'E-Leave'),
       BottomNavItem(
@@ -57,7 +57,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
         label: 'Notify',
         badgeCount: _notificationProvider.unreadCount,
       ),
-      const BottomNavItem(icon: Icons.menu_rounded, label: 'Menu'),
+      const BottomNavItem(icon: Icons.menu_rounded, label: 'More'),
     ];
   }
 

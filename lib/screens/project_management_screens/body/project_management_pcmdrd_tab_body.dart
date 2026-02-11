@@ -286,6 +286,7 @@ class _ProjectManagementPcmdrdTabBodyState extends CoreTabBodyState<ProjectManag
         'layout': 'row',
         'fields': [
               // {'key': 'itemNo', 'label': 'No', 'bgColor': '#EDF7ED', 'borderColor': '#B7E1B0', 'labelColor': '#1E6F1E', 'valueColor': '#125C12'},
+              {'key': 'startDate', 'label': 'Start Date', 'widget': 'datetime', 'datetimeType': 'date', 'displayFormat': 'dd/MM/yyyy', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
               {'key': 'finishDate', 'label': 'Finish Date', 'widget': 'datetime', 'datetimeType': 'date', 'displayFormat': 'dd/MM/yyyy', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20'},
               {'key': 'completeness', 'label': 'Completeness', 'suffix': '%', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20', 'layout': 'row'},
               {'key': 'statusMap.name', 'label': 'Work Status', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20', 'layout': 'row'},
@@ -297,6 +298,7 @@ class _ProjectManagementPcmdrdTabBodyState extends CoreTabBodyState<ProjectManag
           'children': [
             {'key': 'itemNo', 'label': 'No', 'required': true},
             {'key': 'name', 'label': 'Item', 'required': true},
+            {'key': 'startDate', 'widget': 'datetime', 'label': 'Start Date', 'datetimeType': 'date', 'displayFormat': 'ddMMyyyy'},
             {'key': 'finishDate', 'widget': 'datetime', 'label': 'Finish Date', 'datetimeType': 'date', 'displayFormat': 'ddMMyyyy'},
             {'key': 'statusMap', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Work Status', 'data': 'DROPDOWN.PRJMGT/WORKSTATUS', 'display': 'name'},
             {'key': 'completeness', 'widget': 'input', 'label': 'Completeness', 'type': 'number', 'suffix': '%', 'decimalPlaces': 2, 'minValue': 0, 'maxValue': 100},
