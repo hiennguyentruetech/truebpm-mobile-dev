@@ -78,122 +78,132 @@ class AppThemedDialog extends StatelessWidget {
     final base = _typeColor();
     final baseDark = _typeColorDark();
 
+    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       elevation: 16,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white,
-              base.withOpacity(0.03),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white,
+                base.withOpacity(0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 400),
-              tween: Tween<double>(begin: 0.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.scale(
-                  scale: value,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          base.withOpacity(0.1),
-                          baseDark.withOpacity(0.1),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 400),
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            base.withOpacity(0.1),
+                            baseDark.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: base.withOpacity(0.2),
+                          width: 2,
+                        ),
                       ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: base.withOpacity(0.2),
-                        width: 2,
-                      ),
+                      child: Icon(_typeIcon(), color: base, size: 32),
                     ),
-                    child: Icon(_typeIcon(), color: base, size: 32),
+                  );
+                },
+              ),
+              const SizedBox(height: 7),
+
+              // Title
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+
+              // Message block - scrollable when content is too long
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: base.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: base.withOpacity(0.2), width: 1),
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 7),
-
-            // Title
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-
-            // Message block
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: base.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: base.withOpacity(0.2), width: 1),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(_typeIcon(), color: base, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
+                  child: SingleChildScrollView(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(_typeIcon(), color: base, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            message,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Buttons
-            Row(
-              children: [
-                if (cancelText != null) ...[
-                  Expanded(
-                    child: _DialogButton(
-                      text: cancelText!,
-                      isSecondary: true,
-                      base: base,
-                      baseDark: baseDark,
-                      onPressed: onCancel ?? () {},
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Expanded(
-                  child: _DialogButton(
-                    text: confirmText,
-                    isSecondary: false,
-                    base: base,
-                    baseDark: baseDark,
-                    onPressed: onConfirm,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 20),
+
+              // Buttons - always visible at bottom
+              Row(
+                children: [
+                  if (cancelText != null) ...[
+                    Expanded(
+                      child: _DialogButton(
+                        text: cancelText!,
+                        isSecondary: true,
+                        base: base,
+                        baseDark: baseDark,
+                        onPressed: onCancel ?? () {},
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: _DialogButton(
+                      text: confirmText,
+                      isSecondary: false,
+                      base: base,
+                      baseDark: baseDark,
+                      onPressed: onConfirm,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

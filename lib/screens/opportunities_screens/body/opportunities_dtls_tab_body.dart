@@ -46,7 +46,7 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
 
   void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
+      _setByPath(_moduleData, key, value);
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
@@ -57,6 +57,24 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
     });
   }
 
+  /// Set a value in a nested map using dot-notation path (e.g., 'projectManagement.icv')
+  void _setByPath(Map<String, dynamic> map, String path, dynamic value) {
+    final parts = path.split('.');
+    Map<String, dynamic> curr = map;
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final bool isLast = i == parts.length - 1;
+      if (isLast) {
+        curr[part] = value;
+      } else {
+        if (curr[part] is! Map<String, dynamic>) {
+          curr[part] = <String, dynamic>{};
+        }
+        curr = curr[part] as Map<String, dynamic>;
+      }
+    }
+  }
+
   @override
   Widget buildTabContent(BuildContext context) {
     return SingleChildScrollView(
@@ -65,7 +83,9 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildBasicInformationSection(),
+          _buildProjectInformationSection(),
           _buildCustomerInformationSection(),
+          _buildSubOwnerSection(),
           _buildSystemInformationSection(),
         ],
       ),
@@ -89,6 +109,26 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
             { 'key': 'closeDate', 'label': 'Close Date', 'widget': 'datetime', 'datetimeType': 'date' },  
             { 'key': 'moveToNextYear', 'widget': 'checkbox', 'label': 'Move To Next Year', 'checkboxStyle': 'switch'},
             { 'key': 'inPlan', 'widget': 'checkbox', 'label': 'In Plan', 'checkboxStyle': 'switch'},
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProjectInformationSection() {
+    return CardSection(
+      title: 'Project Information',
+      headerIcon: Icons.work_outline,
+      headerColor: Colors.blue,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            { 'key': 'projectManagement.icv', 'label': 'ICV', 'widget': 'input', 'type': 'text', 'disabled': true },
+            { 'key': 'projectManagement.contractNumber', 'label': 'Contract Number', 'widget': 'input', 'type': 'text', 'disabled': true },
+            { 'key': 'projectManagement.projectName', 'label': 'Project Name', 'widget': 'input', 'type': 'text', 'disabled': true, 'maxLines': 3 },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -124,6 +164,59 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
             { 'key': 'contactName', 'label': 'Contact Name', 'widget': 'input', 'type': 'text' },
             { 'key': 'phoneContact', 'label': 'Phone Contact', 'widget': 'input', 'type': 'phone' },
             { 'key': 'email', 'label': 'Email', 'widget': 'input', 'type': 'email' },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubOwnerSection() {
+    return CardSection(
+      title: 'Sub Owner',
+      headerIcon: Icons.people_outline,
+      headerColor: Colors.deepPurple,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {
+              'key': 'listSubOwner',
+              'widget': 'collection',
+              'label': 'Sub Owner',
+              'itemLabel': 'Sub Owner',
+              'addButtonText': 'Add Sub Owner',
+              'hintText': 'Add sub owners to this opportunity',
+              'allowAdd': true,
+              'allowRemove': true,
+              'editMode': 'modal',
+              'summary': {
+                'fields': [
+                  { 'key': 'userId.fullName', 'label': 'User', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+                  { 'key': 'percentage', 'label': 'Percentage', 'type': 'number', 'format': '#,##0', 'suffix': '%', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                ]
+              },
+              'children': [
+                { 
+                  'key': 'userId', 
+                  'widget': 'select', 
+                  'selectType': 'dropdown', 
+                  'label': 'User', 
+                  'data': 'DROPDOWN.OPPRTU/USER_SALE_DEPARTMENT', 
+                  'display': 'fullName',
+                  'required': true 
+                },
+                { 
+                  'key': 'percentage', 
+                  'widget': 'input',
+                  'label': 'Percentage', 
+                  'type': 'number',
+                  'suffix': '%',
+                  'decimalPlaces': 0
+                },
+              ],
+            },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
