@@ -103,7 +103,7 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text('Notification'),
+      title: const Text('Notifications'),
       backgroundColor: Colors.blue,
       foregroundColor: Colors.white,
       elevation: 0,

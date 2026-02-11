@@ -64,11 +64,27 @@ class DetailAttributes {
     required this.required,
   });
 
+  /// Safely extract only top-level bool entries from a map that may contain
+  /// nested objects (e.g. `"createdBy": {"fullName": false}`).
+  /// Non-bool values are skipped to avoid [TypeError] from `Map<String, bool>.from()`.
+  static Map<String, bool> _flatBoolMap(dynamic raw) {
+    if (raw is! Map) return {};
+    final result = <String, bool>{};
+    for (final entry in raw.entries) {
+      if (entry.value is bool) {
+        result[entry.key.toString()] = entry.value as bool;
+      }
+      // Skip nested maps / non-bool values — they are handled
+      // directly by widgets via raw itemDetail['attribute'] traversal.
+    }
+    return result;
+  }
+
   factory DetailAttributes.fromJson(Map<String, dynamic> json) {
     return DetailAttributes(
-      disabled: Map<String, bool>.from(json['disabled'] ?? {}),
-      hidden: Map<String, bool>.from(json['hidden'] ?? {}),
-      required: Map<String, bool>.from(json['required'] ?? {}),
+      disabled: _flatBoolMap(json['disabled']),
+      hidden: _flatBoolMap(json['hidden']),
+      required: _flatBoolMap(json['required']),
     );
   }
 
