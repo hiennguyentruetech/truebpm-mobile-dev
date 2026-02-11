@@ -9,6 +9,7 @@ import 'package:truebpm/screens/menu_screens/management_screens/dataspy_screens/
 import 'package:truebpm/screens/travel_request_screens/detail_travel_request_screen.dart';
 import 'package:truebpm/screens/travel_claim_screens/detail_travel_claim_screen.dart';
 import 'package:truebpm/screens/weekly_report_screens/detail_weekly_report_screen.dart';
+import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -18,6 +19,7 @@ enum TaskModuleType {
   cmdrmd('CMDRMD'),
   travelRequest('TRAREQ'),
   travelClaim('TRACLA'),
+  quotation('QUTATI'),
   weeklyReport('WKLRPT'),
   eLeave('ELEAVE'),
   dataSpy('DATASPY'),
@@ -48,7 +50,7 @@ enum TaskModuleType {
       case 'DATASPY':
         return TaskModuleType.dataSpy;
       case 'QUTATI':
-        return TaskModuleType.generic; // Use generic detail for now
+        return TaskModuleType.quotation;
       case 'CTM':
         return TaskModuleType.generic; // Use generic detail for now
       default:
@@ -146,6 +148,14 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.quotation:
+        return DetailQuotationScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.weeklyReport:
         return DetailWeeklyReportScreen(
           listItem: {'id': config.listItemId},
@@ -196,6 +206,8 @@ class TaskScreenFactory {
         return 'Travel Request';
       case TaskModuleType.travelClaim:
         return 'Travel Claim';
+      case TaskModuleType.quotation:
+        return 'Quotation';
       case TaskModuleType.weeklyReport:
         return 'Weekly Report';
       case TaskModuleType.eLeave:
@@ -225,6 +237,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Travel Request';
       case TaskModuleType.travelClaim:
         return 'Travel Claim';
+      case TaskModuleType.quotation:
+        return 'Quotation';
       case TaskModuleType.weeklyReport:
         return 'Weekly Report';
       case TaskModuleType.eLeave:
@@ -251,6 +265,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.flight_takeoff;
       case TaskModuleType.travelClaim:
         return Icons.receipt_long;
+      case TaskModuleType.quotation:
+        return Icons.request_quote;
       case TaskModuleType.weeklyReport:
         return Icons.calendar_view_week;
       case TaskModuleType.eLeave:

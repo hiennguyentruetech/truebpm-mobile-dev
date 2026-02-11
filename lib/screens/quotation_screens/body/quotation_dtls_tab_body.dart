@@ -46,40 +46,33 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
 
   void _onChanged(String key, dynamic value) {
     setState(() {
-      _moduleData[key] = value;
-
-      // Khi chọn opportunityId mới, nếu object đầy đủ kèm leader/customer thì giữ trong _moduleData để onlyView hiển thị ngay
-      if (key == 'opportunityId' && value is Map<String, dynamic>) {
-        // Đảm bảo có các field nested, nếu API trả thiếu thì cố gắng map từ key phổ biến
-        // Example expected structure: { leader: { fullName }, customer: { name, address, contact, email, industry: { name } } }
-        final opp = value;
-        final leader = opp['leader'];
-        final customer = opp['customer'];
-        // Nếu thiếu nested, bỏ qua (UI chỉ hiển thị nếu có)
-        if (leader is Map<String, dynamic>) {
-          // nothing extra, path rendering uses nested map
-        }
-        if (customer is Map<String, dynamic>) {
-          // Ensure nested industry map existence
-          if (customer['industry'] == null) {
-            // try fallback mapping
-            if (opp['industry'] is Map<String, dynamic>) {
-              customer['industry'] = opp['industry'];
-            }
-          }
-        }
-        // Gán lại để đảm bảo reference copy trong moduleData
-        _moduleData['opportunityId'] = Map<String, dynamic>.from(opp);
-      }
-
+      _setByPath(_moduleData, key, value);
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
 
-    // Gửi notify sau frame để CoreDetail nhận dirty state
+    // Defer notification to avoid calling setState during build
     SchedulerBinding.instance.addPostFrameCallback((_) {
       widget.onDataChanged?.call(_response);
     });
+  }
+
+  /// Set a value in a nested map using dot-notation path
+  void _setByPath(Map<String, dynamic> map, String path, dynamic value) {
+    final parts = path.split('.');
+    Map<String, dynamic> curr = map;
+    for (int i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final bool isLast = i == parts.length - 1;
+      if (isLast) {
+        curr[part] = value;
+      } else {
+        if (curr[part] is! Map<String, dynamic>) {
+          curr[part] = <String, dynamic>{};
+        }
+        curr = curr[part] as Map<String, dynamic>;
+      }
+    }
   }
 
   @override
@@ -89,25 +82,29 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildGeneralInfoSection(),
-          _buildOpportunitySection(),
-          _buildCustomerInfoSection(),
-          _buildProductSection(),
-          _buildSystemInfoSection(),
+          _buildBasicInformationSection(),
+          _buildOpportunityInformationSection(),
+          _buildProjectInformationSection(),
+          _buildCustomerInformationSection(),
+          _buildProductInterestSection(),
+          _buildSystemInformationSection(),
         ],
       ),
     ).dismissKeyboardOnTap();
   }
 
-  Widget _buildGeneralInfoSection() {
+  Widget _buildBasicInformationSection() {
     return CardSection(
-      title: 'General Information',
+      title: 'Basic Information',
       headerIcon: Icons.description_outlined,
       headerColor: Colors.indigo,
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
+            { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
             { 'key': 'code', 'label': 'Code', 'disabled': true },
+            { 'key': 'createdDate', 'label': 'Created Date', 'widget': 'datetime', 'datetimeType': 'date', 'disabled': true },
+            { 'key': 'createdBy', 'label': 'Created By', 'disabled': true },
             { 'key': 'name', 'label': 'Name', 'required': true },
             { 'key': 'approvedDate', 'widget': 'datetime', 'label': 'Approved Date', 'datetimeType': 'date' },
           ],
@@ -119,7 +116,7 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
     );
   }
 
-  Widget _buildOpportunitySection() {
+  Widget _buildOpportunityInformationSection() {
     return CardSection(
       title: 'Opportunity Information',
       headerIcon: Icons.account_tree_outlined,
@@ -127,7 +124,6 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            // opportunityId object related selects (placeholder endpoints)
             {
               'key': 'ownerId',
               'label': 'Owner',
@@ -136,11 +132,9 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
               'data': 'DROPDOWN.QUTATI/OWNER',
               'display': 'fullName',
               'required': true,
-              // Khi đổi owner => clear opportunityId và các field phụ thuộc
-              'clearOnChange': [
-                'opportunityId'
-              ]
+              'clearOnChange': ['opportunityId'],
             },
+            { 'key': 'opportunityId.leader.fullName', 'label': 'Leader', 'widget': 'input', 'disabled': true },
             {
               'key': 'opportunityId',
               'widget': 'select',
@@ -150,8 +144,6 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
               'display': 'name',
               'required': true,
             },
-            // Owner & Leader full name (view only)
-            { 'key': 'opportunityId.leader.fullName', 'label': 'Leader', 'widget': 'input', 'onlyView': true, 'disabled': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -161,19 +153,17 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
     );
   }
 
-  Widget _buildCustomerInfoSection() {
+  Widget _buildProjectInformationSection() {
     return CardSection(
-      title: 'Customer Information',
-      headerIcon: Icons.apartment_outlined,
-      headerColor: Colors.green,
+      title: 'Project Information',
+      headerIcon: Icons.work_outline,
+      headerColor: Colors.blue,
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
-            { 'key': 'opportunityId.customer.name', 'label': 'Customer Name', 'widget': 'input', 'onlyView': true, 'disabled': true },
-            { 'key': 'opportunityId.customer.address', 'label': 'Address', 'widget': 'input', 'type': 'textarea', 'maxLines': 3, 'onlyView': true, 'disabled': true },
-            { 'key': 'opportunityId.customer.contact', 'label': 'Contact', 'widget': 'input', 'onlyView': true, 'disabled': true },
-            { 'key': 'opportunityId.customer.email', 'label': 'Email', 'widget': 'input', 'onlyView': true, 'disabled': true },
-            { 'key': 'opportunityId.customer.industry.name', 'label': 'Industry', 'widget': 'input', 'onlyView': true, 'disabled': true },
+            { 'key': 'opportunityId.projectManagement.icv', 'label': 'ICV', 'widget': 'input', 'disabled': true },
+            { 'key': 'opportunityId.projectManagement.contractNumber', 'label': 'Contract Number', 'widget': 'input', 'disabled': true },
+            { 'key': 'opportunityId.projectManagement.projectName', 'label': 'Project Name', 'widget': 'input', 'disabled': true, 'maxLines': 3 },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -183,36 +173,57 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
     );
   }
 
-  Widget _buildProductSection() {
-    final List<dynamic> products = (_moduleData['product'] is List) ? _moduleData['product'] as List : const [];
+  Widget _buildCustomerInformationSection() {
     return CardSection(
-      title: 'Products',
+      title: 'Customer Information',
+      headerIcon: Icons.apartment_outlined,
+      headerColor: const Color.fromARGB(255, 87, 6, 101),
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            { 'key': 'opportunityId.customer.name', 'label': 'Name', 'widget': 'input', 'disabled': true },
+            { 'key': 'opportunityId.customer.address', 'label': 'Address', 'widget': 'input', 'disabled': true, 'maxLines': 3 },
+            { 'key': 'opportunityId.customer.contact', 'label': 'Contact', 'widget': 'input', 'disabled': true },
+            { 'key': 'opportunityId.customer.email', 'label': 'Email', 'widget': 'input', 'disabled': true },
+            { 'key': 'opportunityId.customer.industry.name', 'label': 'Industry', 'widget': 'input', 'disabled': true },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductInterestSection() {
+    return CardSection(
+      title: 'Product Interest',
       headerIcon: Icons.shopping_bag_outlined,
       headerColor: Colors.orange,
       children: [
-        // Display collection of product objects (view only for now)
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             {
               'key': 'product',
               'widget': 'collection',
-              'label': 'Product Items',
+              'label': 'Products',
               'itemLabel': 'Product',
+              'addButtonText': 'Add Product',
+              'hintText': 'No products added yet',
               'allowAdd': false,
               'allowRemove': false,
-              'hintText': products.isEmpty ? 'No products.' : null,
               'editMode': 'modal',
               'summary': {
                 'fields': [
-                  { 'key': 'code', 'label': 'Code', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
-                  { 'key': 'name', 'label': 'Name', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
-                  { 'key': 'description', 'label': 'Description', 'bgColor': '#E8F5E9', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'name', 'label': 'Name', 'bgColor': '#E3F2FD', 'borderColor': '#90CAF9', 'labelColor': '#1565C0', 'valueColor': '#0D47A1' },
+                  { 'key': 'quantity', 'label': 'Quantity', 'type': 'number', 'format': '#,##0', 'bgColor': '#E8F5E8', 'borderColor': '#A5D6A7', 'labelColor': '#2E7D32', 'valueColor': '#1B5E20' },
+                  { 'key': 'unit', 'label': 'Unit', 'bgColor': '#FFF3E0', 'borderColor': '#FFCC80', 'labelColor': '#F57C00', 'valueColor': '#E65100' },
                 ]
               },
               'children': [
-                { 'key': 'code', 'disabled': true },
-                { 'key': 'name', 'disabled': true },
-                { 'key': 'description', 'type': 'textarea', 'maxLines': 3, 'disabled': true },
+                { 'key': 'name', 'label': 'Name', 'disabled': true },
+                { 'key': 'quantity', 'label': 'Quantity', 'type': 'number', 'decimalPlaces': 0, 'disabled': true },
+                { 'key': 'unit', 'label': 'Unit', 'disabled': true },
               ],
             },
           ],
@@ -224,7 +235,7 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
     );
   }
 
-  Widget _buildSystemInfoSection() {
+  Widget _buildSystemInformationSection() {
     return CardSection(
       title: 'System Information',
       headerIcon: Icons.info_outline,
@@ -251,12 +262,4 @@ class _QuotationDetailsTabBodyState extends CoreTabBodyState<QuotationDetailsTab
       itemDetail: _itemDetail,
     );
   }
-
-  Map<String, dynamic> prepareDataForSave() => Map<String, dynamic>.from(_moduleData);
-
-  @override
-  Future<void> loadTabSpecificData() async {}
-
-  Future<void> saveTabData(Map<String, dynamic> data) async { await Future.delayed(const Duration(milliseconds: 200)); }
-  Future<void> submitTabData(Map<String, dynamic> data) async { await Future.delayed(const Duration(milliseconds: 200)); }
 }

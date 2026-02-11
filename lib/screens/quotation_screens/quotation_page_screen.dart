@@ -4,6 +4,7 @@ import 'package:truebpm/screens/core_screens/list_core_screen.dart';
 import 'package:truebpm/screens/core_screens/tab_cmt_core_body_screen.dart';
 import 'package:truebpm/screens/core_screens/tab_doc_core_body_screen.dart';
 import 'package:truebpm/screens/quotation_screens/body/quotation_dtls_tab_body.dart';
+import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
 
 /// Quotation Page Screen
 /// Follows the structure used by OT Registration and other module pages
@@ -54,7 +55,8 @@ class QuotationPageScreen extends StatelessWidget {
   }
 
   Widget? _createDetailScreen(BuildContext context, Map<String, dynamic> listItem) {
-    // For now we don't have a custom detail screen; returning null will fallback to default behavior
-    return null;
+    return DetailQuotationScreen(
+      listItem: listItem,
+    );
   }
 }
