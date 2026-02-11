@@ -73,6 +73,82 @@ class AppThemedDialog extends StatelessWidget {
     }
   }
 
+  /// Parse simple HTML tags and return RichText widget
+  Widget _buildMessageWidget() {
+    return RichText(
+      text: _parseHtmlToTextSpan(message),
+    );
+  }
+
+  /// Parse HTML string to TextSpan with basic tag support
+  TextSpan _parseHtmlToTextSpan(String html) {
+    final List<TextSpan> spans = [];
+    final RegExp tagPattern = RegExp(r'<(/?)(\w+)>');
+    
+    int lastIndex = 0;
+    final List<String> styleStack = [];
+    
+    for (final match in tagPattern.allMatches(html)) {
+      // Add text before this tag
+      if (match.start > lastIndex) {
+        final text = html.substring(lastIndex, match.start);
+        spans.add(TextSpan(
+          text: text,
+          style: _getStyleFromStack(styleStack),
+        ));
+      }
+      
+      final isClosing = match.group(1) == '/';
+      final tagName = match.group(2)?.toLowerCase() ?? '';
+      
+      if (isClosing) {
+        // Remove last matching tag from stack
+        styleStack.remove(tagName);
+      } else {
+        // Add tag to stack
+        if (['b', 'strong', 'i', 'em', 'u'].contains(tagName)) {
+          styleStack.add(tagName);
+        }
+      }
+      
+      lastIndex = match.end;
+    }
+    
+    // Add remaining text
+    if (lastIndex < html.length) {
+      final text = html.substring(lastIndex);
+      spans.add(TextSpan(
+        text: text,
+        style: _getStyleFromStack(styleStack),
+      ));
+    }
+    
+    return TextSpan(
+      children: spans,
+      style: const TextStyle(
+        fontSize: 13,
+        color: AppColors.textSecondary,
+        height: 1.4,
+      ),
+    );
+  }
+
+  /// Build TextStyle based on active HTML tags
+  TextStyle _getStyleFromStack(List<String> stack) {
+    bool isBold = stack.contains('b') || stack.contains('strong');
+    bool isItalic = stack.contains('i') || stack.contains('em');
+    bool isUnderline = stack.contains('u');
+    
+    return TextStyle(
+      fontSize: 13,
+      color: AppColors.textSecondary,
+      height: 1.4,
+      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+      fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+      decoration: isUnderline ? TextDecoration.underline : TextDecoration.none,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final base = _typeColor();
@@ -160,14 +236,7 @@ class AppThemedDialog extends StatelessWidget {
                         Icon(_typeIcon(), color: base, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            message,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                              height: 1.4,
-                            ),
-                          ),
+                          child: _buildMessageWidget(),
                         ),
                       ],
                     ),
