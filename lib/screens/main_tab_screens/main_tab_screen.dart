@@ -9,6 +9,7 @@ import 'package:truebpm/navigation/stack_navigator/travel_request_stack_navigato
 import 'package:truebpm/navigation/stack_navigator/menu_stack_navigator.dart';
 import 'package:truebpm/navigation/stack_navigator/notification_stack_navigator.dart';
 import 'package:truebpm/providers/notification_provider.dart';
+import 'package:truebpm/services/firebase_messaging_service.dart';
 
 class MainTabScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -33,6 +34,13 @@ class _MainTabScreenState extends State<MainTabScreen> {
     _notificationProvider = NotificationProvider();
     _notificationProvider.addListener(_onNotificationCountChanged);
     _notificationProvider.loadNotifications();
+
+    // Nếu app được mở từ terminated state qua FCM notification tap
+    // → tự động chuyển sang Notify tab (index 4)
+    if (FirebaseMessagingService.pendingNotifyTabNavigation) {
+      FirebaseMessagingService.clearPendingNotifyTabNavigation();
+      _selectedIndex = 4;
+    }
   }
 
   @override
