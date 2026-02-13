@@ -25,7 +25,7 @@ class _MenuListState extends State<MenuList> {
     final visibleMenus = widget.menuData
         .where((m) {
           final token = m.applicationPageId?.token;
-          return token != 'task-list' && token != 'weekly-report-page';
+          return token != 'task-list';
         })
         .toList();
 

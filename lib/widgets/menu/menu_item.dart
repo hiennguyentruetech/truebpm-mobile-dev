@@ -178,7 +178,7 @@ class _MenuItemState extends State<MenuItem> {
           children: widget.menu.children
               .where((child) {
                 final token = child.applicationPageId?.token;
-                return token != 'task-list' && token != 'weekly-report-page';
+                return token != 'task-list';
               })
               .map((child) => MenuItem(
                     menu: child,

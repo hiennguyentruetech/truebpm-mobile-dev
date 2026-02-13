@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/widgets/weekly_report/html_content_viewer.dart';
 
-/// Tab body for WKLRPT DTLS (Details)
+/// Tab body for WKLRPT DTLS (Details) - View Only
 class WeeklyReportDetailsTabBody extends CoreTabBody {
   const WeeklyReportDetailsTabBody({
     super.key,
@@ -50,11 +51,15 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
-
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      widget.onDataChanged?.call(_response);
-    });
+    if (widget.onDataChanged != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        widget.onDataChanged!(_response);
+      });
+    }
   }
+
+  /// Extract raw html string for a key
+  String _getHtmlString(String key) => _moduleData[key]?.toString() ?? '';
 
   @override
   Widget buildTabContent(BuildContext context) {
@@ -64,7 +69,7 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildGeneralInfoSection(),
-          _buildWorkSummarySection(),
+          _buildWeeklySummarySection(),
           _buildSystemInfoSection(),
         ],
       ),
@@ -75,14 +80,14 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
     return CardSection(
       title: 'General Information',
       headerIcon: Icons.article_outlined,
-      headerColor: Colors.indigo,
+      headerColor: const Color.fromARGB(255, 26, 26, 163),
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             { 'key': 'status', 'widget': 'status', 'showIcon': true, 'visibleWhen': { 'key': 'id', 'operator': 'ne', 'value': null } },
             { 'key': 'code', 'label': 'Report Code', 'disabled': true },
-            { 'key': 'userId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Reporter', 'hintText': 'Select user', 'data': 'DROPDOWN.WKLRPT/USERS', 'display': 'fullName' },
-            { 'key': 'startDate', 'widget': 'datetime', 'label': 'From Date - To Date', 'datetimeType': 'daterange', 'startDateKey': 'startDate', 'endDateKey': 'endDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select week duration...' },
+            { 'key': 'userId', 'widget': 'select', 'selectType': 'dropdown', 'label': 'Reporter', 'hintText': 'Select user', 'data': 'DROPDOWN.WKLRPT/USERS', 'display': 'fullName', 'disabled': true },
+            { 'key': 'startDate', 'widget': 'datetime', 'label': 'From Date - To Date', 'datetimeType': 'daterange', 'startDateKey': 'startDate', 'endDateKey': 'endDate', 'displayFormat': 'ddMMyyyy', 'hintText': 'Select week duration...', 'disabled': true },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,
@@ -92,21 +97,35 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
     );
   }
 
-  Widget _buildWorkSummarySection() {
+  Widget _buildWeeklySummarySection() {
+    final completedWork = _getHtmlString('jobCompletedLastWeek');
+    final planNextWeek = _getHtmlString('jobNextWeek');
+    final notes = _getHtmlString('note');
+
     return CardSection(
       title: 'Weekly Summary',
       headerIcon: Icons.event_note,
       headerColor: Colors.teal,
       children: [
-        ...CoreDynamicFields.buildFields(
-          fieldConfigs: [
-            { 'key': 'jobCompletedLastWeek', 'label': 'Completed Last Week', 'type': 'html', 'hintText': 'Enter completed work...' },
-            { 'key': 'jobNextWeek', 'label': 'Plan Next Week', 'type': 'html', 'hintText': 'Enter next week plan...' },
-            { 'key': 'note', 'label': 'Notes', 'type': 'html' },
-          ],
-          itemDetail: _itemDetail,
-          moduleData: _moduleData,
-          onChanged: _onChanged,
+        HtmlContentViewer(
+          title: 'Completed Last Week',
+          htmlContent: completedWork,
+          themeColor: const Color(0xFF2E7D32),
+          icon: Icons.check_circle_rounded,
+        ),
+        const SizedBox(height: 10),
+        HtmlContentViewer(
+          title: 'Plan Next Week',
+          htmlContent: planNextWeek,
+          themeColor: const Color(0xFF1565C0),
+          icon: Icons.schedule_rounded,
+        ),
+        const SizedBox(height: 10),
+        HtmlContentViewer(
+          title: 'Notes',
+          htmlContent: notes,
+          themeColor: const Color(0xFFEF6C00),
+          icon: Icons.note_alt_rounded,
         ),
       ],
     );
@@ -116,7 +135,7 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
     return CardSection(
       title: 'System Information',
       headerIcon: Icons.info_outline,
-      headerColor: Colors.orange,
+      headerColor: const Color.fromARGB(255, 71, 102, 21),
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
@@ -133,23 +152,11 @@ class _WeeklyReportDetailsTabBodyState extends CoreTabBodyState<WeeklyReportDeta
 
   @override
   bool validateData() {
-    return CoreDynamicFields.validateData(
-      context: context,
-      moduleData: _moduleData,
-      itemDetail: _itemDetail,
-    );
+    return true; // View only - no validation needed
   }
 
   @override
   Future<void> loadTabSpecificData() async {}
-
-  Future<void> saveTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-  }
-
-  Future<void> submitTabData(Map<String, dynamic> data) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-  }
 }
 
 
