@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/models/menu_model.dart';
 import 'package:truebpm/widgets/menu/menu_item.dart';
+import 'package:truebpm/widgets/menu/menu_utils.dart';
 
 class MenuList extends StatefulWidget {
   final List<MenuModel> menuData;
@@ -23,10 +24,7 @@ class _MenuListState extends State<MenuList> {
   @override
   Widget build(BuildContext context) {
     final visibleMenus = widget.menuData
-        .where((m) {
-          final token = m.applicationPageId?.token;
-          return token != 'task-list';
-        })
+        .where((m) => !MenuUtils.shouldHideMenu(m))
         .toList();
 
     return SliverPadding(

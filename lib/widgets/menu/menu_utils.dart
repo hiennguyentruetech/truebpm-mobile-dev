@@ -3,6 +3,15 @@ import 'package:truebpm/models/menu_model.dart';
 import 'package:truebpm/utils/menu_constants.dart';
 
 class MenuUtils {
+  static bool shouldHideMenu(MenuModel menu) {
+    final token = menu.applicationPageId?.token.trim().toLowerCase() ?? '';
+    final displayName = menu.displayName.trim().toLowerCase();
+
+    if (token == 'task-list') return true;
+    if (token == 'dashboard' || token == 'dashboard-page') return true;
+    return displayName == 'dashboard';
+  }
+
   static IconData getMenuIcon(MenuModel menu) {
     if (menu.hasChildren) {
       return Icons.folder;
