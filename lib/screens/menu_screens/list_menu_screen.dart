@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/services/menu_service.dart';
 import 'package:truebpm/services/auth_service.dart';
+import 'package:truebpm/navigation/app_routes.dart';
+import 'package:truebpm/navigation/navigation_service.dart';
 import 'package:truebpm/utils/exceptions.dart';
 import 'package:truebpm/models/menu_model.dart';
 import 'package:truebpm/models/user_model.dart';
@@ -65,9 +67,7 @@ class _ListMenuScreenState extends State<ListMenuScreen> with TickerProviderStat
       context,
       onConfirm: () async {
         await _authService.clearSavedCredentials();
-        if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-        }
+        NavigationService.replaceAllWith(AppRoutes.login);
       },
     );
   }

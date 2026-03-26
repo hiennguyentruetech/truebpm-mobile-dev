@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/services/auth_service.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/navigation/app_routes.dart';
 import 'package:truebpm/navigation/navigation_service.dart';
 
 class SessionHandler {
@@ -29,10 +30,7 @@ class SessionHandler {
       context,
       onConfirm: () {
         // Navigate về login screen bằng root navigator
-        NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
+        NavigationService.replaceAllWith(AppRoutes.login);
       },
     );
   }

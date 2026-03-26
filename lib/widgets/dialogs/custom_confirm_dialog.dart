@@ -312,6 +312,7 @@ class CustomConfirmDialog extends StatelessWidget {
   }) {
     return showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: false,
       builder: (context) => AppThemedDialog(
         title: title,
@@ -319,12 +320,12 @@ class CustomConfirmDialog extends StatelessWidget {
         type: AppDialogType.warning,
         confirmText: confirmText,
         onConfirm: () {
-          Navigator.of(context).pop(true);
+          Navigator.of(context, rootNavigator: true).pop(true);
           onConfirm();
         },
         cancelText: cancelText,
         onCancel: () {
-          Navigator.of(context).pop(false);
+          Navigator.of(context, rootNavigator: true).pop(false);
         },
         icon: Icons.lock_clock_outlined,
       ),

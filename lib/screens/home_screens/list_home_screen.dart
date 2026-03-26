@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:truebpm/navigation/app_routes.dart';
+import 'package:truebpm/navigation/app_routes.dart';
+import 'package:truebpm/navigation/navigation_service.dart';
 import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/widgets/loading_overlay.dart';
 import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
@@ -146,9 +147,7 @@ class _ListHomeScreenState extends State<ListHomeScreen> {
       context,
       onConfirm: () async {
         await _authService.clearSavedCredentials();
-        if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-        }
+        NavigationService.replaceAllWith(AppRoutes.login);
       },
     );
   }
