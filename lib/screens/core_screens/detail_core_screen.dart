@@ -1557,6 +1557,8 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     switch (tabCode.toUpperCase()) {
       case 'DTLS':
         return Icons.info_outline_rounded;
+      case 'DETAIL':
+        return Icons.insert_chart_outlined_rounded;
       case 'DOC':
         return Icons.insert_drive_file_rounded;
       case 'CMT':
