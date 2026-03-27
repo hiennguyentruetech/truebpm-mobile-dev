@@ -527,43 +527,24 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     if (provider.isToolbarVisible(ToolbarAction.submit) && !widget.fromTaskScreen) {
       final isSubmitDisabled = !provider.isToolbarEnabled(ToolbarAction.submit);
       menuItems.add(
-        PopupMenuItem(
+        _buildToolbarPopupItem(
           value: 'submit',
+          label: 'Submit',
+          icon: Icons.send_outlined,
+          color: Colors.green,
           enabled: !isSubmitDisabled,
-          child: Row(
-            children: [
-              Icon(
-                Icons.send_outlined, 
-                size: 20, 
-                color: isSubmitDisabled 
-                  ? Colors.grey.shade400 
-                  : Colors.green.shade600,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Submit', 
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isSubmitDisabled ? Colors.grey.shade400 : null,
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
     
     // Refresh action (không có trong toolbar config, luôn hiển thị)
     menuItems.add(
-      PopupMenuItem(
+      _buildToolbarPopupItem(
         value: 'refresh',
-        child: Row(
-          children: [
-            Icon(Icons.refresh_outlined, size: 20, color: Colors.blue.shade600),
-            const SizedBox(width: 12),
-            const Text('Refresh', style: TextStyle(fontSize: 14)),
-          ],
-        ),
+        label: 'Refresh',
+        icon: Icons.refresh_outlined,
+        color: Colors.blue,
+        enabled: true,
       ),
     );
     
@@ -571,28 +552,12 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     if (provider.isToolbarVisible(ToolbarAction.copy) && !isNewRecord && !widget.fromTaskScreen) {
       final isCopyDisabled = !provider.isToolbarEnabled(ToolbarAction.copy);
       menuItems.add(
-        PopupMenuItem(
+        _buildToolbarPopupItem(
           value: 'copy',
+          label: 'Copy',
+          icon: Icons.copy_outlined,
+          color: Colors.purple,
           enabled: !isCopyDisabled,
-          child: Row(
-            children: [
-              Icon(
-                Icons.copy_outlined, 
-                size: 20, 
-                color: isCopyDisabled 
-                  ? Colors.grey.shade400 
-                  : Colors.purple.shade600,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Copy', 
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isCopyDisabled ? Colors.grey.shade400 : null,
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
@@ -601,28 +566,12 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     if (provider.isToolbarVisible(ToolbarAction.print) && !isNewRecord) {
       final isPrintDisabled = !provider.isToolbarEnabled(ToolbarAction.print);
       menuItems.add(
-        PopupMenuItem(
+        _buildToolbarPopupItem(
           value: 'print',
+          label: 'Print',
+          icon: Icons.print_outlined,
+          color: Colors.teal,
           enabled: !isPrintDisabled,
-          child: Row(
-            children: [
-              Icon(
-                Icons.print_outlined, 
-                size: 20, 
-                color: isPrintDisabled 
-                  ? Colors.grey.shade400 
-                  : Colors.teal.shade600,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Print', 
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isPrintDisabled ? Colors.grey.shade400 : null,
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
@@ -631,63 +580,32 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
     if (provider.isToolbarVisible(ToolbarAction.cancel) && !isNewRecord && !widget.fromTaskScreen) {
       final isCancelDisabled = !provider.isToolbarEnabled(ToolbarAction.cancel);
       menuItems.add(
-        PopupMenuItem(
+        _buildToolbarPopupItem(
           value: 'cancel',
+          label: 'Cancel',
+          icon: Icons.cancel_outlined,
+          color: Colors.orange,
           enabled: !isCancelDisabled,
-          child: Row(
-            children: [
-              Icon(
-                Icons.cancel_outlined, 
-                size: 20, 
-                color: isCancelDisabled 
-                  ? Colors.grey.shade400 
-                  : Colors.orange.shade600,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Cancel', 
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isCancelDisabled ? Colors.grey.shade400 : null,
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
     
     // Add divider if we have delete action
     if (provider.isToolbarVisible(ToolbarAction.delete) && !isNewRecord && !widget.fromTaskScreen && menuItems.isNotEmpty) {
-      menuItems.add(const PopupMenuDivider());
+      menuItems.add(const PopupMenuDivider(height: 10));
     }
     
     // Delete action - disabled for new records and hidden when from task screen
     if (provider.isToolbarVisible(ToolbarAction.delete) && !isNewRecord && !widget.fromTaskScreen) {
       final isDeleteDisabled = !provider.isToolbarEnabled(ToolbarAction.delete);
       menuItems.add(
-        PopupMenuItem(
+        _buildToolbarPopupItem(
           value: 'delete',
+          label: 'Delete',
+          icon: Icons.delete_outline,
+          color: Colors.red,
           enabled: !isDeleteDisabled,
-          child: Row(
-            children: [
-              Icon(
-                Icons.delete_outline, 
-                size: 20, 
-                color: isDeleteDisabled 
-                  ? Colors.grey.shade400 
-                  : Colors.red.shade600,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Delete', 
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDeleteDisabled ? Colors.grey.shade400 : null,
-                ),
-              ),
-            ],
-          ),
+          isDestructive: true,
         ),
       );
     }
@@ -698,19 +616,93 @@ class _DetailCoreScreenState extends State<DetailCoreScreen> with TickerProvider
         PopupMenuButton<String>(
           onSelected: (value) => _handleMenuAction(value, provider),
           enabled: !provider.showLoadingOverlay,
-          icon: const Icon(Icons.more_vert, size: 22, color: Colors.white),
-          color: Colors.white,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          icon: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: Colors.white.withOpacity(0),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              Icons.more_vert_rounded,
+              size: 20,
+              color: Colors.white.withOpacity(provider.showLoadingOverlay ? 0.55 : 1),
+            ),
           ),
-          offset: const Offset(0, 45),
+          padding: const EdgeInsets.only(left: 4, right: 6),
+          tooltip: 'More actions',
+          color: Colors.white,
+          elevation: 14,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(5),
+            side: BorderSide(
+              color: Colors.blueGrey.withOpacity(0.12),
+            ),
+          ),
+          offset: const Offset(0, 44),
           itemBuilder: (context) => menuItems,
         ),
       );
     }
     
     return actions;
+  }
+
+  PopupMenuItem<String> _buildToolbarPopupItem({
+    required String value,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool enabled,
+    bool isDestructive = false,
+  }) {
+    final iconColor = enabled
+        ? (isDestructive ? Colors.red.shade600 : color)
+        : Colors.grey.shade400;
+    final textColor = enabled
+        ? (isDestructive ? Colors.red.shade700 : Colors.grey.shade900)
+        : Colors.grey.shade400;
+
+    return PopupMenuItem<String>(
+      value: value,
+      enabled: enabled,
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(enabled ? 0.14 : 0.08),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: iconColor.withOpacity(enabled ? 0.2 : 0.12),
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleMenuAction(String action, CoreDetailProvider provider) {
