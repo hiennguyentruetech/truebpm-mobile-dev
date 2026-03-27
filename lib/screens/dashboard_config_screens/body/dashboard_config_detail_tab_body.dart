@@ -67,7 +67,7 @@ class _DashboardConfigDetailCollectionTabBodyState extends CoreTabBodyState<Dash
     final List<Map<String, dynamic>> fieldConfigs = [
       {
         'key': 'dashboardConfigDetail',
-        'label': 'Dashboard Config Detail',
+        'label': 'Chart Display Detail',
         'widget': 'collection',
         'itemLabel': 'Chart Config Item',
         'addButtonText': 'Add Chart Config',
