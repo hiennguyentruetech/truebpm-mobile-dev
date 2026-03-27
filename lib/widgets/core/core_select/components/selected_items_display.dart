@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class SelectedItemsDisplay extends StatelessWidget {
   final List<dynamic> selectedValues;
   final String Function(dynamic) getDisplayText;
+  final bool isDisabled;
 
   const SelectedItemsDisplay({
     super.key,
     required this.selectedValues,
     required this.getDisplayText,
+    this.isDisabled = false,
   });
 
   @override
@@ -17,6 +19,7 @@ class SelectedItemsDisplay extends StatelessWidget {
     
     // Calculate max items to show (approximately 3 lines with wrapping)
     const int maxItemsToShow = 4; // Adjust based on typical screen width
+    const Color disabledValueColor = Color.fromARGB(255, 125, 125, 125);
     final itemsToShow = selectedValues.take(maxItemsToShow).toList();
     final hasMoreItems = selectedValues.length > maxItemsToShow;
     
@@ -28,14 +31,14 @@ class SelectedItemsDisplay extends StatelessWidget {
         ...itemsToShow.map((item) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blue.shade100,
+            color: isDisabled ? Colors.grey.shade100 : Colors.blue.shade100,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.shade300),
+            border: Border.all(color: isDisabled ? Colors.grey.shade300 : Colors.blue.shade300),
           ),
           child: Text(
             getDisplayText(item),
             style: TextStyle(
-              color: Colors.blue.shade700,
+              color: isDisabled ? disabledValueColor : Colors.blue.shade700,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -46,14 +49,14 @@ class SelectedItemsDisplay extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: isDisabled ? Colors.grey.shade100 : Colors.orange.shade100,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade300),
+              border: Border.all(color: isDisabled ? Colors.grey.shade300 : Colors.orange.shade300),
             ),
             child: Text(
               '+${selectedValues.length - maxItemsToShow} more',
               style: TextStyle(
-                color: Colors.orange.shade700,
+                color: isDisabled ? disabledValueColor : Colors.orange.shade700,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),

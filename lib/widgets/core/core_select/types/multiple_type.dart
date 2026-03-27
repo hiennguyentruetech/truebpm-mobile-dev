@@ -25,6 +25,8 @@ class MultipleTypeBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color disabledValueColor = Color.fromARGB(255, 125, 125, 125);
+
     // Convert selected values to List if not already
     List<dynamic> selectedValues = [];
     if (selectedValue is List) {
@@ -73,12 +75,13 @@ class MultipleTypeBuilder extends StatelessWidget {
                             ? SelectedItemsDisplay(
                                 selectedValues: selectedValues,
                                 getDisplayText: getDisplayText,
+                                isDisabled: isDisabled,
                               )
                             : Text(
                                 !isDisabled ? (hintText ?? 'Select options') : '',
                                 style: TextStyle(
                                   color: isDisabled
-                                      ? Colors.grey.shade400
+                                      ? disabledValueColor
                                       : Colors.grey.shade500,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,

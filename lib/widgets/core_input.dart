@@ -117,6 +117,9 @@ class CoreInput extends StatefulWidget {
 }
 
 class _CoreInputState extends State<CoreInput> {
+  static const Color _disabledLabelColor = Color.fromARGB(255, 145, 145, 145);
+  static const Color _disabledValueColor = Color.fromARGB(255, 125, 125, 125);
+
   bool get _isRequired {
     if (widget.required != null) return widget.required!;
     // Fallback to API attribute if available
@@ -409,7 +412,7 @@ class _CoreInputState extends State<CoreInput> {
               text: labelText,
               style: TextStyle(
                 color: _isDisabled 
-                  ? const Color.fromARGB(255, 180, 180, 180)
+                  ? _disabledLabelColor
                   : (_isFocused 
                     ? Colors.blue.shade600 
                     : const Color.fromARGB(255, 91, 91, 91)),
@@ -433,7 +436,7 @@ class _CoreInputState extends State<CoreInput> {
         labelText,
         style: TextStyle(
           color: _isDisabled 
-            ? const Color.fromARGB(255, 180, 180, 180)
+            ? _disabledLabelColor
             : (_isFocused 
               ? Colors.blue.shade600 
               : const Color.fromARGB(255, 91, 91, 91)),
@@ -613,7 +616,7 @@ class _CoreInputState extends State<CoreInput> {
           style: widget.textStyle ?? TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: _isDisabled ? Colors.grey.shade400 : Colors.grey.shade800,
+            color: _isDisabled ? _disabledValueColor : Colors.grey.shade800,
           ),
           validator: widget.validator ?? _buildValidator(),
           decoration: _buildInputDecoration(),
@@ -632,7 +635,7 @@ class _CoreInputState extends State<CoreInput> {
       label: _buildLabel,
       floatingLabelStyle: TextStyle(
         color: _isDisabled 
-          ? const Color.fromARGB(255, 165, 165, 165)
+          ? _disabledLabelColor
           : Colors.blue.shade600,
         fontSize: 17,
         fontWeight: FontWeight.w600,

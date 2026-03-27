@@ -28,6 +28,8 @@ class SelectTypeBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color disabledValueColor = Color.fromARGB(255, 125, 125, 125);
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -55,7 +57,7 @@ class SelectTypeBuilder extends StatelessWidget {
               hint: Text(
                 hintText ?? 'Select an option',
                 style: TextStyle(
-                  color: isDisabled ? Colors.grey.shade400 : Colors.grey.shade500,
+                  color: isDisabled ? disabledValueColor : Colors.grey.shade500,
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                 ),
@@ -111,7 +113,7 @@ class SelectTypeBuilder extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: isDisabled ? Colors.grey.shade400 : Colors.grey.shade800,
+                        color: isDisabled ? disabledValueColor : Colors.grey.shade800,
                       ),
                     ),
                   ),

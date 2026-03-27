@@ -130,6 +130,9 @@ class CoreDateTime extends StatefulWidget {
 }
 
 class _CoreDateTimeState extends State<CoreDateTime> {
+  static const Color _disabledLabelColor = Color.fromARGB(255, 145, 145, 145);
+  static const Color _disabledValueColor = Color.fromARGB(255, 125, 125, 125);
+
   late TextEditingController _controller;
   late TextEditingController _startController;
   late TextEditingController _endController;
@@ -173,7 +176,7 @@ class _CoreDateTimeState extends State<CoreDateTime> {
               text: labelText,
               style: TextStyle(
                 color: _isDisabled
-                    ? const Color.fromARGB(255, 180, 180, 180)
+                    ? _disabledLabelColor
                     : const Color.fromARGB(255, 91, 91, 91),
                 fontSize: 17,
                 fontWeight: FontWeight.w500,
@@ -195,7 +198,7 @@ class _CoreDateTimeState extends State<CoreDateTime> {
         labelText,
         style: TextStyle(
           color: _isDisabled
-              ? const Color.fromARGB(255, 180, 180, 180)
+              ? _disabledLabelColor
               : const Color.fromARGB(255, 91, 91, 91),
           fontSize: 17,
           fontWeight: FontWeight.w500,
@@ -504,7 +507,9 @@ class _CoreDateTimeState extends State<CoreDateTime> {
         canRequestFocus: false, // Disable focus cho tất cả
         onTap: _isDisabled ? null : onTap, // Tất cả đều có thể tap để popup
         onChanged: null, // Disable onChanged vì tất cả đều popup-only
-        style: widget.textStyle ?? const TextStyle(fontSize: 14),
+        style: (widget.textStyle ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)).copyWith(
+          color: _isDisabled ? _disabledValueColor : Colors.grey.shade800,
+        ),
         decoration: widget.decoration ?? InputDecoration(
           // Dùng RichText để hiển thị dấu * màu đỏ khi required (đồng bộ với CoreInput)
           label: _buildLabel,
@@ -512,7 +517,7 @@ class _CoreDateTimeState extends State<CoreDateTime> {
             fontSize: 17, // Match CoreInput
             fontWeight: FontWeight.w500, // Match CoreInput
             color: _isDisabled 
-              ? const Color.fromARGB(255, 165, 165, 165) // Disabled floating like CoreInput
+              ? _disabledLabelColor // Disabled floating like CoreInput
               : const Color.fromARGB(255, 91, 91, 91), // Normal grey color like CoreInput (not blue)
           ),
           floatingLabelBehavior: FloatingLabelBehavior.always, // Label luôn floating

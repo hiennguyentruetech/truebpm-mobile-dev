@@ -24,6 +24,8 @@ class DropdownTypeBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color disabledValueColor = Color.fromARGB(255, 125, 125, 125);
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -66,7 +68,7 @@ class DropdownTypeBuilder extends StatelessWidget {
                               : (!isDisabled ? (hintText ?? 'Select an option') : ''),
                           style: TextStyle(
                             color: isDisabled
-                                ? Colors.grey.shade400
+                                ? disabledValueColor
                                 : (hasValidDisplayText ? Colors.grey.shade800 : Colors.grey.shade500),
                             fontSize: 14,
                             fontWeight: hasValidDisplayText ? FontWeight.w500 : FontWeight.w400,

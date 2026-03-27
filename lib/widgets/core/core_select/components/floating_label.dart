@@ -19,7 +19,7 @@ class FloatingLabel extends StatelessWidget {
 
     // Match CoreInput floatingLabelStyle when blurred
     final Color labelColor = isDisabled
-        ? const Color.fromARGB(255, 165, 165, 165)
+        ? const Color.fromARGB(255, 145, 145, 145)
         : const Color(0xFF5B5B5B); // #5B5B5B giống CoreInput khi blur
 
     return Positioned(

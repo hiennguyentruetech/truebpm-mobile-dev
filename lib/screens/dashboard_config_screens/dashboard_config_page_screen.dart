@@ -22,7 +22,7 @@ class DashboardConfigPageScreen extends StatelessWidget {
     ),
     TabConfig(
       code: 'DETAIL',
-      name: 'Config Detail',
+      name: 'Chart Display',
       tabBodyBuilder: DashboardConfigDetailCollectionTabBody.new,
     ),
   ];
