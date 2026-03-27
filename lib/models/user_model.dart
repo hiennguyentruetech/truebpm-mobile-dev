@@ -9,6 +9,7 @@ class UserModel {
   final String? createdDate;
   final String? managerFullName;
   final List<dynamic> roles;
+  final List<dynamic> departments;
 
   UserModel({
     required this.id,
@@ -21,9 +22,12 @@ class UserModel {
     this.createdDate,
     this.managerFullName,
     this.roles = const [],
+    this.departments = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final rawDepartments = json['departments'] ?? json['departmentList'];
+
     return UserModel(
       id: json['id'] ?? '',
       code: json['code'] ?? '',
@@ -35,6 +39,9 @@ class UserModel {
       createdDate: json['createdDate'],
       managerFullName: json['managerFullName'],
       roles: json['roles'] ?? [],
+      departments: rawDepartments is List
+          ? List<dynamic>.from(rawDepartments)
+          : const [],
     );
   }
 
@@ -50,6 +57,7 @@ class UserModel {
       'createdDate': createdDate,
       'managerFullName': managerFullName,
       'roles': roles,
+      'departments': departments,
     };
   }
 }

@@ -18,7 +18,8 @@ class ListCoreScreen extends StatefulWidget {
   final String? moduleName;
   final String? tabModuleCode;
   final List<TabConfig>? availableTabs;
-  final Widget? Function(BuildContext context, Map<String, dynamic> listItem)? detailScreenBuilder;
+  final Widget? Function(BuildContext context, Map<String, dynamic> listItem)?
+  detailScreenBuilder;
   final List<PrintReportOption>? printReports;
 
   const ListCoreScreen({
@@ -35,7 +36,8 @@ class ListCoreScreen extends StatefulWidget {
   State<ListCoreScreen> createState() => _ListCoreScreenState();
 }
 
-class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStateMixin {
+class _ListCoreScreenState extends State<ListCoreScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -43,6 +45,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   AnimationController? _fabAnimationController;
   Animation<double>? _fabScaleAnimation;
   bool _isSearchFocused = false;
+  bool _canSwipeDelete = false;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       widget.moduleName,
       onSessionExpired: _handleSessionExpired,
     );
+    _loadSwipeDeletePermission();
     _scrollController.addListener(_onScroll);
     _searchFocusNode.addListener(_onSearchFocusChanged);
 
@@ -61,13 +65,12 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _fabScaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _fabAnimationController!,
-      curve: Curves.easeInOut,
-    ));
+    _fabScaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(
+        parent: _fabAnimationController!,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   @override
@@ -88,10 +91,11 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - CoreConstants.scrollThreshold) {
+        _scrollController.position.maxScrollExtent -
+            CoreConstants.scrollThreshold) {
       _provider.loadMoreData(widget.moduleCode, widget.tabModuleCode);
     }
-    
+
     // Dismiss keyboard when scrolling if search is focused
     if (_isSearchFocused) {
       _dismissKeyboard();
@@ -108,7 +112,11 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   void _handleSearchSubmit(String value) {
     _dismissKeyboard();
     if (value.trim().isNotEmpty) {
-      _provider.performSearch(widget.moduleCode, widget.tabModuleCode, value.trim());
+      _provider.performSearch(
+        widget.moduleCode,
+        widget.tabModuleCode,
+        value.trim(),
+      );
     }
   }
 
@@ -126,11 +134,75 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
     if (success && mounted) {
       // If auto-login successful, retry fetching data
       await _provider.fetchData(widget.moduleCode);
+      await _loadSwipeDeletePermission();
     }
   }
 
+  Future<void> _loadSwipeDeletePermission() async {
+    final authService = AuthService();
+    final userInfo = await authService.getSavedUserInfo();
+    final userData = userInfo?.toJson() ?? const <String, dynamic>{};
+    final canSwipeDelete = _hasSwipeDeleteDepartmentPermission(userData);
+
+    if (!mounted) return;
+    setState(() {
+      _canSwipeDelete = canSwipeDelete;
+    });
+  }
+
+  bool _hasSwipeDeleteDepartmentPermission(Map<String, dynamic> userData) {
+    const allowedDepartmentNames = {'admin department', 'r&d department'};
+
+    final departments = userData['departments'];
+    if (departments is! List) return false;
+
+    for (final department in departments) {
+      final departmentName = _extractDepartmentName(department);
+      if (departmentName != null &&
+          allowedDepartmentNames.contains(
+            _normalizeDepartmentName(departmentName),
+          )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _normalizeDepartmentName(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  String? _extractDepartmentName(dynamic department) {
+    if (department is String) {
+      final value = department.trim();
+      return value.isEmpty ? null : value;
+    }
+
+    if (department is Map) {
+      final directName = department['name'] ?? department['departmentName'];
+      if (directName != null) {
+        final value = directName.toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+
+      final nestedDepartment = department['department'];
+      if (nestedDepartment is Map) {
+        final nestedName =
+            nestedDepartment['name'] ?? nestedDepartment['departmentName'];
+        if (nestedName != null) {
+          final value = nestedName.toString().trim();
+          if (value.isNotEmpty) return value;
+        }
+      }
+    }
+
+    return null;
+  }
+
   Future<void> _refreshListKeepingScroll(CoreListProvider provider) async {
-    final double savedOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final double savedOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
     await provider.refreshData(widget.moduleCode, widget.tabModuleCode);
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -146,7 +218,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   void _navigateToNewRecord(CoreListProvider provider) {
     // Dismiss keyboard before navigation
     _dismissKeyboard();
-    
+
     // Create a new item structure for the NEW action
     final Map<String, dynamic> newItem = {
       'id': null, // No ID for new records
@@ -154,42 +226,53 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       'action': 'NEW', // Special flag to indicate this is a new record
     };
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) {
-          // Use custom detail screen if provided, otherwise use default
-          final customScreen = widget.detailScreenBuilder?.call(context, newItem);
-          if (customScreen != null) {
-            return customScreen;
-          }
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) {
+              // Use custom detail screen if provided, otherwise use default
+              final customScreen = widget.detailScreenBuilder?.call(
+                context,
+                newItem,
+              );
+              if (customScreen != null) {
+                return customScreen;
+              }
 
-          return GenericDetailCoreScreen(
-            moduleCode: widget.moduleCode,
-            moduleName: provider.displayModuleName,
-            listItem: newItem,
-            initialTabCode: 'DTLS', // Always default to DTLS for new records
-            dataSpy: provider.dataSpy,
-            availableTabs: widget.availableTabs ?? _getDefaultTabs(),
-            printReports: widget.printReports ?? _getExamplePrintReports(),
-            onOperationSuccess: () async {
-              // Refresh data spy and keep scroll position after successful save
-              await _refreshListKeepingScroll(provider);
+              return GenericDetailCoreScreen(
+                moduleCode: widget.moduleCode,
+                moduleName: provider.displayModuleName,
+                listItem: newItem,
+                initialTabCode:
+                    'DTLS', // Always default to DTLS for new records
+                dataSpy: provider.dataSpy,
+                availableTabs: widget.availableTabs ?? _getDefaultTabs(),
+                printReports: widget.printReports ?? _getExamplePrintReports(),
+                onOperationSuccess: () async {
+                  // Refresh data spy and keep scroll position after successful save
+                  await _refreshListKeepingScroll(provider);
+                },
+              );
             },
-          );
-        },
-      ),
-    ).then((_) async {
-      // Refresh the list when returning from detail screen, keep scroll
-      await _refreshListKeepingScroll(provider);
-    });
+          ),
+        )
+        .then((_) async {
+          // Refresh the list when returning from detail screen, keep scroll
+          await _refreshListKeepingScroll(provider);
+        });
   }
 
-  Future<void> _handleSwipeDelete(CoreListProvider provider, Map<String, dynamic> item, int index) async {
+  Future<void> _handleSwipeDelete(
+    CoreListProvider provider,
+    Map<String, dynamic> item,
+    int index,
+  ) async {
     // Show confirmation dialog
     final confirmed = await CustomConfirmDialog.showDelete(
       context,
       title: 'Confirm Delete',
-      message: 'Are you sure you want to delete this item? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete this item? This action cannot be undone.',
       onConfirm: () {},
     );
 
@@ -355,8 +438,12 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       child: Consumer<CoreListProvider>(
         builder: (context, provider, child) {
           // Handle generic server/network error: show message and go back
-          if (provider.lastErrorStatusCode != null && (provider.lastErrorStatusCode! >= 500 || provider.lastErrorStatusCode == 0)) {
-            final msg = provider.lastErrorMessage ?? 'Connection error. Please try again later.';
+          if (provider.lastErrorStatusCode != null &&
+              (provider.lastErrorStatusCode! >= 500 ||
+                  provider.lastErrorStatusCode == 0)) {
+            final msg =
+                provider.lastErrorMessage ??
+                'Connection error. Please try again later.';
             // Clear to avoid repeat
             provider.clearLastError();
             _showGenericErrorAndBack(msg);
@@ -380,7 +467,11 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                   dataSpies: provider.dataSpies,
                   selectedDataSpyId: provider.selectedId,
                   onDataSpyChanged: (val) {
-                    provider.selectDataSpy(val, widget.moduleCode, widget.tabModuleCode);
+                    provider.selectDataSpy(
+                      val,
+                      widget.moduleCode,
+                      widget.tabModuleCode,
+                    );
                   },
                   searchController: _searchController,
                   onSearch: () {
@@ -401,7 +492,10 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                             child: FloatingAddButton(
                               onPressed: isEnabled
                                   ? () {
-                                      _fabAnimationController?.forward().then((_) => _fabAnimationController?.reverse());
+                                      _fabAnimationController?.forward().then(
+                                        (_) =>
+                                            _fabAnimationController?.reverse(),
+                                      );
                                       _navigateToNewRecord(provider);
                                     }
                                   : () {},
@@ -410,12 +504,12 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                         },
                       )
                     : null,
-                floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+                floatingActionButtonLocation:
+                    FloatingActionButtonLocation.endFloat,
               ),
 
               // Loading Overlay (unified with detail screen)
-              if (provider.showLoadingOverlay)
-                const LoadingOverlayWidget(),
+              if (provider.showLoadingOverlay) const LoadingOverlayWidget(),
             ],
           );
         },
@@ -436,10 +530,7 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
+            colors: [Colors.blue.shade50, Colors.white],
           ),
         ),
         child: _buildDataList(provider),
@@ -450,7 +541,8 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
   Widget _buildDataList(CoreListProvider provider) {
     if (provider.listData.isEmpty) {
       return CoreEmptyState(
-        onRefresh: () => provider.refreshData(widget.moduleCode, widget.tabModuleCode),
+        onRefresh: () =>
+            provider.refreshData(widget.moduleCode, widget.tabModuleCode),
       );
     }
 
@@ -469,11 +561,67 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
           itemBuilder: (context, index) {
             final item = provider.listData[index] as Map<String, dynamic>;
             final statusStyle = _buildStatusStyle(item);
+            final card = CoreListItemCard(
+              item: item,
+              index: index + 1,
+              headers: provider.headers,
+              contents: provider.contents,
+              statusStyle: statusStyle,
+              onTap: () {
+                // Dismiss keyboard before navigation
+                _dismissKeyboard();
+
+                // Navigate to detail screen
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) {
+                          // Use custom detail screen if provided, otherwise use default
+                          final customScreen = widget.detailScreenBuilder?.call(
+                            context,
+                            item,
+                          );
+                          if (customScreen != null) {
+                            return customScreen;
+                          }
+
+                          return GenericDetailCoreScreen(
+                            moduleCode: widget.moduleCode,
+                            moduleName: provider.displayModuleName,
+                            listItem: item,
+                            initialTabCode: widget.tabModuleCode ?? 'DTLS',
+                            dataSpy: provider.dataSpy,
+                            availableTabs:
+                                widget.availableTabs ?? _getDefaultTabs(),
+                            printReports:
+                                widget.printReports ??
+                                _getExamplePrintReports(),
+                            onOperationSuccess: () async {
+                              // Refresh list and keep scroll for copy/delete, etc.
+                              await _refreshListKeepingScroll(provider);
+                            },
+                          );
+                        },
+                      ),
+                    )
+                    .then((_) async {
+                      await _refreshListKeepingScroll(provider);
+                    });
+              },
+            );
+
+            if (!_canSwipeDelete) {
+              return card;
+            }
+
             return Dismissible(
               key: Key('item_${item['id'] ?? index}'),
               direction: DismissDirection.endToStart,
               background: Container(
-                margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                margin: const EdgeInsets.symmetric(
+                  vertical: 4.0,
+                  horizontal: 8.0,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
@@ -517,7 +665,10 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -541,50 +692,10 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
                 ),
               ),
               confirmDismiss: (direction) async {
-                // Show confirmation and handle delete
                 await _handleSwipeDelete(provider, item, index);
-                return false; // Don't auto-dismiss, we handle it manually
+                return false;
               },
-              child: CoreListItemCard(
-                item: item,
-                index: index + 1,
-                headers: provider.headers,
-                contents: provider.contents,
-                statusStyle: statusStyle,
-                onTap: () {
-                  // Dismiss keyboard before navigation
-                  _dismissKeyboard();
-                  
-                  // Navigate to detail screen
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) {
-                        // Use custom detail screen if provided, otherwise use default
-                        final customScreen = widget.detailScreenBuilder?.call(context, item);
-                        if (customScreen != null) {
-                          return customScreen;
-                        }
-
-                        return GenericDetailCoreScreen(
-                          moduleCode: widget.moduleCode,
-                          moduleName: provider.displayModuleName,
-                          listItem: item,
-                          initialTabCode: widget.tabModuleCode ?? 'DTLS',
-                          dataSpy: provider.dataSpy,
-                          availableTabs: widget.availableTabs ?? _getDefaultTabs(),
-                          printReports: widget.printReports ?? _getExamplePrintReports(),
-                          onOperationSuccess: () async {
-                            // Refresh list and keep scroll for copy/delete, etc.
-                            await _refreshListKeepingScroll(provider);
-                          },
-                        );
-                      },
-                    ),
-                  ).then((_) async {
-                    await _refreshListKeepingScroll(provider);
-                  });
-                },
-              ),
+              child: card,
             );
           },
         ),
@@ -612,5 +723,4 @@ class _ListCoreScreenState extends State<ListCoreScreen> with TickerProviderStat
       ),
     ];
   }
-
 }
