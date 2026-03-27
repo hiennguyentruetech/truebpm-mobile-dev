@@ -61,6 +61,9 @@ class MenuNavigationService {
         case 'dataspy-page':
           routeName = AppRoutes.dataSpy;
           break;
+        case 'dashboard-config-page':
+          routeName = AppRoutes.dashboardConfig;
+          break;
         default:
           routeName = AppRoutes.detailMenu;
       }

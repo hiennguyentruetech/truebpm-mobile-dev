@@ -4,6 +4,7 @@ import 'package:truebpm/navigation/app_routes.dart';
 // Import screens for all stacks
 // Dashboard Screens
 import 'package:truebpm/screens/dashboard_screens/dashboard_page_screen.dart';
+import 'package:truebpm/screens/dashboard_config_screens/dashboard_config_page_screen.dart';
 
 // Home Screens (ListHomeScreen kept for detailHome route references)
 // import 'package:truebpm/screens/home_screens/list_home_screen.dart';
@@ -61,6 +62,7 @@ class StackRoutes {
   static final Map<String, Widget Function()> stackRoutes = {
     // Dashboard Stack Routes
     AppRoutes.dashboard: () => const DashboardPageScreen(),
+    AppRoutes.dashboardConfig: () => const DashboardConfigPageScreen(),
 
     // Home Stack Routes
     AppRoutes.home: () => const DashboardPageScreen(), // Changed to Dashboard

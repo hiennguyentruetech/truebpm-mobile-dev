@@ -10,6 +10,7 @@ import 'package:truebpm/screens/travel_request_screens/detail_travel_request_scr
 import 'package:truebpm/screens/travel_claim_screens/detail_travel_claim_screen.dart';
 import 'package:truebpm/screens/weekly_report_screens/detail_weekly_report_screen.dart';
 import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
+import 'package:truebpm/screens/dashboard_config_screens/detail_dashboard_config_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -23,6 +24,7 @@ enum TaskModuleType {
   weeklyReport('WKLRPT'),
   eLeave('ELEAVE'),
   dataSpy('DATASPY'),
+  dashboardConfig('DASCFG'),
   generic('GENERIC');
 
   const TaskModuleType(this.code);
@@ -49,6 +51,8 @@ enum TaskModuleType {
         return TaskModuleType.eLeave;
       case 'DATASPY':
         return TaskModuleType.dataSpy;
+      case 'DASCFG':
+        return TaskModuleType.dashboardConfig;
       case 'QUTATI':
         return TaskModuleType.quotation;
       case 'CTM':
@@ -180,6 +184,14 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.dashboardConfig:
+        return DetailDashboardConfigScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.generic:
         return GenericDetailCoreScreen(
           moduleCode: config.moduleCode,
@@ -214,6 +226,8 @@ class TaskScreenFactory {
         return 'E-Leave Request';
       case TaskModuleType.dataSpy:
         return 'Data Spy';
+      case TaskModuleType.dashboardConfig:
+        return 'Dashboard Config';
       case TaskModuleType.generic:
         return 'Task Detail';
     }
@@ -245,6 +259,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'E-Leave';
       case TaskModuleType.dataSpy:
         return 'Data Spy';
+      case TaskModuleType.dashboardConfig:
+        return 'Dashboard Config';
       case TaskModuleType.generic:
         return 'General Task';
     }
@@ -273,6 +289,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.event_note;
       case TaskModuleType.dataSpy:
         return Icons.analytics;
+      case TaskModuleType.dashboardConfig:
+        return Icons.dashboard_customize;
       case TaskModuleType.generic:
         return Icons.task_alt;
     }

@@ -7,6 +7,10 @@ class AppRoutes {
   // Dashboard module routes
   dashboard =         '/dashboard',
 
+  // Dashboard Config routes
+  dashboardConfig =   '/dashboardConfig',
+  detailDashboardConfig = '/detailDashboardConfig',
+
   // Home module routes
   home =              '/home',
   detailHome =        '/detailHome',

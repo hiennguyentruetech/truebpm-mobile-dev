@@ -10,6 +10,7 @@ import 'package:truebpm/screens/main_tab_screens/main_tab_screen.dart';
 
 // Dashboard screens
 import 'package:truebpm/screens/dashboard_screens/dashboard_page_screen.dart';
+import 'package:truebpm/screens/dashboard_config_screens/dashboard_config_page_screen.dart';
 
 // All pages imported below are in home_screens stack
 import 'package:truebpm/screens/home_screens/list_home_screen.dart';
@@ -70,6 +71,7 @@ class AppPages {
 
     // Dashboard module route
     AppRoutes.dashboard: (context) => const DashboardPageScreen(),
+    AppRoutes.dashboardConfig: (context) => const DashboardConfigPageScreen(),
 
     // Home module routes
     AppRoutes.home: (context) => const ListHomeScreen(),
