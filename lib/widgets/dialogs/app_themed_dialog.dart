@@ -30,30 +30,30 @@ class AppThemedDialog extends StatelessWidget {
   Color _typeColor() {
     switch (type) {
       case AppDialogType.success:
-        return AppColors.success;
+        return AppColors.dialogSuccess;
       case AppDialogType.warning:
-        return AppColors.warning;
+        return AppColors.dialogWarning;
       case AppDialogType.error:
-        return AppColors.error;
+        return AppColors.dialogError;
       case AppDialogType.info:
-        return AppColors.info;
+        return AppColors.dialogInfo;
       case AppDialogType.neutral:
-      return AppColors.primary;
+        return AppColors.primary;
     }
   }
 
   Color _typeColorDark() {
     switch (type) {
       case AppDialogType.success:
-        return AppColors.successDark;
+        return AppColors.dialogSuccessDark;
       case AppDialogType.warning:
-        return AppColors.warningDark;
+        return AppColors.dialogWarningDark;
       case AppDialogType.error:
-        return AppColors.errorDark;
+        return AppColors.dialogErrorDark;
       case AppDialogType.info:
-        return AppColors.infoDark;
+        return AppColors.dialogInfoDark;
       case AppDialogType.neutral:
-      return AppColors.primaryDark;
+        return AppColors.primaryDark;
     }
   }
 
@@ -69,38 +69,33 @@ class AppThemedDialog extends StatelessWidget {
       case AppDialogType.info:
         return Icons.info_outline_rounded;
       case AppDialogType.neutral:
-      return Icons.info_outline_rounded;
+        return Icons.info_outline_rounded;
     }
   }
 
   /// Parse simple HTML tags and return RichText widget
   Widget _buildMessageWidget() {
-    return RichText(
-      text: _parseHtmlToTextSpan(message),
-    );
+    return RichText(text: _parseHtmlToTextSpan(message));
   }
 
   /// Parse HTML string to TextSpan with basic tag support
   TextSpan _parseHtmlToTextSpan(String html) {
     final List<TextSpan> spans = [];
     final RegExp tagPattern = RegExp(r'<(/?)(\w+)>');
-    
+
     int lastIndex = 0;
     final List<String> styleStack = [];
-    
+
     for (final match in tagPattern.allMatches(html)) {
       // Add text before this tag
       if (match.start > lastIndex) {
         final text = html.substring(lastIndex, match.start);
-        spans.add(TextSpan(
-          text: text,
-          style: _getStyleFromStack(styleStack),
-        ));
+        spans.add(TextSpan(text: text, style: _getStyleFromStack(styleStack)));
       }
-      
+
       final isClosing = match.group(1) == '/';
       final tagName = match.group(2)?.toLowerCase() ?? '';
-      
+
       if (isClosing) {
         // Remove last matching tag from stack
         styleStack.remove(tagName);
@@ -110,25 +105,22 @@ class AppThemedDialog extends StatelessWidget {
           styleStack.add(tagName);
         }
       }
-      
+
       lastIndex = match.end;
     }
-    
+
     // Add remaining text
     if (lastIndex < html.length) {
       final text = html.substring(lastIndex);
-      spans.add(TextSpan(
-        text: text,
-        style: _getStyleFromStack(styleStack),
-      ));
+      spans.add(TextSpan(text: text, style: _getStyleFromStack(styleStack)));
     }
-    
+
     return TextSpan(
       children: spans,
       style: const TextStyle(
-        fontSize: 13,
-        color: AppColors.textSecondary,
-        height: 1.4,
+        fontSize: 14,
+        color: AppColors.textPrimary,
+        height: 1.45,
       ),
     );
   }
@@ -138,11 +130,11 @@ class AppThemedDialog extends StatelessWidget {
     bool isBold = stack.contains('b') || stack.contains('strong');
     bool isItalic = stack.contains('i') || stack.contains('em');
     bool isUnderline = stack.contains('u');
-    
+
     return TextStyle(
-      fontSize: 13,
-      color: AppColors.textSecondary,
-      height: 1.4,
+      fontSize: 14,
+      color: AppColors.textPrimary,
+      height: 1.45,
       fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
       fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
       decoration: isUnderline ? TextDecoration.underline : TextDecoration.none,
@@ -157,19 +149,17 @@ class AppThemedDialog extends StatelessWidget {
     final maxHeight = MediaQuery.of(context).size.height * 0.75;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 16,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: base.withOpacity(0.16)),
             gradient: LinearGradient(
-              colors: [
-                Colors.white,
-                base.withOpacity(0.03),
-              ],
+              colors: [AppColors.surface, base.withOpacity(0.07)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -185,65 +175,75 @@ class AppThemedDialog extends StatelessWidget {
                   return Transform.scale(
                     scale: value,
                     child: Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            base.withOpacity(0.1),
-                            baseDark.withOpacity(0.1),
+                            base.withOpacity(0.14),
+                            baseDark.withOpacity(0.16),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: base.withOpacity(0.2),
+                          color: base.withOpacity(0.26),
                           width: 2,
                         ),
                       ),
-                      child: Icon(_typeIcon(), color: base, size: 32),
+                      child: Icon(_typeIcon(), color: base, size: 34),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 10),
 
               // Title
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
+                  letterSpacing: 0.2,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               // Message block - scrollable when content is too long
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: base.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: base.withOpacity(0.2), width: 1),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: base.withOpacity(0.22),
+                      width: 1.2,
+                    ),
                   ),
                   child: SingleChildScrollView(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(_typeIcon(), color: base, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildMessageWidget(),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: base.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(_typeIcon(), color: baseDark, size: 18),
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildMessageWidget()),
                       ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Buttons - always visible at bottom
               Row(
@@ -310,9 +310,10 @@ class _DialogButtonState extends State<_DialogButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -342,10 +343,13 @@ class _DialogButtonState extends State<_DialogButton>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                color: widget.isSecondary ? Colors.transparent : null,
-                borderRadius: BorderRadius.circular(8),
+                color: widget.isSecondary ? AppColors.surface : null,
+                borderRadius: BorderRadius.circular(12),
                 border: widget.isSecondary
-                    ? Border.all(color: AppColors.divider, width: 1.5)
+                    ? Border.all(
+                        color: widget.base.withOpacity(0.35),
+                        width: 1.6,
+                      )
                     : null,
                 boxShadow: widget.isSecondary
                     ? null
@@ -360,16 +364,18 @@ class _DialogButtonState extends State<_DialogButton>
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   onTap: widget.onPressed,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
                     child: Text(
                       widget.text,
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: widget.isSecondary ? AppColors.textSecondary : Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: widget.isSecondary
+                            ? widget.baseDark
+                            : AppColors.surface,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -383,4 +389,3 @@ class _DialogButtonState extends State<_DialogButton>
     );
   }
 }
-
