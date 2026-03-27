@@ -72,7 +72,7 @@ class _DashboardConfigDetailsTabBodyState extends CoreTabBodyState<DashboardConf
 
   Widget _buildGeneralSection() {
     return CardSection(
-      title: 'Dashboard Config Details',
+      title: 'General Information',
       headerIcon: Icons.dashboard_customize_outlined,
       headerColor: Colors.indigo,
       children: [
@@ -96,13 +96,13 @@ class _DashboardConfigDetailsTabBodyState extends CoreTabBodyState<DashboardConf
             {
               'key': 'isDefault',
               'widget': 'checkbox',
-              'label': 'Default Config',
+              'label': 'Is Default Dashboard',
               'checkboxStyle': 'switch',
             },
             {
               'key': 'isActive',
               'widget': 'checkbox',
-              'label': 'Active',
+              'label': 'Is Active',
               'checkboxStyle': 'switch',
             },
           ],
