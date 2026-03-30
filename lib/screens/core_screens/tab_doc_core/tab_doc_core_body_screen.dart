@@ -1,0 +1,23 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image/image.dart' as img;
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:truebpm/providers/core_detail_provider.dart';
+import 'package:truebpm/services/auth_service.dart';
+import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/widgets/core/core_tab_body.dart';
+import 'package:truebpm/widgets/dialogs/custom_confirm_dialog.dart';
+import 'package:truebpm/widgets/loading_overlay.dart';
+import 'package:truebpm/widgets/file_viewer_dialog.dart';
+
+part 'tab_doc_core_body_screen_main.dart';
+part 'tab_doc_core_body_screen_picker.dart';
+part 'tab_doc_core_body_screen_transfer.dart';
+part 'tab_doc_core_body_screen_ui.dart';

@@ -1,0 +1,17 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:truebpm/models/core_detail_model.dart';
+import 'package:truebpm/models/tab_doc_config.dart';
+import 'package:truebpm/providers/core_detail_provider.dart';
+import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/services/auth_service.dart';
+import 'package:truebpm/utils/session_handler.dart';
+import 'package:truebpm/utils/keyboard_utils.dart';
+import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+part 'detail_core_screen_main.dart';
+part 'detail_core_screen_actions.dart';
+part 'detail_core_screen_tabs.dart';
+part 'detail_core_screen_task_actions.dart';
+part 'detail_core_screen_dialogs.dart';
