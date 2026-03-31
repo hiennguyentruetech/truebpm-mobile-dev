@@ -19,63 +19,80 @@ class FileViewerDialog {
     required Map<String, dynamic> fileInfo,
     required Function(BuildContext, String, Uint8List) onSaveToDevice,
   }) async {
-  final classification = _classifyMime(_resolveMime(fileType, fileName));
-  final isOffice = classification == 'word' || classification == 'excel' || classification == 'powerpoint';
-  final isPdf = classification == 'pdf';
+    final classification = _classifyMime(_resolveMime(fileType, fileName));
+    final isOffice =
+        classification == 'word' ||
+        classification == 'excel' ||
+        classification == 'powerpoint';
+    final isPdf = classification == 'pdf';
 
     final choice = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        elevation: 8,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        backgroundColor: const Color(0xFFF7FBFF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 18,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 400),
           padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFD6E7F8), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1565C0).withOpacity(0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // File Icon
               Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: _getFileTypeColor(fileType).withOpacity(0.1),
+                  color: _getFileTypeColor(fileType).withOpacity(0.12),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _getFileTypeColor(fileType).withOpacity(0.24),
+                    width: 1.2,
+                  ),
                 ),
                 child: Icon(
                   _getFileTypeIcon(fileType),
-                  size: 32,
+                  size: 34,
                   color: _getFileTypeColor(fileType),
                 ),
               ),
-              const SizedBox(height: 16),
-              
+              const SizedBox(height: 18),
+
               // File Name
               Text(
                 fileName,
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                  letterSpacing: 0.2,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
-              
+
               // File Info
               Text(
                 '${_formatFileSize(bytes.length)} • ${_getFileTypeDisplayName(fileType, fileName: fileName)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 14, color: const Color(0xFF6B7280)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              
+
               // Action Buttons
               Column(
                 children: [
@@ -88,18 +105,27 @@ class FileViewerDialog {
                         icon: const Icon(Icons.visibility),
                         label: const Text('View File'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: const Color(0xFF2196F3),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 2,
+                          shadowColor: const Color(
+                            0xFF1E88E5,
+                          ).withOpacity(0.35),
+                          minimumSize: const Size.fromHeight(56),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
-                  
+
                   if (isOffice || isPdf) ...[
                     SizedBox(
                       width: double.infinity,
@@ -107,6 +133,23 @@ class FileViewerDialog {
                         onPressed: () => Navigator.of(context).pop('open'),
                         icon: const Icon(Icons.open_in_new),
                         label: const Text('Open in another app'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1976D2),
+                          minimumSize: const Size.fromHeight(56),
+                          backgroundColor: const Color(0xFFEFF6FF),
+                          side: const BorderSide(
+                            color: Color(0xFF2196F3),
+                            width: 1.4,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -120,25 +163,40 @@ class FileViewerDialog {
                       icon: const Icon(Icons.download),
                       label: const Text('Download to Device'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: const Color(0xFF1976D2),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF1565C0).withOpacity(0.32),
+                        minimumSize: const Size.fromHeight(56),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Cancel Button
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade600,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        foregroundColor: const Color(0xFF6B7280),
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -155,7 +213,14 @@ class FileViewerDialog {
 
     // Handle user choice
     if (choice == 'view') {
-      await _viewFile(context, fileName, fileType, bytes, fileInfo, onSaveToDevice);
+      await _viewFile(
+        context,
+        fileName,
+        fileType,
+        bytes,
+        fileInfo,
+        onSaveToDevice,
+      );
     } else if (choice == 'download') {
       await onSaveToDevice(context, fileName, bytes);
     } else if (choice == 'open') {
@@ -336,8 +401,8 @@ class FileViewerDialog {
 
   static bool _isViewableFileType(String fileType) {
     final category = _classifyMime(_resolveMime(fileType, null));
-  // Only allow in-app view for image and text. PDF will be opened with system apps.
-  return category == 'image' || category == 'text';
+    // Only allow in-app view for image and text. PDF will be opened with system apps.
+    return category == 'image' || category == 'text';
   }
 
   static String _getFileTypeDisplayName(String fileType, {String? fileName}) {
@@ -363,7 +428,8 @@ class FileViewerDialog {
   static String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
@@ -419,19 +485,42 @@ class FileViewerDialog {
     try {
       final category = _classifyMime(_resolveMime(fileType, fileName));
       if (category == 'image') {
-        await _showProfessionalImageViewer(context, fileName, bytes, fileInfo, onSaveToDevice);
+        await _showProfessionalImageViewer(
+          context,
+          fileName,
+          bytes,
+          fileInfo,
+          onSaveToDevice,
+        );
       } else if (category == 'pdf') {
         // Open PDFs with installed apps instead of in-app viewing
         await _openWithSystemApp(fileName, bytes, context);
       } else if (category == 'text') {
-        await _showTextViewer(context, fileName, bytes, fileInfo, onSaveToDevice);
-      } else if (category == 'word' || category == 'excel' || category == 'powerpoint') {
-        await _showDocumentViewer(context, fileName, fileType, bytes, fileInfo, onSaveToDevice);
+        await _showTextViewer(
+          context,
+          fileName,
+          bytes,
+          fileInfo,
+          onSaveToDevice,
+        );
+      } else if (category == 'word' ||
+          category == 'excel' ||
+          category == 'powerpoint') {
+        await _showDocumentViewer(
+          context,
+          fileName,
+          fileType,
+          bytes,
+          fileInfo,
+          onSaveToDevice,
+        );
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Viewer for ${_getFileTypeDisplayName(fileType, fileName: fileName)} coming soon'),
+              content: Text(
+                'Viewer for ${_getFileTypeDisplayName(fileType, fileName: fileName)} coming soon',
+              ),
               backgroundColor: Colors.orange,
             ),
           );
@@ -449,7 +538,11 @@ class FileViewerDialog {
     }
   }
 
-  static Future<void> _openWithSystemApp(String fileName, Uint8List bytes, BuildContext context) async {
+  static Future<void> _openWithSystemApp(
+    String fileName,
+    Uint8List bytes,
+    BuildContext context,
+  ) async {
     try {
       final tempDir = await getTemporaryDirectory();
       final tempPath = '${tempDir.path}/$fileName';
@@ -458,13 +551,19 @@ class FileViewerDialog {
       final result = await OpenFilex.open(tempPath);
       if (result.type != ResultType.done && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cannot open file: ${result.message}'), backgroundColor: Colors.orange),
+          SnackBar(
+            content: Text('Cannot open file: ${result.message}'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Open error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Open error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -484,10 +583,7 @@ class FileViewerDialog {
           appBar: AppBar(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
-            title: Text(
-              fileName,
-              overflow: TextOverflow.ellipsis,
-            ),
+            title: Text(fileName, overflow: TextOverflow.ellipsis),
             actions: [
               IconButton(
                 onPressed: () => onSaveToDevice(context, fileName, bytes),
@@ -516,7 +612,8 @@ class FileViewerDialog {
                   color: Colors.white,
                   value: event == null
                       ? 0
-                      : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
+                      : event.cumulativeBytesLoaded /
+                            (event.expectedTotalBytes ?? 1),
                 ),
               ),
             ),
@@ -525,7 +622,6 @@ class FileViewerDialog {
       ),
     );
   }
-
 
   static Future<void> _showTextViewer(
     BuildContext context,
@@ -542,10 +638,7 @@ class FileViewerDialog {
           MaterialPageRoute(
             builder: (context) => Scaffold(
               appBar: AppBar(
-                title: Text(
-                  fileName,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                title: Text(fileName, overflow: TextOverflow.ellipsis),
                 actions: [
                   IconButton(
                     onPressed: () => onSaveToDevice(context, fileName, bytes),
@@ -562,7 +655,11 @@ class FileViewerDialog {
                     color: Colors.indigo.shade50,
                     child: Row(
                       children: [
-                        Icon(Icons.article_outlined, color: Colors.indigo.shade600, size: 20),
+                        Icon(
+                          Icons.article_outlined,
+                          color: Colors.indigo.shade600,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -623,10 +720,7 @@ class FileViewerDialog {
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
-            title: Text(
-              fileName,
-              overflow: TextOverflow.ellipsis,
-            ),
+            title: Text(fileName, overflow: TextOverflow.ellipsis),
             actions: [
               IconButton(
                 onPressed: () => onSaveToDevice(context, fileName, bytes),
@@ -643,7 +737,11 @@ class FileViewerDialog {
                 color: Colors.blue.shade50,
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.blue.shade600,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

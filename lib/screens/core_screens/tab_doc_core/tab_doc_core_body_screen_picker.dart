@@ -6,34 +6,58 @@ extension TabDocCoreBodyPickerExt on _TabDocCoreBodyScreenState {
     final choice = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 8,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        backgroundColor: const Color(0xFFF7FBFF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 18,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 400),
           padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFD6E7F8), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1565C0).withOpacity(0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Icon
               Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEAF3FF), Color(0xFFDDEFFF)],
+                  ),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFC9DFF7),
+                    width: 1.2,
+                  ),
                 ),
                 child: const Icon(
                   Icons.folder_open,
-                  size: 32,
-                  color: Colors.blue,
+                  size: 34,
+                  color: Color(0xFF1976D2),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // Title
               const Text(
                 'Select Source',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                  letterSpacing: 0.2,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -42,13 +66,13 @@ extension TabDocCoreBodyPickerExt on _TabDocCoreBodyScreenState {
               Text(
                 'Choose where to pick files from:',
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
+                  fontSize: 15.5,
+                  color: Color(0xFF6B7280),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // Options
               Column(
@@ -60,11 +84,18 @@ extension TabDocCoreBodyPickerExt on _TabDocCoreBodyScreenState {
                       icon: const Icon(Icons.folder),
                       label: const Text('Device Storage'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: const Color(0xFF2196F3),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF1E88E5).withOpacity(0.35),
+                        minimumSize: const Size.fromHeight(56),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
@@ -77,11 +108,18 @@ extension TabDocCoreBodyPickerExt on _TabDocCoreBodyScreenState {
                       icon: const Icon(Icons.photo_library),
                       label: const Text('Photo Gallery'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: const Color(0xFF1976D2),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF1565C0).withOpacity(0.32),
+                        minimumSize: const Size.fromHeight(56),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
@@ -92,8 +130,16 @@ extension TabDocCoreBodyPickerExt on _TabDocCoreBodyScreenState {
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade600,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        foregroundColor: const Color(0xFF6B7280),
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),

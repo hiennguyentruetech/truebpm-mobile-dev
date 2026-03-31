@@ -5,13 +5,18 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF8FBFF)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD7E8FB), width: 1.1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: const Color(0xFF1565C0).withOpacity(0.10),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -22,23 +27,35 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               onTap: () {
                 _safeSetState(() {
                   _isUploadAreaExpanded = !_isUploadAreaExpanded;
                 });
               },
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
                         ),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1E88E5).withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.cloud_upload,
@@ -54,14 +71,18 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                           Text(
                             'Upload Documents',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF111827),
+                              letterSpacing: 0.2,
                             ),
                           ),
                           Text(
                             'Tap to expand upload options',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF6B7280),
+                            ),
                           ),
                         ],
                       ),
@@ -70,19 +91,21 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                     if (_selectedFiles.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 10,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF42A5F5), Color(0xFF1E88E5)],
+                          ),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          '${_selectedFiles.length}',
+                          '${_selectedFiles.length} selected',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -92,7 +115,7 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                       duration: const Duration(milliseconds: 300),
                       child: Icon(
                         Icons.keyboard_arrow_down,
-                        color: Colors.grey.shade600,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
                   ],
@@ -112,10 +135,10 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
               child: _isUploadAreaExpanded
                   ? Container(
                       padding: const EdgeInsets.only(
-                        left: 10,
-                        right: 10,
-                        bottom: 10,
-                        top: 5,
+                        left: 12,
+                        right: 12,
+                        bottom: 12,
+                        top: 6,
                       ),
                       child: Column(
                         children: [
@@ -128,9 +151,11 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                                   label: 'Files & Gallery',
                                   onTap: _pickFiles,
                                   gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                     colors: [
-                                      Color(0xFF4FACFE),
-                                      Color(0xFF00F2FE),
+                                      Color.fromARGB(255, 22, 61, 170),
+                                      Color.fromARGB(255, 76, 109, 180),
                                     ],
                                   ),
                                 ),
@@ -142,9 +167,11 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                                   label: 'Camera',
                                   onTap: _pickFromCamera,
                                   gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                     colors: [
-                                      Color(0xFFFA709A),
-                                      Color(0xFFFEE140),
+                                      Color.fromARGB(255, 52, 73, 105),
+                                      Color.fromARGB(255, 107, 118, 141),
                                     ],
                                   ),
                                 ),
@@ -180,21 +207,22 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
       onTap: _isProcessing ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           gradient: _isProcessing
               ? LinearGradient(
                   colors: [Colors.grey.shade300, Colors.grey.shade400],
                 )
               : gradient,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.35), width: 1),
           boxShadow: _isProcessing
               ? []
               : [
                   BoxShadow(
-                    color: gradient.colors.first.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: gradient.colors.first.withOpacity(0.26),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
                 ],
         ),
@@ -450,16 +478,19 @@ extension TabDocCoreBodyUiExt on _TabDocCoreBodyScreenState {
                   colors: [Colors.grey.shade300, Colors.grey.shade400],
                 )
               : const LinearGradient(
-                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF42A5F5), Color(0xFF1565C0)],
                 ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.28), width: 1),
           boxShadow: _isUploading
               ? []
               : [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                    color: const Color(0xFF1E88E5).withOpacity(0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
         ),
