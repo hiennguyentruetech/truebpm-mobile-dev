@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/styles/app_colors.dart';
 
-/// Unified App Dialog styled after TakeTaskDialog, with color variants
-/// for info, success, warning, and error. Supports 1 or 2 actions.
 enum AppDialogType { neutral, info, success, warning, error }
 
 class AppThemedDialog extends StatelessWidget {
@@ -67,27 +65,22 @@ class AppThemedDialog extends StatelessWidget {
       case AppDialogType.error:
         return Icons.error_outline_rounded;
       case AppDialogType.info:
-        return Icons.info_outline_rounded;
       case AppDialogType.neutral:
         return Icons.info_outline_rounded;
     }
   }
 
-  /// Parse simple HTML tags and return RichText widget
   Widget _buildMessageWidget() {
     return RichText(text: _parseHtmlToTextSpan(message));
   }
 
-  /// Parse HTML string to TextSpan with basic tag support
   TextSpan _parseHtmlToTextSpan(String html) {
-    final List<TextSpan> spans = [];
-    final RegExp tagPattern = RegExp(r'<(/?)(\w+)>');
-
-    int lastIndex = 0;
-    final List<String> styleStack = [];
+    final spans = <TextSpan>[];
+    final tagPattern = RegExp(r'<(/?)(\w+)>');
+    var lastIndex = 0;
+    final styleStack = <String>[];
 
     for (final match in tagPattern.allMatches(html)) {
-      // Add text before this tag
       if (match.start > lastIndex) {
         final text = html.substring(lastIndex, match.start);
         spans.add(TextSpan(text: text, style: _getStyleFromStack(styleStack)));
@@ -97,19 +90,14 @@ class AppThemedDialog extends StatelessWidget {
       final tagName = match.group(2)?.toLowerCase() ?? '';
 
       if (isClosing) {
-        // Remove last matching tag from stack
         styleStack.remove(tagName);
-      } else {
-        // Add tag to stack
-        if (['b', 'strong', 'i', 'em', 'u'].contains(tagName)) {
-          styleStack.add(tagName);
-        }
+      } else if (['b', 'strong', 'i', 'em', 'u'].contains(tagName)) {
+        styleStack.add(tagName);
       }
 
       lastIndex = match.end;
     }
 
-    // Add remaining text
     if (lastIndex < html.length) {
       final text = html.substring(lastIndex);
       spans.add(TextSpan(text: text, style: _getStyleFromStack(styleStack)));
@@ -125,11 +113,10 @@ class AppThemedDialog extends StatelessWidget {
     );
   }
 
-  /// Build TextStyle based on active HTML tags
   TextStyle _getStyleFromStack(List<String> stack) {
-    bool isBold = stack.contains('b') || stack.contains('strong');
-    bool isItalic = stack.contains('i') || stack.contains('em');
-    bool isUnderline = stack.contains('u');
+    final isBold = stack.contains('b') || stack.contains('strong');
+    final isItalic = stack.contains('i') || stack.contains('em');
+    final isUnderline = stack.contains('u');
 
     return TextStyle(
       fontSize: 14,
@@ -141,135 +128,178 @@ class AppThemedDialog extends StatelessWidget {
     );
   }
 
+  Color _toneForBusiness(
+    Color color, {
+    double saturationFactor = 0.60,
+    double lightnessBoost = 0.06,
+  }) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withSaturation((hsl.saturation * saturationFactor).clamp(0.0, 1.0))
+        .withLightness((hsl.lightness + lightnessBoost).clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  Color _softStatusBackground(Color color) {
+    return Color.alphaBlend(color.withOpacity(0.10), AppColors.surface);
+  }
+
   @override
   Widget build(BuildContext context) {
     final base = _typeColor();
     final baseDark = _typeColorDark();
-
-    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+    final headerEnd = _toneForBusiness(
+      baseDark,
+      saturationFactor: 0.50,
+      lightnessBoost: 0.06,
+    );
+    final actionBase = _toneForBusiness(
+      base,
+      saturationFactor: 0.56,
+      lightnessBoost: 0.05,
+    );
+    final actionBaseDark = _toneForBusiness(
+      baseDark,
+      saturationFactor: 0.62,
+      lightnessBoost: 0.03,
+    );
+    final panelBg = _softStatusBackground(base);
+    final maxHeight = MediaQuery.of(context).size.height * 0.78;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      elevation: 16,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 18,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
+        constraints: BoxConstraints(
+          maxWidth: 400,
+          minWidth: 320,
+          maxHeight: maxHeight,
+        ),
         child: Container(
-          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: base.withOpacity(0.16)),
-            gradient: LinearGradient(
-              colors: [AppColors.surface, base.withOpacity(0.07)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: base.withOpacity(0.22), width: 1.3),
+            color: panelBg,
+            boxShadow: [
+              BoxShadow(
+                color: base.withOpacity(0.10),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 400),
-                tween: Tween<double>(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            base.withOpacity(0.14),
-                            baseDark.withOpacity(0.16),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 350),
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.44),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: base.withOpacity(0.30),
+                                width: 1.4,
+                              ),
+                            ),
+                            child: Icon(
+                              _typeIcon(),
+                              color: headerEnd,
+                              size: 30,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        color: headerEnd,
+                        letterSpacing: 0.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: base.withOpacity(0.20),
+                            width: 1.2,
+                          ),
                         ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: base.withOpacity(0.26),
-                          width: 2,
+                        child: Scrollbar(
+                          thumbVisibility: false,
+                          child: SingleChildScrollView(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: base.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    _typeIcon(),
+                                    color: baseDark,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(child: _buildMessageWidget()),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      child: Icon(_typeIcon(), color: base, size: 34),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // Title
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: 0.2,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-
-              // Message block - scrollable when content is too long
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: base.withOpacity(0.22),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 16),
+                    Row(
                       children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: base.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
+                        if (cancelText != null) ...[
+                          Expanded(
+                            child: _DialogButton(
+                              text: cancelText!,
+                              isSecondary: true,
+                              base: actionBase,
+                              baseDark: actionBaseDark,
+                              onPressed: onCancel ?? () {},
+                            ),
                           ),
-                          child: Icon(_typeIcon(), color: baseDark, size: 18),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: _DialogButton(
+                            text: confirmText,
+                            isSecondary: false,
+                            base: actionBase,
+                            baseDark: actionBaseDark,
+                            onPressed: onConfirm,
+                          ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildMessageWidget()),
                       ],
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Buttons - always visible at bottom
-              Row(
-                children: [
-                  if (cancelText != null) ...[
-                    Expanded(
-                      child: _DialogButton(
-                        text: cancelText!,
-                        isSecondary: true,
-                        base: base,
-                        baseDark: baseDark,
-                        onPressed: onCancel ?? () {},
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                   ],
-                  Expanded(
-                    child: _DialogButton(
-                      text: confirmText,
-                      isSecondary: false,
-                      base: base,
-                      baseDark: baseDark,
-                      onPressed: onConfirm,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),

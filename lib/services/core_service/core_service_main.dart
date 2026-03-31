@@ -73,6 +73,8 @@ class CoreService {
     return performAction(moduleCode, tabModuleCode, 'SAVE', {
       'user': userData,
       'itemDetail': itemDetail,
+      'moduleCode': moduleCode,
+      'tabModuleCode': tabModuleCode,
       'dataSpy': dataSpy,
     });
   }
@@ -88,6 +90,8 @@ class CoreService {
     return performAction(moduleCode, tabModuleCode, 'SUBMIT', {
       'user': userData,
       'itemDetail': itemDetail,
+      'moduleCode': moduleCode,
+      'tabModuleCode': tabModuleCode,
       'dataSpy': dataSpy,
     });
   }
@@ -100,9 +104,13 @@ class CoreService {
     Map<String, dynamic> itemDetail,
     Map<String, dynamic> dataSpy,
   ) async {
-    return performAction(moduleCode, tabModuleCode, 'COPY', {
+    // Keep legacy behavior: COPY endpoint/payload always targets DTLS.
+    const effectiveTabModuleCode = 'DTLS';
+    return performAction(moduleCode, effectiveTabModuleCode, 'COPY', {
       'user': userData,
       'itemDetail': itemDetail,
+      'moduleCode': moduleCode,
+      'tabModuleCode': effectiveTabModuleCode,
       'dataSpy': dataSpy,
     });
   }
@@ -115,9 +123,12 @@ class CoreService {
     Map<String, dynamic> itemDetail,
     Map<String, dynamic> dataSpy,
   ) async {
-    return performAction(moduleCode, tabModuleCode, 'CANCEL', {
+    const effectiveTabModuleCode = 'DTLS';
+    return performAction(moduleCode, effectiveTabModuleCode, 'CANCEL', {
       'user': userData,
       'itemDetail': itemDetail,
+      'moduleCode': moduleCode,
+      'tabModuleCode': effectiveTabModuleCode,
       'dataSpy': dataSpy,
     });
   }
@@ -130,9 +141,12 @@ class CoreService {
     Map<String, dynamic> itemDetail,
     Map<String, dynamic> dataSpy,
   ) async {
-    return performAction(moduleCode, tabModuleCode, 'DELETE', {
+    const effectiveTabModuleCode = 'DTLS';
+    return performAction(moduleCode, effectiveTabModuleCode, 'DELETE', {
       'user': userData,
-      'itemDetail': itemDetail,
+      'listItem': itemDetail['value'] ?? itemDetail,
+      'moduleCode': moduleCode,
+      'tabModuleCode': effectiveTabModuleCode,
       'dataSpy': dataSpy,
     });
   }
@@ -207,13 +221,12 @@ class CoreService {
       );
 
       return _handleApiResponseSuccess(response);
-    } on Exception catch (e) {
+    } catch (e, stack) {
       if (e.toString().contains('No user info found')) {
         logger.e('❌ No user info found');
         return null;
       }
-      rethrow;
-    } catch (e, stack) {
+
       _logApiError(
         url: '${hosts.coreUrl}$endpoint',
         error: e,
