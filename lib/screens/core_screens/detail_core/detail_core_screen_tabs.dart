@@ -14,11 +14,11 @@ extension _DetailCoreScreenTabsExt on _DetailCoreScreenState {
       ),
       child: Consumer<CoreDetailProvider>(
         builder: (context, provider, child) {
-          final isNewRecord = _isNewRecord(provider);
+          final isNew = isNewRecord(provider);
 
           // Filter out hidden tabs and for new records, only show default tab (DTLS)
           List<TabConfig> visibleTabs;
-          if (isNewRecord) {
+          if (isNew) {
             visibleTabs = tabs
                 .where(
                   (tab) =>
@@ -119,7 +119,7 @@ extension _DetailCoreScreenTabsExt on _DetailCoreScreenState {
                             selectedTab.code,
                           );
                           if (!isTabDisabled) {
-                            await _changeTab(selectedTab.code);
+                            await changeTab(selectedTab.code);
                           }
                         },
                         tabs: visibleTabs.asMap().entries.map((entry) {
@@ -338,7 +338,7 @@ extension _DetailCoreScreenTabsExt on _DetailCoreScreenState {
                                       index < _tabController!.length) {
                                     _tabController!.index = index;
                                   }
-                                  await _changeTab(tab.code);
+                                  await changeTab(tab.code);
                                 },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -641,7 +641,7 @@ extension _DetailCoreScreenTabsExt on _DetailCoreScreenState {
           itemId: provider.itemDetail?.value['id']?.toString(),
           initialData: provider.rawResponse, // Truyền toàn bộ raw response động
           onDataChanged: (updatedData) =>
-              _handleDataChanged(provider, updatedData),
+              handleDataChanged(provider, updatedData),
         ),
       ),
     );

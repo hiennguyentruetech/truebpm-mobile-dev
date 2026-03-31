@@ -15,3 +15,6 @@ part 'detail_core_screen_actions.dart';
 part 'detail_core_screen_tabs.dart';
 part 'detail_core_screen_task_actions.dart';
 part 'detail_core_screen_dialogs.dart';
+part 'detail_core_screen_change_tracking.dart';
+part 'detail_core_screen_navigation.dart';
+part 'detail_core_screen_helpers.dart';

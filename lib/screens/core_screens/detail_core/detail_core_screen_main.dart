@@ -135,12 +135,12 @@ class _DetailCoreScreenState extends State<DetailCoreScreen>
         widget.listItem,
         tabModuleCode: _currentTabCode,
         availableTabs: widget.availableTabs,
-        onSessionExpired: _handleSessionExpired,
+        onSessionExpired: handleSessionExpired,
         initialDocSubTabCode: initialDocSubTabCode,
       );
 
       // Initialize original data for change tracking
-      _initializeChangeTracking();
+      initializeChangeTracking();
     });
   }
 
@@ -151,311 +151,10 @@ class _DetailCoreScreenState extends State<DetailCoreScreen>
     super.dispose();
   }
 
-  /// Initialize change tracking with current data
-  void _initializeChangeTracking() {
-    if (_provider.rawResponse != null) {
-      // Legacy fallback snapshots (kept for compatibility)
-      _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
-      _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
-
-      // New sanitized editable snapshot
-      _originalEditableSnapshot = _buildEditableSnapshot(_provider);
-      _screenInitTime ??= DateTime.now(); // set only first time
-      _hasUnsavedChanges = false;
-      if (_debugDirtyTracking) {
-        debugPrint(
-          '[DirtyTrack] Baseline initialized. Keys=${_originalEditableSnapshot.keys.length}',
-        );
-      }
-    }
-  }
-
-  /// Check if there are unsaved changes by comparing current data with original data
-  bool _checkForUnsavedChanges() {
-    if (_provider.rawResponse == null) return false;
-
-    // Suppression windows (initial load or shortly after tab switch)
-    final now = DateTime.now();
-    if (_screenInitTime != null &&
-        now.difference(_screenInitTime!) < _initialSuppression) {
-      if (_debugDirtyTracking)
-        debugPrint('[DirtyTrack] Suppressed (initial load window)');
-      return false;
-    }
-    if (_lastTabChangeTime != null &&
-        now.difference(_lastTabChangeTime!) < _tabSwitchSuppression) {
-      if (_debugDirtyTracking)
-        debugPrint('[DirtyTrack] Suppressed (tab switch window)');
-      return false;
-    }
-
-    final currentSnapshot = _buildEditableSnapshot(_provider);
-    final changed = _deepCompareData(
-      _originalEditableSnapshot,
-      currentSnapshot,
-    );
-    if (_debugDirtyTracking && changed) {
-      debugPrint('[DirtyTrack] Detected change.');
-    }
-    return changed;
-  }
-
-  /// Deep comparison of two data maps
-  bool _deepCompareData(dynamic data1, dynamic data2) {
-    if (data1.runtimeType != data2.runtimeType) return true;
-
-    if (data1 is Map) {
-      if (data2 is! Map) return true;
-      if (data1.length != data2.length) return true;
-
-      for (final key in data1.keys) {
-        if (!data2.containsKey(key)) return true;
-        if (_deepCompareData(data1[key], data2[key])) return true;
-      }
-      return false;
-    } else if (data1 is List) {
-      if (data2 is! List) return true;
-      if (data1.length != data2.length) return true;
-
-      for (int i = 0; i < data1.length; i++) {
-        if (_deepCompareData(data1[i], data2[i])) return true;
-      }
-      return false;
-    } else {
-      return data1 != data2;
-    }
-  }
-
-  /// Show discard changes confirmation dialog
-  Future<bool> _showDiscardChangesDialog() async {
-    if (!_hasUnsavedChanges) return true;
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _DiscardChangesDialog(),
-    );
-
-    return result ?? false;
-  }
-
-  /// Handle data changes from widgets
-  void _handleDataChanged(
-    CoreDetailProvider provider,
-    Map<String, dynamic> updatedData,
-  ) {
-    provider.updateRawResponse(updatedData);
-
-    // Check for unsaved changes
-    _hasUnsavedChanges = _checkForUnsavedChanges();
-  }
-
-  /// Reset change tracking after successful save
-  void _resetChangeTracking() {
-    if (_provider.rawResponse != null) {
-      _originalData = Map<String, dynamic>.from(_provider.rawResponse!);
-      _currentData = Map<String, dynamic>.from(_provider.rawResponse!);
-      _originalEditableSnapshot = _buildEditableSnapshot(_provider);
-      _hasUnsavedChanges = false;
-      if (_debugDirtyTracking) debugPrint('[DirtyTrack] Baseline reset.');
-    }
-  }
-
   // Allow extracted part methods to trigger state updates safely.
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
     setState(fn);
-  }
-
-  /// Override back button behavior to check for unsaved changes
-  Future<bool> _onWillPop() async {
-    if (_hasUnsavedChanges) {
-      final shouldDiscard = await _showDiscardChangesDialog();
-      if (shouldDiscard) {
-        return true; // Allow back navigation
-      } else {
-        return false; // Prevent back navigation
-      }
-    }
-    return true; // Allow back navigation if no changes
-  }
-
-  /// Handle swipe back gesture with custom behavior
-  Future<bool> _onSwipeBack() async {
-    if (_hasUnsavedChanges) {
-      final shouldDiscard = await _showDiscardChangesDialog();
-      if (shouldDiscard) {
-        return true; // Allow swipe back
-      } else {
-        return false; // Prevent swipe back
-      }
-    }
-    return true; // Allow swipe back if no changes
-  }
-
-  void _handleSessionExpired() {
-    SessionHandler.handleSessionExpired(context);
-  }
-
-  Future<void> _changeTab(String tabCode) async {
-    // Check for unsaved changes before switching tabs
-    if (_hasUnsavedChanges) {
-      final shouldDiscard = await _showDiscardChangesDialog();
-      if (!shouldDiscard) {
-        // User chose Cancel - revert tab selection to current tab
-        if (_tabController != null) {
-          final currentIndex = widget.availableTabs.indexWhere(
-            (tab) => tab.code == _currentTabCode,
-          );
-          if (currentIndex >= 0) {
-            _tabController!.index = currentIndex;
-          }
-        }
-        return; // Stay on current tab
-      }
-      // Reset change tracking if discarding
-      _resetChangeTracking();
-    }
-
-    setState(() {
-      _currentTabCode = tabCode;
-    });
-    // Mark tab switch time for suppression window
-    _lastTabChangeTime = DateTime.now();
-
-    // If switching to DOC, determine the default sub-tab
-    String? docSubTabCode;
-    if (tabCode.toUpperCase() == 'DOC' &&
-        widget.docSubTabs != null &&
-        widget.docSubTabs!.isNotEmpty) {
-      // Only set if not already set
-      _currentDocSubTabCode ??= widget.docSubTabs!
-          .firstWhere(
-            (t) => t.isDefault,
-            orElse: () => widget.docSubTabs!.first,
-          )
-          .code;
-      docSubTabCode = _currentDocSubTabCode;
-    }
-
-    // Call provider to switch tab and fetch new data with sub-tab if applicable
-    _provider.switchTab(
-      tabCode,
-      onSessionExpired: _handleSessionExpired,
-      docSubTabCode: docSubTabCode,
-    );
-
-    // Re-initialize change tracking for new tab
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeChangeTracking();
-    });
-  }
-
-  // Build a sanitized snapshot focusing on editable content only
-  Map<String, dynamic> _buildEditableSnapshot(CoreDetailProvider provider) {
-    final raw = provider.rawResponse;
-    if (raw == null) return {};
-
-    // Prefer nested itemDetail.value if present
-    dynamic itemDetail = raw['itemDetail'];
-    if (itemDetail is Map<String, dynamic>) {
-      if (itemDetail.containsKey('value') &&
-          itemDetail['value'] is Map<String, dynamic>) {
-        itemDetail = itemDetail['value'];
-      } else if (itemDetail.containsKey('itemDetail') &&
-          itemDetail['itemDetail'] is Map<String, dynamic>) {
-        // Some responses nest deeper
-        final nested = itemDetail['itemDetail'];
-        if (nested is Map<String, dynamic> && nested.containsKey('value')) {
-          itemDetail = nested['value'];
-        }
-      }
-    }
-
-    if (itemDetail is! Map<String, dynamic>) {
-      return {};
-    }
-
-    final volatileKeys = {
-      'lastModifiedDate',
-      'lastModified',
-      'lastUpdate',
-      'updatedAt',
-      'updatedTime',
-      'status',
-      'statusHistory',
-      'logs',
-      'attachments',
-      'comments',
-      '_timestamp',
-    };
-
-    dynamic sanitize(dynamic input) {
-      if (input is Map<String, dynamic>) {
-        final result = <String, dynamic>{};
-        input.forEach((k, v) {
-          if (volatileKeys.contains(k)) return; // skip volatile
-          result[k] = sanitize(v);
-        });
-        return result;
-      } else if (input is List) {
-        return input.map(sanitize).toList();
-      } else {
-        return input; // primitive
-      }
-    }
-
-    final sanitized = sanitize(itemDetail);
-    if (sanitized is Map<String, dynamic>) {
-      return sanitized;
-    }
-    return {};
-  }
-
-  /// Check if the current record is new (no ID)
-  bool _isNewRecord(CoreDetailProvider provider) {
-    final itemDetail = provider.itemDetail?.value;
-    if (itemDetail == null) return widget.listItem['action'] == 'NEW';
-
-    final id = itemDetail['id'];
-    return id == null || id.toString().isEmpty;
-  }
-
-  /// Check if the current record was created from "New" action in list
-  bool _isFromNewAction() {
-    return widget.listItem['action'] == 'NEW';
-  }
-
-  /// Check if this operation should trigger list refresh (NEW or COPY -> SAVE)
-  bool _shouldRefreshListOnSave() {
-    return _isFromNewAction() || _wasCopyOperation();
-  }
-
-  /// Check if this was originally a COPY operation that should refresh list on save
-  bool _wasCopyOperation() {
-    // Check if we have cached COPY response in provider, indicating this was a COPY operation
-    // Use the local provider instance to avoid depending on context lookup during lifecycle transitions
-    return _provider.currentCachedAction == 'COPY';
-  }
-
-  void _showGenericErrorAndBack(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      CoreActionDialog.showResponseDialog(
-        context,
-        response: {
-          'success': false,
-          'messageType': 'error',
-          'message': message,
-        },
-        title: 'Error',
-      );
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
-      });
-    });
   }
 
   @override
@@ -472,12 +171,12 @@ class _DetailCoreScreenState extends State<DetailCoreScreen>
                 provider.lastErrorMessage ??
                 'Connection error. Please try again later.';
             provider.clearLastError();
-            _showGenericErrorAndBack(msg);
+            showGenericErrorAndBack(msg);
           }
           return WillPopScope(
-            onWillPop: _onWillPop,
+            onWillPop: onWillPop,
             child: _SwipeBackHandler(
-              onSwipeBack: _onSwipeBack,
+              onSwipeBack: onSwipeBack,
               child: Scaffold(
                 appBar: _buildAppBar(provider),
                 body: Stack(

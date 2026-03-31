@@ -3,7 +3,7 @@ part of 'detail_core_screen.dart';
 extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
   List<Widget> _buildAppBarActions(CoreDetailProvider provider) {
     List<Widget> actions = [];
-    final isNewRecord = _isNewRecord(provider);
+    final isNew = isNewRecord(provider);
 
     // Quick Save Action - check if save is hidden or disabled
     if (provider.isToolbarVisible(ToolbarAction.save)) {
@@ -58,7 +58,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
 
     // Copy action - disabled for new records and hidden when from task screen
     if (provider.isToolbarVisible(ToolbarAction.copy) &&
-        !isNewRecord &&
+        !isNew &&
         !widget.fromTaskScreen) {
       final isCopyDisabled = !provider.isToolbarEnabled(ToolbarAction.copy);
       menuItems.add(
@@ -73,7 +73,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
     }
 
     // Print action - disabled for new records
-    if (provider.isToolbarVisible(ToolbarAction.print) && !isNewRecord) {
+    if (provider.isToolbarVisible(ToolbarAction.print) && !isNew) {
       final isPrintDisabled = !provider.isToolbarEnabled(ToolbarAction.print);
       menuItems.add(
         _buildToolbarPopupItem(
@@ -88,7 +88,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
 
     // Cancel action - disabled for new records and hidden when from task screen
     if (provider.isToolbarVisible(ToolbarAction.cancel) &&
-        !isNewRecord &&
+        !isNew &&
         !widget.fromTaskScreen) {
       final isCancelDisabled = !provider.isToolbarEnabled(ToolbarAction.cancel);
       menuItems.add(
@@ -104,7 +104,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
 
     // Add divider if we have delete action
     if (provider.isToolbarVisible(ToolbarAction.delete) &&
-        !isNewRecord &&
+        !isNew &&
         !widget.fromTaskScreen &&
         menuItems.isNotEmpty) {
       menuItems.add(const PopupMenuDivider(height: 10));
@@ -112,7 +112,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
 
     // Delete action - disabled for new records and hidden when from task screen
     if (provider.isToolbarVisible(ToolbarAction.delete) &&
-        !isNewRecord &&
+        !isNew &&
         !widget.fromTaskScreen) {
       final isDeleteDisabled = !provider.isToolbarEnabled(ToolbarAction.delete);
       menuItems.add(
@@ -273,7 +273,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
         });
         await _provider.switchTab(
           defaultTabCode,
-          onSessionExpired: _handleSessionExpired,
+          onSessionExpired: handleSessionExpired,
         );
       }
 
@@ -296,7 +296,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
           // Update provider state from response
           provider.updateDataAfterCopy(response);
           // Reset change tracking after successful copy
-          _resetChangeTracking();
+          resetChangeTracking();
           // Do NOT mutate widget.listItem here. We keep list screen data intact.
         }
 
@@ -428,7 +428,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
           if (response['success'] == true) {
             provider.updateDataAfterSave(response);
             // Reset change tracking after successful cancel
-            _resetChangeTracking();
+            resetChangeTracking();
           }
 
           CoreActionDialog.showResponseDialog(
@@ -512,7 +512,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
           if (response['success'] == true) {
             provider.updateDataAfterSave(response);
             // Reset change tracking after successful delete
-            _resetChangeTracking();
+            resetChangeTracking();
           }
 
           CoreActionDialog.showResponseDialog(
@@ -585,9 +585,9 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
           provider.updateDataAfterSave(response);
 
           // Reset change tracking after successful save
-          _resetChangeTracking();
+          resetChangeTracking();
 
-          if (_isFromNewAction()) {
+          if (isFromNewAction()) {
             try {
               final newItemDetail = response['itemDetail'];
               if (newItemDetail != null &&
@@ -613,7 +613,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
           response: response,
           title: 'Save Operation',
           onSuccess: () {
-            if (_shouldRefreshListOnSave() &&
+            if (shouldRefreshListOnSave() &&
                 widget.onOperationSuccess != null) {
               widget.onOperationSuccess!();
               provider.clearCachedAction();
@@ -678,7 +678,7 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
         if (response['success'] == true) {
           provider.updateDataAfterSave(response);
           // Reset change tracking after successful submit
-          _resetChangeTracking();
+          resetChangeTracking();
         }
 
         CoreActionDialog.showResponseDialog(
@@ -729,12 +729,12 @@ extension _DetailCoreScreenActionsExt on _DetailCoreScreenState {
 
       // Re-fetch data for current tab
       await provider.fetchDetailData(
-        onSessionExpired: _handleSessionExpired,
+        onSessionExpired: handleSessionExpired,
         forceRefresh: false,
       );
 
       // Reset change tracking after refresh
-      _resetChangeTracking();
+      resetChangeTracking();
 
       if (mounted) {
         CoreActionDialog.showResponseDialog(
