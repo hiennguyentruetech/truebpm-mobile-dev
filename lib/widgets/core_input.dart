@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
+import 'package:truebpm/utils/functions.dart';
 
 /// Input types enum for CoreInput
 enum CoreInputType {
@@ -15,7 +16,7 @@ enum CoreInputType {
 }
 
 /// Core input widget with dynamic data binding and professional design
-/// 
+///
 /// Features:
 /// - Overlapping text label animation
 /// - Dynamic data binding with itemDetail
@@ -26,48 +27,49 @@ enum CoreInputType {
 class CoreInput extends StatefulWidget {
   /// Manually specify if the field is required (overrides API if set)
   final bool? required;
+
   /// The key to bind value from itemDetail.value.<key>
   final String dataKey;
-  
+
   /// The complete item detail response containing value, attribute, etc.
   final Map<String, dynamic> itemDetail;
-  
+
   /// Display label for the input (defaults to dataKey if not provided)
   final String? label;
-  
+
   /// Input type (text, number, currency, textarea, etc.)
   final CoreInputType type;
-  
+
   /// Suffix symbol/text (e.g., "VND", "$", "L", "m", etc.)
   final String? suffix;
-  
+
   /// Callback when value changes
   final ValueChanged<String>? onChanged;
-  
+
   /// Custom validation function
   final String? Function(String?)? validator;
-  
+
   /// Hint text for the input
   final String? hintText;
-  
+
   /// Maximum number of lines (for textarea type)
   final int? maxLines;
-  
+
   /// Custom text style
   final TextStyle? textStyle;
-  
+
   /// Custom input decoration
   final InputDecoration? decoration;
-  
+
   /// Focus node for the input
   final FocusNode? focusNode;
-  
+
   /// Whether to show character counter
   final bool showCounter;
-  
+
   /// Maximum length of input
   final int? maxLength;
-  
+
   /// Number of decimal places for number type (default: 0 for integer display)
   final int decimalPlaces;
 
@@ -123,26 +125,28 @@ class _CoreInputState extends State<CoreInput> {
   bool get _isRequired {
     if (widget.required != null) return widget.required!;
     // Fallback to API attribute if available
-    final requiredAttr = widget.itemDetail['attribute']?['required']?[widget.dataKey];
+    final requiredAttr =
+        widget.itemDetail['attribute']?['required']?[widget.dataKey];
     return requiredAttr == true;
   }
+
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  
+
   bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize controllers
     _controller = TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    
+
     // Setup listeners
     _focusNode.addListener(_onFocusChange);
     _controller.addListener(_onTextChange);
-    
+
     // Set initial value
     _setInitialValue();
   }
@@ -159,9 +163,10 @@ class _CoreInputState extends State<CoreInput> {
   @override
   void didUpdateWidget(CoreInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Check if itemDetail or dataKey changed
-    if (oldWidget.itemDetail != widget.itemDetail || oldWidget.dataKey != widget.dataKey) {
+    if (oldWidget.itemDetail != widget.itemDetail ||
+        oldWidget.dataKey != widget.dataKey) {
       final newValue = _getCurrentValue();
       if (!_focusNode.hasFocus) {
         if (widget.type == CoreInputType.number) {
@@ -190,7 +195,7 @@ class _CoreInputState extends State<CoreInput> {
     setState(() {
       _isFocused = _focusNode.hasFocus;
     });
-    
+
     // When unfocusing, sync with latest value from itemDetail
     _handleUnfocus();
   }
@@ -199,7 +204,8 @@ class _CoreInputState extends State<CoreInput> {
     if (widget.onChanged == null) return;
     if (widget.onlyView) return; // Do not propagate any value changes
 
-    if (widget.type == CoreInputType.number || widget.type == CoreInputType.currency) {
+    if (widget.type == CoreInputType.number ||
+        widget.type == CoreInputType.currency) {
       // Real-time auto-adjust for min/max values
       final adjustedText = _autoAdjustMinMaxValueRealTime(_controller.text);
       if (adjustedText != _controller.text) {
@@ -222,7 +228,8 @@ class _CoreInputState extends State<CoreInput> {
   void _handleUnfocus() {
     if (!_focusNode.hasFocus) {
       final latestValue = _getCurrentValue();
-      if (widget.type == CoreInputType.number || widget.type == CoreInputType.currency) {
+      if (widget.type == CoreInputType.number ||
+          widget.type == CoreInputType.currency) {
         // Auto-adjust min/max values before formatting
         final adjustedValue = _autoAdjustMinMaxValue(_controller.text);
 
@@ -274,7 +281,9 @@ class _CoreInputState extends State<CoreInput> {
     if (adjustedValue != numValue) {
       // Format back to EU style (use comma as decimal separator)
       if (widget.decimalPlaces > 0) {
-        return adjustedValue.toStringAsFixed(widget.decimalPlaces).replaceAll('.', ',');
+        return adjustedValue
+            .toStringAsFixed(widget.decimalPlaces)
+            .replaceAll('.', ',');
       } else {
         return adjustedValue.toInt().toString();
       }
@@ -317,7 +326,9 @@ class _CoreInputState extends State<CoreInput> {
     if (wasAdjusted) {
       // Format back to EU style (use comma as decimal separator)
       if (widget.decimalPlaces > 0) {
-        return adjustedValue.toStringAsFixed(widget.decimalPlaces).replaceAll('.', ',');
+        return adjustedValue
+            .toStringAsFixed(widget.decimalPlaces)
+            .replaceAll('.', ',');
       } else {
         return adjustedValue.toInt().toString();
       }
@@ -392,14 +403,14 @@ class _CoreInputState extends State<CoreInput> {
 
   String get _displayLabel {
     if (widget.label != null) return widget.label!;
-    
+
     // Convert camelCase to Title Case
-    return widget.dataKey.replaceAllMapped(
-      RegExp(r'([A-Z])'),
-      (match) => ' ${match.group(0)}',
-    ).trim().split(' ').map((word) => 
-      word[0].toUpperCase() + word.substring(1).toLowerCase()
-    ).join(' ');
+    return widget.dataKey
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}')
+        .trim()
+        .split(' ')
+        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .join(' ');
   }
 
   Widget get _buildLabel {
@@ -411,11 +422,11 @@ class _CoreInputState extends State<CoreInput> {
             TextSpan(
               text: labelText,
               style: TextStyle(
-                color: _isDisabled 
-                  ? _disabledLabelColor
-                  : (_isFocused 
-                    ? Colors.blue.shade600 
-                    : const Color.fromARGB(255, 91, 91, 91)),
+                color: _isDisabled
+                    ? _disabledLabelColor
+                    : (_isFocused
+                          ? Colors.blue.shade600
+                          : const Color.fromARGB(255, 91, 91, 91)),
                 fontSize: 17,
                 fontWeight: FontWeight.w500,
               ),
@@ -435,11 +446,11 @@ class _CoreInputState extends State<CoreInput> {
       return Text(
         labelText,
         style: TextStyle(
-          color: _isDisabled 
-            ? _disabledLabelColor
-            : (_isFocused 
-              ? Colors.blue.shade600 
-              : const Color.fromARGB(255, 91, 91, 91)),
+          color: _isDisabled
+              ? _disabledLabelColor
+              : (_isFocused
+                    ? Colors.blue.shade600
+                    : const Color.fromARGB(255, 91, 91, 91)),
           fontSize: 17,
           fontWeight: FontWeight.w500,
         ),
@@ -450,9 +461,15 @@ class _CoreInputState extends State<CoreInput> {
   TextInputType get _keyboardType {
     switch (widget.type) {
       case CoreInputType.number:
-        return TextInputType.numberWithOptions(decimal: widget.decimalPlaces > 0, signed: false);
+        return TextInputType.numberWithOptions(
+          decimal: widget.decimalPlaces > 0,
+          signed: false,
+        );
       case CoreInputType.currency:
-        return const TextInputType.numberWithOptions(decimal: true, signed: false);
+        return const TextInputType.numberWithOptions(
+          decimal: true,
+          signed: false,
+        );
       case CoreInputType.email:
         return TextInputType.emailAddress;
       case CoreInputType.phone:
@@ -613,11 +630,13 @@ class _CoreInputState extends State<CoreInput> {
           maxLines: _maxLines,
           maxLength: widget.maxLength,
           obscureText: _obscureText,
-          style: widget.textStyle ?? TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: _isDisabled ? _disabledValueColor : Colors.grey.shade800,
-          ),
+          style:
+              widget.textStyle ??
+              TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _isDisabled ? _disabledValueColor : Colors.grey.shade800,
+              ),
           validator: widget.validator ?? _buildValidator(),
           decoration: _buildInputDecoration(),
           // Add onTapOutside callback for better keyboard dismissal
@@ -634,19 +653,14 @@ class _CoreInputState extends State<CoreInput> {
       // Floating label with red asterisk for required fields
       label: _buildLabel,
       floatingLabelStyle: TextStyle(
-        color: _isDisabled 
-          ? _disabledLabelColor
-          : Colors.blue.shade600,
+        color: _isDisabled ? _disabledLabelColor : Colors.blue.shade600,
         fontSize: 17,
         fontWeight: FontWeight.w600,
       ),
-      
+
       hintText: _isDisabled ? null : widget.hintText,
-      hintStyle: TextStyle(
-        color: Colors.grey.shade400,
-        fontSize: 13,
-      ),
-      
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+
       // Suffix for symbols/units - positioned at right corner only
       suffixIcon: widget.suffix != null && widget.suffix!.isNotEmpty
           ? Container(
@@ -660,10 +674,7 @@ class _CoreInputState extends State<CoreInput> {
                   bottomRight: Radius.circular(8),
                 ),
                 border: Border(
-                  left: BorderSide(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
+                  left: BorderSide(color: Colors.grey.shade300, width: 1),
                 ),
               ),
               alignment: Alignment.center,
@@ -671,83 +682,59 @@ class _CoreInputState extends State<CoreInput> {
                 widget.suffix!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: _isFocused ? Colors.blue.shade600 : Colors.grey.shade600,
+                  color: _isFocused
+                      ? Colors.blue.shade600
+                      : Colors.grey.shade600,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             )
           : null,
-      
+
       // Border styling - more compact
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.grey.shade300,
-          width: 1,
-        ),
+        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.grey.shade300,
-          width: 1,
-        ),
+        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.blue.shade600,
-          width: 2,
-        ),
+        borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.red.shade400,
-          width: 2,
-        ),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.red.shade600,
-          width: 2,
-        ),
+        borderSide: BorderSide(color: Colors.red.shade600, width: 2),
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(
-          color: Colors.grey.shade200,
-          width: 1,
-        ),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
-      
+
       // Fill and colors
       filled: true,
-      fillColor: _isDisabled 
-        ? Colors.grey.shade50 
-        : Colors.white,
-      
+      fillColor: _isDisabled ? Colors.grey.shade50 : Colors.white,
+
       // Content padding - more compact
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 12,
-      ),
-      
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+
       // Counter styling
-      counterStyle: TextStyle(
-        color: Colors.grey.shade500,
-        fontSize: 12,
-      ),
-      
+      counterStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+
       // Error styling
       errorStyle: TextStyle(
         color: Colors.red.shade600,
         fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
-      
+
       // Always show label in floating/overlapping position
       floatingLabelBehavior: FloatingLabelBehavior.always,
     );
@@ -767,15 +754,7 @@ class _CoreInputState extends State<CoreInput> {
 
   /// Get nested value by path like 'a.b.c'
   dynamic _getByPath(Map<String, dynamic> map, String path) {
-    dynamic curr = map;
-    for (final part in path.split('.')) {
-      if (curr is Map && curr.containsKey(part)) {
-        curr = curr[part];
-      } else {
-        return null;
-      }
-    }
-    return curr;
+    return Functions().getByPath(map, path, supportListLength: false);
   }
 
   /// Build validator function with min/max value validation for number types
@@ -787,9 +766,10 @@ class _CoreInputState extends State<CoreInput> {
       }
 
       // Min/Max validation for number types
-      if ((widget.type == CoreInputType.number || widget.type == CoreInputType.currency) &&
-          value != null && value.isNotEmpty) {
-
+      if ((widget.type == CoreInputType.number ||
+              widget.type == CoreInputType.currency) &&
+          value != null &&
+          value.isNotEmpty) {
         // Parse the value (handle EU format with dots and commas)
         String cleanValue = value.replaceAll('.', '').replaceAll(',', '.');
         final double? numValue = double.tryParse(cleanValue);
@@ -879,18 +859,18 @@ class _CurrencyInputFormatter extends TextInputFormatter {
   ) {
     // Remove all non-digit characters except decimal point
     String newText = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
-    
+
     // Ensure only one decimal point
     final parts = newText.split('.');
     if (parts.length > 2) {
       newText = '${parts[0]}.${parts.sublist(1).join('')}';
     }
-    
+
     // Limit decimal places to 2
     if (parts.length == 2 && parts[1].length > 2) {
       newText = '${parts[0]}.${parts[1].substring(0, 2)}';
     }
-    
+
     return TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: newText.length),

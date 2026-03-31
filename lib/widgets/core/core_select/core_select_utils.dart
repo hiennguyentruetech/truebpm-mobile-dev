@@ -21,10 +21,10 @@ class CoreSelectUtils {
 
     try {
       final response = await CoreService.instance.getDropdownData(endpoint);
-      
+
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];
-        
+
         // Handle different data types
         if (data is List) {
           options = List.from(data);
@@ -47,7 +47,9 @@ class CoreSelectUtils {
       // Use a SnackBar to avoid modal interruptions
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Could not load options (forbidden or unavailable).'),
+          content: const Text(
+            'Could not load options (forbidden or unavailable).',
+          ),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.red.shade600,
         ),
@@ -59,7 +61,7 @@ class CoreSelectUtils {
   /// Get display text for an option
   static String getDisplayText(dynamic option, String? displayField) {
     if (option == null) return '';
-    
+
     try {
       if (displayField != null && option is Map) {
         // Handle nested paths like 'userPermission.name'
@@ -71,12 +73,12 @@ class CoreSelectUtils {
           return '';
         }
       }
-      
+
       // For primitive values or when no displayField specified
       if (option is String || option is num || option is bool) {
         return option.toString();
       }
-      
+
       // For Map without displayField, try common fallback fields
       if (option is Map) {
         final fallbackFields = ['name', 'title', 'label', 'text', 'value'];
@@ -85,11 +87,11 @@ class CoreSelectUtils {
             return option[field].toString();
           }
         }
-        
+
         // If all fallback fields are null, return empty string
         return '';
       }
-      
+
       return option.toString();
     } catch (e) {
       return '';
@@ -105,10 +107,14 @@ class CoreSelectUtils {
   }
 
   /// Compare two values for equality (handles objects and primitives)
-  static bool compareValues(dynamic value1, dynamic value2, String? displayField) {
+  static bool compareValues(
+    dynamic value1,
+    dynamic value2,
+    String? displayField,
+  ) {
     if (value1 == null && value2 == null) return true;
     if (value1 == null || value2 == null) return false;
-    
+
     // If both are Maps, compare by the display field or the whole object
     if (value1 is Map && value2 is Map) {
       if (displayField != null) {
@@ -120,7 +126,7 @@ class CoreSelectUtils {
         return value1.toString() == value2.toString();
       }
     }
-    
+
     // For other types, use direct comparison
     return value1 == value2;
   }
@@ -140,12 +146,12 @@ class CoreSelectUtils {
 
   /// Get default label from dataKey
   static String getDefaultLabel(String dataKey) {
-    return dataKey.replaceAllMapped(
-      RegExp(r'([A-Z])'),
-      (match) => ' ${match.group(0)}',
-    ).trim().split(' ').map((word) => 
-      word[0].toUpperCase() + word.substring(1).toLowerCase()
-    ).join(' ');
+    return dataKey
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}')
+        .trim()
+        .split(' ')
+        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .join(' ');
   }
 
   /// Filter options based on search text
@@ -174,7 +180,7 @@ class CoreSelectUtils {
             final type = field['type'];
             final format = field['format'];
             final raw = getByPath(option, key);
-            
+
             String value;
             if (raw == null || raw.toString().isEmpty) {
               value = '';
@@ -184,7 +190,7 @@ class CoreSelectUtils {
             } else {
               value = raw.toString();
             }
-            
+
             if (value.toLowerCase().contains(searchLower)) {
               return true;
             }
@@ -199,15 +205,11 @@ class CoreSelectUtils {
   /// Safely get nested value by dot-notation path (e.g., 'customerId.name')
   static dynamic getByPath(Map obj, String path) {
     try {
-      dynamic curr = obj;
-      for (final part in path.split('.')) {
-        if (curr is Map && curr.containsKey(part)) {
-          curr = curr[part];
-        } else {
-          return null;
-        }
-      }
-      return curr;
+      return Functions().getByPath(
+        Map<String, dynamic>.from(obj),
+        path,
+        supportListLength: false,
+      );
     } catch (_) {
       return null;
     }

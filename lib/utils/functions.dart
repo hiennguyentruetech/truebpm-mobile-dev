@@ -135,10 +135,14 @@ class Functions {
     return null;
   }
 
-  dynamic getByPath(Map<String, dynamic> map, String path) {
+  dynamic getByPath(
+    Map<String, dynamic> map,
+    String path, {
+    bool supportListLength = true,
+  }) {
     dynamic curr = map;
     for (final segment in path.split('.')) {
-      if (segment == 'length' && curr is List) {
+      if (supportListLength && segment == 'length' && curr is List) {
         return curr.length;
       }
       if (curr is Map && curr.containsKey(segment)) {
