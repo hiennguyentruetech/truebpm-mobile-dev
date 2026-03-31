@@ -9,166 +9,6 @@ class CoreService {
   final Dio _dio = Dio();
 
   // ============================================================================
-  // ENHANCED LOGGING METHODS (Delegated to CoreApiLogger)
-  // ============================================================================
-
-  /// Log API request with comprehensive details
-  void _logApiRequest({
-    required String method,
-    required String url,
-    Map<String, String>? headers,
-    dynamic payload,
-    String? action,
-  }) {
-    // Convert headers to Map<String, dynamic> and show full headers
-    final headersMap = <String, dynamic>{};
-    if (headers != null) {
-      headersMap.addAll(headers);
-    }
-
-    // Check if URL already contains action parameter to avoid duplication
-    final endpoint = action != null && !url.contains('?action=')
-        ? '$url?action=$action'
-        : url;
-
-    // Handle different payload types
-    Map<String, dynamic>? payloadMap;
-    if (payload is Map<String, dynamic>) {
-      payloadMap = payload;
-    } else if (payload != null) {
-      // For non-Map payloads (like FormData), create a descriptive map
-      payloadMap = {
-        'type': payload.runtimeType.toString(),
-        'description': payload.toString().length > 200
-            ? '${payload.toString().substring(0, 200)}...'
-            : payload.toString(),
-      };
-    }
-
-    CoreApiLogger.logApiRequest(
-      method: method,
-      endpoint: endpoint,
-      headers: headersMap,
-      payload: payloadMap,
-    );
-  }
-
-  /// Log API response with status-based formatting
-  void _logApiResponse({
-    required int? statusCode,
-    dynamic responseData,
-    required String url,
-    Duration? duration,
-    dynamic requestPayload, // Keep for compatibility but won't use
-  }) {
-    // Normalize response to Map for logging while preserving full content
-    Map<String, dynamic>? normalized;
-    try {
-      if (responseData is Map<String, dynamic>) {
-        normalized = responseData;
-      } else if (responseData is List) {
-        normalized = {
-          'type': 'List',
-          'length': responseData.length,
-          'data': responseData,
-        };
-      } else if (responseData is String) {
-        // Try parse JSON string; if not JSON, keep raw
-        try {
-          final parsed = jsonDecode(responseData);
-          if (parsed is Map<String, dynamic>) {
-            normalized = parsed;
-          } else if (parsed is List) {
-            normalized = {
-              'type': 'List',
-              'length': parsed.length,
-              'data': parsed,
-            };
-          } else {
-            normalized = {'raw': responseData};
-          }
-        } catch (_) {
-          normalized = {'raw': responseData};
-        }
-      } else if (responseData != null) {
-        normalized = {'raw': responseData.toString()};
-      }
-    } catch (_) {
-      // Fallback to raw to avoid logging crash
-      normalized = {'raw': responseData.toString()};
-    }
-
-    CoreApiLogger.logApiResponse(
-      method: 'POST', // Most of our APIs are POST
-      endpoint: url,
-      statusCode: statusCode ?? 0,
-      responseData: normalized,
-      duration: duration,
-    );
-  }
-
-  /// Log API errors with detailed context
-  void _logApiError({
-    required String url,
-    required dynamic error,
-    StackTrace? stackTrace,
-    String? context,
-    Map<String, dynamic>? requestPayload,
-  }) {
-    CoreApiLogger.logApiError(
-      method: 'POST',
-      endpoint: url,
-      error: error,
-      stackTrace: stackTrace,
-      requestPayload: requestPayload,
-    );
-  }
-
-  /// Log session/authentication details
-  void _logAuthentication({
-    required String context,
-    String? token,
-    List<String>? cookies,
-    bool isExpired = false,
-  }) {
-    logger.i(
-      '┌────────────────────────────────────────────────────────────────────',
-    );
-    logger.i('│ 🔐 AUTHENTICATION: $context');
-    logger.i(
-      '├────────────────────────────────────────────────────────────────────',
-    );
-
-    if (isExpired) {
-      logger.w('│ 🔒 Session Status: EXPIRED - Re-authentication required');
-    } else {
-      logger.i('│ ✅ Session Status: ACTIVE');
-    }
-
-    if (token != null) {
-      final maskedToken = token.length > 20
-          ? '${token.substring(0, 10)}...${token.substring(token.length - 5)}'
-          : '***';
-      logger.i('│ 🎫 Bonita Token: $maskedToken');
-    }
-
-    if (cookies != null && cookies.isNotEmpty) {
-      logger.i('│ 🍪 Cookies: ${cookies.length} cookie(s) found');
-      for (var i = 0; i < math.min(3, cookies.length); i++) {
-        final cookie = cookies[i];
-        final parts = cookie.split('=');
-        if (parts.length >= 2) {
-          logger.i('│   • ${parts[0]}: [MASKED]');
-        }
-      }
-    }
-
-    logger.i(
-      '└────────────────────────────────────────────────────────────────────',
-    );
-  }
-
-  // ============================================================================
   // API METHODS WITH ENHANCED LOGGING
   // ============================================================================
 
@@ -218,6 +58,85 @@ class CoreService {
     return _makeApiCall('$moduleCode.$tabModuleCode?action=$action', payload);
   }
 
+  // ============================================================================
+  // SEMANTIC ACTION METHODS (self-documenting API)
+  // ============================================================================
+
+  /// Save data for a specific module and tab
+  Future<Map<String, dynamic>?> saveData(
+    String moduleCode,
+    String tabModuleCode,
+    Map<String, dynamic> userData,
+    Map<String, dynamic> itemDetail,
+    Map<String, dynamic> dataSpy,
+  ) async {
+    return performAction(moduleCode, tabModuleCode, 'SAVE', {
+      'user': userData,
+      'itemDetail': itemDetail,
+      'dataSpy': dataSpy,
+    });
+  }
+
+  /// Submit data for a specific module and tab
+  Future<Map<String, dynamic>?> submitData(
+    String moduleCode,
+    String tabModuleCode,
+    Map<String, dynamic> userData,
+    Map<String, dynamic> itemDetail,
+    Map<String, dynamic> dataSpy,
+  ) async {
+    return performAction(moduleCode, tabModuleCode, 'SUBMIT', {
+      'user': userData,
+      'itemDetail': itemDetail,
+      'dataSpy': dataSpy,
+    });
+  }
+
+  /// Copy data for a specific module and tab
+  Future<Map<String, dynamic>?> copyData(
+    String moduleCode,
+    String tabModuleCode,
+    Map<String, dynamic> userData,
+    Map<String, dynamic> itemDetail,
+    Map<String, dynamic> dataSpy,
+  ) async {
+    return performAction(moduleCode, tabModuleCode, 'COPY', {
+      'user': userData,
+      'itemDetail': itemDetail,
+      'dataSpy': dataSpy,
+    });
+  }
+
+  /// Cancel data for a specific module and tab
+  Future<Map<String, dynamic>?> cancelData(
+    String moduleCode,
+    String tabModuleCode,
+    Map<String, dynamic> userData,
+    Map<String, dynamic> itemDetail,
+    Map<String, dynamic> dataSpy,
+  ) async {
+    return performAction(moduleCode, tabModuleCode, 'CANCEL', {
+      'user': userData,
+      'itemDetail': itemDetail,
+      'dataSpy': dataSpy,
+    });
+  }
+
+  /// Delete data for a specific module and tab
+  Future<Map<String, dynamic>?> deleteData(
+    String moduleCode,
+    String tabModuleCode,
+    Map<String, dynamic> userData,
+    Map<String, dynamic> itemDetail,
+    Map<String, dynamic> dataSpy,
+  ) async {
+    return performAction(moduleCode, tabModuleCode, 'DELETE', {
+      'user': userData,
+      'itemDetail': itemDetail,
+      'dataSpy': dataSpy,
+    });
+  }
+
   /// Generic method to make API calls with session cookies and authentication
   Future<Map<String, dynamic>?> _makeApiCall(
     String endpoint,
@@ -226,47 +145,9 @@ class CoreService {
     final startTime = DateTime.now();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userJsonStr = prefs.getString('user_info');
-      if (userJsonStr == null) {
-        logger.e('❌ No user info found');
-        return null;
-      }
+      // Get session data (cookies, token, headers)
+      final session = await _getSessionData();
       final url = '${hosts.coreUrl}$endpoint';
-
-      // Get cookies from saved login (if any)
-      List<String> cookies = [];
-      final cookiesStr = prefs.getString('session_cookies');
-      if (cookiesStr != null && cookiesStr.isNotEmpty) {
-        try {
-          final dynamic parsed = jsonDecode(cookiesStr);
-          if (parsed is List) {
-            cookies = parsed.map((e) => e.toString()).toList();
-          }
-        } catch (_) {
-          cookies = [cookiesStr];
-        }
-      }
-
-      // Extract X-Bonita-API-Token from cookies
-      String? bonitaToken;
-      if (cookies.isNotEmpty) {
-        for (final c in cookies) {
-          // Only get the part before ; if any
-          final cookiePair = c.split(';')[0];
-          final parts = cookiePair.split('=');
-          if (parts.length == 2 && parts[0].trim() == 'X-Bonita-API-Token') {
-            bonitaToken = parts[1];
-            break;
-          }
-        }
-      }
-
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        if (bonitaToken != null) 'X-Bonita-API-Token': bonitaToken,
-        if (cookies.isNotEmpty) 'cookie': cookies.join('; '),
-      };
 
       final bool isActionCall = endpoint.contains('?action=');
       final action = isActionCall
@@ -276,40 +157,34 @@ class CoreService {
       _logApiRequest(
         method: 'POST',
         url: url,
-        headers: headers,
+        headers: session.headers,
         payload: payload,
         action: action,
       );
 
-      // Normalize itemDetail.tree so server always receives latest tree changes
-      try {
-        if (payload['itemDetail'] is Map) {
-          final id = payload['itemDetail'] as Map;
-          dynamic tree = id['tree'];
-          if (tree == null && id['value'] is Map) {
-            final v = id['value'] as Map;
-            if (v['tree'] != null) tree = v['tree'];
-          }
-          if (tree != null) {
-            if (tree is List) {
-              id['tree'] = {'data': tree};
-            } else if (tree is Map) {
-              // Ensure data exists as list if children provided
-              id['tree'] = tree;
-            }
+      // Normalize itemDetail.tree before sending
+      if (payload['itemDetail'] is Map) {
+        final itemDetailMap = payload['itemDetail'] as Map;
+        dynamic tree = itemDetailMap['tree'];
+        if (tree == null && itemDetailMap['value'] is Map) {
+          tree = (itemDetailMap['value'] as Map)['tree'];
+        }
+        if (tree != null) {
+          if (tree is List) {
+            itemDetailMap['tree'] = {'data': tree};
+          } else if (tree is Map) {
+            itemDetailMap['tree'] = tree;
           }
         }
-      } catch (_) {
-        // ignore normalization errors
       }
 
+      // Make API call
       final response = await _dio.post(
         url,
         data: jsonEncode(payload),
         options: Options(
-          headers: headers,
+          headers: session.headers,
           validateStatus: (status) {
-            // Accept 200 and 400 as before; 401/500 will be handled in catch as DioException
             return status != null && (status == 200 || status == 400);
           },
         ),
@@ -317,7 +192,7 @@ class CoreService {
 
       final duration = DateTime.now().difference(startTime);
 
-      // Check if response indicates session expired (401 or specific error)
+      // Check if session expired
       if (response.statusCode == 401) {
         _logAuthentication(context: 'API Call Failed', isExpired: true);
         return null;
@@ -331,30 +206,13 @@ class CoreService {
         requestPayload: payload,
       );
 
-      // Handle successful responses (200) and client errors (400) that may contain valid data
-      if ((response.statusCode == 200 || response.statusCode == 400) &&
-          response.data != null) {
-        final responseData = response.data is Map<String, dynamic>
-            ? response.data
-            : jsonDecode(response.data);
-
-        // For status 400, still return the data as it may contain messageType info
-        if (response.statusCode == 400) {
-          logger.w('⚠️ API returned 400 with data');
-          // Ensure we have proper structure for error responses
-          if (responseData is Map<String, dynamic>) {
-            return {
-              'success': responseData['success'] ?? false,
-              'messageType': responseData['messageType'] ?? 'error',
-              'message': responseData['message'] ?? 'Unknown error occurred',
-              ...responseData, // Include any additional fields
-            };
-          }
-        }
-
-        return responseData;
+      return _handleApiResponseSuccess(response);
+    } on Exception catch (e) {
+      if (e.toString().contains('No user info found')) {
+        logger.e('❌ No user info found');
+        return null;
       }
-      return null;
+      rethrow;
     } catch (e, stack) {
       _logApiError(
         url: '${hosts.coreUrl}$endpoint',
@@ -363,64 +221,13 @@ class CoreService {
         context: '_makeApiCall',
       );
 
-      // Check if error is due to session expiry
-      if (e is DioException) {
-        final status = e.response?.statusCode;
-        if (status == 401) {
-          _logAuthentication(context: 'API Error', isExpired: true);
-          return null;
-        }
-
-        // Handle DioException with status 400 (which may contain valid response data)
-        if (status == 400 && e.response?.data != null) {
-          logger.w('⚠️ DioException 400 with response data');
-          try {
-            final responseData = e.response?.data is Map<String, dynamic>
-                ? e.response?.data
-                : jsonDecode(e.response?.data);
-
-            if (responseData is Map<String, dynamic>) {
-              return {
-                'success': responseData['success'] ?? false,
-                'messageType': responseData['messageType'] ?? 'error',
-                'message': responseData['message'] ?? 'Request failed',
-                ...responseData, // Include any additional fields
-              };
-            }
-          } catch (parseError) {
-            logger.e('❌ Error parsing 400 response data: $parseError');
-          }
-        }
-
-        // NEW: Treat 5xx as generic server error (do NOT trigger session expired)
-        if (status != null && status >= 500) {
-          logger.e('🚨 Server error - Status: $status');
-          return {
-            'success': false,
-            'messageType': 'error',
-            'message': 'Server error. Please try again later.',
-            'statusCode': status,
-          };
-        }
-
-        // NEW: Network or unknown Dio error (no status)
-        if (status == null) {
-          logger.e('🌐 Network error - Check connection');
-          return {
-            'success': false,
-            'messageType': 'error',
-            'message':
-                'Network error. Please check your connection and try again.',
-          };
-        }
+      // Check if session expired
+      if (e is DioException && e.response?.statusCode == 401) {
+        _logAuthentication(context: 'API Error', isExpired: true);
+        return null;
       }
 
-      // Do not treat as session expired; return a generic error map
-      return {
-        'success': false,
-        'messageType': 'error',
-        'message': 'Unexpected error. Please try again.',
-      };
+      return _handleApiError(e, errorMessage: 'API call failed');
     }
   }
 
@@ -441,61 +248,11 @@ class CoreService {
       logger.i('  • File: ${fileData['fileName'] ?? 'Unknown'}');
 
       // Get session data
-      final prefs = await SharedPreferences.getInstance();
-      final userJsonStr = prefs.getString('user_info');
-      if (userJsonStr == null) {
-        logger.e('❌ No user info found for download');
-        return null;
-      }
+      final session = await instance._getSessionData();
 
-      // Get cookies from saved login (if any)
-      List<String> cookies = [];
-      final cookiesStr = prefs.getString('session_cookies');
-      if (cookiesStr != null && cookiesStr.isNotEmpty) {
-        try {
-          final dynamic parsed = jsonDecode(cookiesStr);
-          if (parsed is List) {
-            cookies = parsed.map((e) => e.toString()).toList();
-          }
-        } catch (_) {
-          cookies = [cookiesStr];
-        }
-      }
-
-      // Extract X-Bonita-API-Token from cookies
-      String? bonitaToken;
-      if (cookies.isNotEmpty) {
-        for (final c in cookies) {
-          final cookiePair = c.split(';')[0];
-          final parts = cookiePair.split('=');
-          if (parts.length == 2 && parts[0].trim() == 'X-Bonita-API-Token') {
-            bonitaToken = parts[1];
-            break;
-          }
-        }
-      }
-
-      // Build headers
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        if (bonitaToken != null) 'X-Bonita-API-Token': bonitaToken,
-        if (cookies.isNotEmpty) 'cookie': cookies.join('; '),
-      };
-
-      // Build payload
+      // Build payload using helper
       final payload = {
-        'user': {
-          'id': userInfo['id'],
-          'code': userInfo['code'],
-          'fullName': userInfo['fullName'],
-          'phone': userInfo['phone'],
-          'email': userInfo['email'],
-          'personalEmail': userInfo['personalEmail'],
-          'position': userInfo['position'],
-          'createdDate': userInfo['createdDate'],
-          'managerFullName': userInfo['managerFullName'],
-          'roles': userInfo['roles'] ?? [],
-        },
+        'user': instance._buildUserPayload(userInfo),
         'moduleCode': moduleCode,
         'tabModuleCode': subTabModuleCode ?? tabModuleCode ?? 'DOC',
         'file': fileData,
@@ -509,7 +266,7 @@ class CoreService {
       instance._logApiRequest(
         method: 'POST',
         url: url,
-        headers: headers,
+        headers: session.headers,
         payload: payload,
         action: 'DownloadFile',
       );
@@ -518,7 +275,7 @@ class CoreService {
         url,
         data: payload,
         options: Options(
-          headers: headers,
+          headers: session.headers,
           validateStatus: (status) {
             return status != null && (status == 200 || status == 400);
           },
@@ -527,7 +284,7 @@ class CoreService {
 
       final duration = DateTime.now().difference(startTime);
 
-      // Check if response indicates session expired (401 or specific error)
+      // Check if session expired
       if (response.statusCode == 401) {
         instance._logAuthentication(
           context: 'Download Failed',
@@ -544,29 +301,10 @@ class CoreService {
         requestPayload: payload,
       );
 
-      // Handle successful responses (200) and client errors (400) that may contain valid data
-      if ((response.statusCode == 200 || response.statusCode == 400) &&
-          response.data != null) {
-        final responseData = response.data is Map<String, dynamic>
-            ? response.data
-            : jsonDecode(response.data);
-
-        // For status 400, still return the data as it may contain messageType info
-        if (response.statusCode == 400) {
-          logger.w('⚠️ Download returned 400 with data');
-          if (responseData is Map<String, dynamic>) {
-            return {
-              'success': responseData['success'] ?? false,
-              'messageType': responseData['messageType'] ?? 'error',
-              'message': responseData['message'] ?? 'Download failed',
-              ...responseData,
-            };
-          }
-        }
-
-        return responseData;
-      }
-      return null;
+      return instance._handleApiResponseSuccess(
+        response,
+        failureMessage: 'Download failed',
+      );
     } catch (e, stack) {
       instance._logApiError(
         url:
@@ -576,36 +314,13 @@ class CoreService {
         context: 'downloadFile',
       );
 
-      // Check if error is due to session expiry
+      // Check if session expired
       if (e is DioException && e.response?.statusCode == 401) {
         instance._logAuthentication(context: 'Download Error', isExpired: true);
         return null;
       }
 
-      // Handle DioException with status 400 (which may contain valid response data)
-      if (e is DioException &&
-          e.response?.statusCode == 400 &&
-          e.response?.data != null) {
-        logger.w('⚠️ Download DioException 400 with response data');
-        try {
-          final responseData = e.response?.data is Map<String, dynamic>
-              ? e.response?.data
-              : jsonDecode(e.response?.data);
-
-          if (responseData is Map<String, dynamic>) {
-            return {
-              'success': responseData['success'] ?? false,
-              'messageType': responseData['messageType'] ?? 'error',
-              'message': responseData['message'] ?? 'Download failed',
-              ...responseData,
-            };
-          }
-        } catch (parseError) {
-          logger.e('❌ Error parsing 400 response data: $parseError');
-        }
-      }
-
-      throw e;
+      return instance._handleApiError(e, errorMessage: 'Download failed');
     }
   }
 
@@ -631,66 +346,13 @@ class CoreService {
       }
 
       // Get session data
-      final prefs = await SharedPreferences.getInstance();
-      final userJsonStr = prefs.getString('user_info');
-      if (userJsonStr == null) {
-        logger.e('❌ No user info found for delete');
-        return null;
-      }
+      final session = await instance._getSessionData();
 
-      // Get cookies from saved login (if any)
-      List<String> cookies = [];
-      final cookiesStr = prefs.getString('session_cookies');
-      if (cookiesStr != null && cookiesStr.isNotEmpty) {
-        try {
-          final dynamic parsed = jsonDecode(cookiesStr);
-          if (parsed is List) {
-            cookies = parsed.map((e) => e.toString()).toList();
-          }
-        } catch (_) {
-          cookies = [cookiesStr];
-        }
-      }
-
-      // Extract X-Bonita-API-Token from cookies
-      String? bonitaToken;
-      if (cookies.isNotEmpty) {
-        for (final c in cookies) {
-          final cookiePair = c.split(';')[0];
-          final parts = cookiePair.split('=');
-          if (parts.length == 2 && parts[0].trim() == 'X-Bonita-API-Token') {
-            bonitaToken = parts[1];
-            break;
-          }
-        }
-      }
-
-      // Build headers
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        if (bonitaToken != null) 'X-Bonita-API-Token': bonitaToken,
-        if (cookies.isNotEmpty) 'cookie': cookies.join('; '),
-      };
-
-      // Build payload
+      // Build payload using helper
       final payload = {
-        'user': {
-          'id': userInfo['id'],
-          'code': userInfo['code'],
-          'fullName': userInfo['fullName'],
-          'phone': userInfo['phone'],
-          'email': userInfo['email'],
-          'personalEmail': userInfo['personalEmail'],
-          'position': userInfo['position'],
-          'createdDate': userInfo['createdDate'],
-          'managerFullName': userInfo['managerFullName'],
-          'roles': userInfo['roles'] ?? [],
-        },
+        'user': instance._buildUserPayload(userInfo),
         'moduleCode': moduleCode,
-        'tabModuleCode':
-            subTabCode ??
-            tabModuleCode ??
-            'DOC', // Use subTabCode if provided, otherwise use tabModuleCode, default to 'DOC'
+        'tabModuleCode': subTabCode ?? tabModuleCode ?? 'DOC',
         'file': fileData,
       };
 
@@ -702,19 +364,17 @@ class CoreService {
       instance._logApiRequest(
         method: 'POST',
         url: url,
-        headers: headers,
+        headers: session.headers,
         payload: payload,
         action: 'DeleteFile',
       );
 
-      // Use the regular Dio instance - headers already contain cookies
       final response = await Dio().post(
         url,
         data: payload,
         options: Options(
-          headers: headers,
+          headers: session.headers,
           validateStatus: (status) {
-            // Accept 200, 400, and 403 as valid responses to handle properly
             return status != null &&
                 (status == 200 || status == 400 || status == 403);
           },
@@ -723,7 +383,7 @@ class CoreService {
 
       final duration = DateTime.now().difference(startTime);
 
-      // Check if response indicates session expired (401 or specific error)
+      // Check if session expired
       if (response.statusCode == 401) {
         instance._logAuthentication(context: 'Delete Failed', isExpired: true);
         return null;
@@ -737,7 +397,7 @@ class CoreService {
         requestPayload: payload,
       );
 
-      // Handle responses including 403 (Forbidden)
+      // Handle 403 Forbidden
       if (response.statusCode == 403) {
         logger.w('⚠️ Delete returned 403 - Forbidden');
         return {
@@ -749,29 +409,10 @@ class CoreService {
         };
       }
 
-      // Handle successful responses (200) and client errors (400) that may contain valid data
-      if ((response.statusCode == 200 || response.statusCode == 400) &&
-          response.data != null) {
-        final responseData = response.data is Map<String, dynamic>
-            ? response.data
-            : jsonDecode(response.data);
-
-        // For status 400, still return the data as it may contain messageType info
-        if (response.statusCode == 400) {
-          logger.w('⚠️ Delete returned 400 with data');
-          if (responseData is Map<String, dynamic>) {
-            return {
-              'success': responseData['success'] ?? false,
-              'messageType': responseData['messageType'] ?? 'error',
-              'message': responseData['message'] ?? 'Delete failed',
-              ...responseData,
-            };
-          }
-        }
-
-        return responseData;
-      }
-      return null;
+      return instance._handleApiResponseSuccess(
+        response,
+        failureMessage: 'Delete failed',
+      );
     } catch (e, stack) {
       instance._logApiError(
         url:
@@ -781,214 +422,13 @@ class CoreService {
         context: 'deleteFile',
       );
 
-      // Check if error is due to session expiry
+      // Check if session expired
       if (e is DioException && e.response?.statusCode == 401) {
         instance._logAuthentication(context: 'Delete Error', isExpired: true);
         return null;
       }
 
-      // Handle DioException with status 400 (which may contain valid response data)
-      if (e is DioException &&
-          e.response?.statusCode == 400 &&
-          e.response?.data != null) {
-        logger.w('⚠️ Delete DioException 400 with response data');
-        try {
-          final responseData = e.response?.data is Map<String, dynamic>
-              ? e.response?.data
-              : jsonDecode(e.response?.data);
-
-          if (responseData is Map<String, dynamic>) {
-            return {
-              'success': responseData['success'] ?? false,
-              'messageType': responseData['messageType'] ?? 'error',
-              'message': responseData['message'] ?? 'Delete failed',
-              ...responseData,
-            };
-          }
-        } catch (parseError) {
-          logger.e('❌ Error parsing 400 response data: $parseError');
-        }
-      }
-
-      throw e;
-    }
-  }
-
-  /// Get MIME type based on file extension
-  String _getMimeType(String fileName) {
-    final extension = fileName.split('.').last.toLowerCase();
-    switch (extension) {
-      // Documents
-      case 'pdf':
-        return 'application/pdf';
-      case 'rtf':
-        return 'application/rtf';
-      case 'epub':
-        return 'application/epub+zip';
-
-      // Word
-      case 'doc':
-        return 'application/msword';
-      case 'docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case 'docm':
-        return 'application/vnd.ms-word.document.macroEnabled.12';
-      case 'dot':
-        return 'application/msword';
-      case 'dotx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.template';
-      case 'dotm':
-        return 'application/vnd.ms-word.template.macroEnabled.12';
-
-      // Excel
-      case 'xls':
-        return 'application/vnd.ms-excel';
-      case 'xlsx':
-        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      case 'xlsm':
-        return 'application/vnd.ms-excel.sheet.macroEnabled.12';
-      case 'xltx':
-        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.template';
-      case 'xltm':
-        return 'application/vnd.ms-excel.template.macroEnabled.12';
-      case 'xlam':
-        return 'application/vnd.ms-excel.addin.macroEnabled.12';
-      case 'xlsb':
-        return 'application/vnd.ms-excel.sheet.binary.macroEnabled.12';
-      case 'csv':
-        return 'text/csv';
-      case 'tsv':
-        return 'text/tab-separated-values';
-
-      // PowerPoint
-      case 'ppt':
-        return 'application/vnd.ms-powerpoint';
-      case 'pptx':
-        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-      case 'pptm':
-        return 'application/vnd.ms-powerpoint.presentation.macroEnabled.12';
-      case 'potx':
-        return 'application/vnd.openxmlformats-officedocument.presentationml.template';
-      case 'potm':
-        return 'application/vnd.ms-powerpoint.template.macroEnabled.12';
-      case 'pps':
-        return 'application/vnd.ms-powerpoint';
-      case 'ppsx':
-        return 'application/vnd.openxmlformats-officedocument.presentationml.slideshow';
-      case 'ppsm':
-        return 'application/vnd.ms-powerpoint.slideshow.macroEnabled.12';
-
-      // OpenDocument formats
-      case 'odt':
-        return 'application/vnd.oasis.opendocument.text';
-      case 'ott':
-        return 'application/vnd.oasis.opendocument.text-template';
-      case 'ods':
-        return 'application/vnd.oasis.opendocument.spreadsheet';
-      case 'ots':
-        return 'application/vnd.oasis.opendocument.spreadsheet-template';
-      case 'odp':
-        return 'application/vnd.oasis.opendocument.presentation';
-      case 'otp':
-        return 'application/vnd.oasis.opendocument.presentation-template';
-
-      // Images
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'bmp':
-        return 'image/bmp';
-      case 'tiff':
-      case 'tif':
-        return 'image/tiff';
-      case 'webp':
-        return 'image/webp';
-      case 'svg':
-      case 'svgz':
-        return 'image/svg+xml';
-      case 'heic':
-        return 'image/heic';
-      case 'heif':
-        return 'image/heif';
-      case 'ico':
-        return 'image/x-icon';
-
-      // Text / Markup / Code
-      case 'txt':
-        return 'text/plain';
-      case 'json':
-        return 'application/json';
-      case 'xml':
-        return 'application/xml';
-      case 'html':
-      case 'htm':
-        return 'text/html';
-      case 'md':
-      case 'markdown':
-        return 'text/markdown';
-      case 'yaml':
-      case 'yml':
-        return 'application/x-yaml';
-      case 'ini':
-      case 'log':
-        return 'text/plain';
-      case 'css':
-        return 'text/css';
-      case 'js':
-        return 'application/javascript';
-
-      // Archives / Compressed
-      case 'zip':
-        return 'application/zip';
-      case 'rar':
-        return 'application/vnd.rar';
-      case '7z':
-        return 'application/x-7z-compressed';
-      case 'tar':
-        return 'application/x-tar';
-      case 'gz':
-        return 'application/gzip';
-      case 'tgz':
-        return 'application/gzip';
-      case 'bz2':
-        return 'application/x-bzip2';
-      case 'xz':
-        return 'application/x-xz';
-
-      // Audio
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'wav':
-        return 'audio/wav';
-      case 'm4a':
-        return 'audio/mp4';
-      case 'ogg':
-        return 'audio/ogg';
-      case 'flac':
-        return 'audio/flac';
-      case 'aac':
-        return 'audio/aac';
-
-      // Video
-      case 'mp4':
-        return 'video/mp4';
-      case 'm4v':
-        return 'video/x-m4v';
-      case 'mov':
-        return 'video/quicktime';
-      case 'avi':
-        return 'video/x-msvideo';
-      case 'mkv':
-        return 'video/x-matroska';
-      case 'webm':
-        return 'video/webm';
-
-      default:
-        return 'application/octet-stream';
+      return instance._handleApiError(e, errorMessage: 'Delete failed');
     }
   }
 

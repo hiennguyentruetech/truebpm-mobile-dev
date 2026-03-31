@@ -6,6 +6,9 @@ import 'package:truebpm/utils/global_store.dart';
 import 'package:truebpm/utils/core_api_logger.dart';
 import 'package:http_parser/http_parser.dart';
 
+part 'core_service_constants.dart';
+part 'core_service_helpers.dart';
+part 'core_service_logging.dart';
 part 'core_service_main.dart';
 part 'core_service_task_api.dart';
 part 'core_service_action_api.dart';
