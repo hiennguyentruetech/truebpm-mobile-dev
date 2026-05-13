@@ -11,7 +11,9 @@ import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/widgets/auth/auth_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool fromSplash;
+
+  const LoginScreen({super.key, this.fromSplash = false});
 
   @override
   LoginScreenState createState() => LoginScreenState();
@@ -22,12 +24,12 @@ class LoginScreenState extends State<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _isBiometricAvailable = false;
   bool _biometricLoginEnabled = false;
-  
+
   late final AuthService _authService;
 
   @override
@@ -39,11 +41,8 @@ class LoginScreenState extends State<LoginScreen>
 
   Future<void> _initializeScreen() async {
     setupAnimations();
-    startAnimations();
-    await Future.wait([
-      _checkBiometricAvailability(),
-      _loadSavedCredentials(),
-    ]);
+    startAnimations(fromSplash: widget.fromSplash);
+    await Future.wait([_checkBiometricAvailability(), _loadSavedCredentials()]);
   }
 
   @override
@@ -73,15 +72,15 @@ class LoginScreenState extends State<LoginScreen>
         _authService.getSavedUsername(),
         _authService.isBiometricLoginEnabled(),
       ]);
-      
+
       if (mounted) {
         final savedUsername = results[0] as String?;
         final biometricEnabled = results[1] as bool;
-        
+
         if (savedUsername != null) {
           _usernameController.text = savedUsername;
         }
-        
+
         setState(() {
           _biometricLoginEnabled = biometricEnabled;
         });
@@ -93,40 +92,42 @@ class LoginScreenState extends State<LoginScreen>
 
   Future<void> _authenticateWithBiometrics() async {
     try {
-      print('Starting biometric authentication...');
+      logger.i('Starting biometric authentication');
       if (!mounted) return;
-      
+
       // Add small delay to ensure UI is ready
       await Future.delayed(const Duration(milliseconds: 200));
-      
+
       // Don't show loading immediately to avoid UI conflicts with biometric dialog
       final isAuthenticated = await _authService.authenticateWithBiometrics();
-      print('Biometric authentication result: $isAuthenticated');
-      
+      logger.i('Biometric authentication result: $isAuthenticated');
+
       if (!mounted) return;
 
       if (isAuthenticated) {
-        print('Biometric success, logging in with saved credentials...');
+        logger.i('Biometric success, logging in with saved credentials');
         context.showLoading(message: appStrings.signingIn);
         await _loginWithSavedCredentials();
       } else {
-        print('Biometric authentication was not successful');
+        logger.i('Biometric authentication was not successful');
         // Only show error if user didn't just cancel
         final errorInfo = _authService.getLastBiometricError();
-        print('Last biometric error: $errorInfo');
-        
+        logger.i('Last biometric error: $errorInfo');
+
         // Don't show error for user cancellation
-        if (errorInfo['code'] != 'NotAvailable' && 
+        if (errorInfo['code'] != 'NotAvailable' &&
             errorInfo['code'] != 'UserCanceled' &&
             errorInfo['code'] != 'SystemCanceled') {
-          _setErrorMessage('Xác thực sinh trắc học thất bại. Vui lòng thử lại.');
+          _setErrorMessage(
+            'Xác thực sinh trắc học thất bại. Vui lòng thử lại.',
+          );
         }
       }
     } catch (e) {
       if (!mounted) return;
       context.hideLoading();
-      print('Biometric authentication error: $e');
-      print('Error type: ${e.runtimeType}');
+      logger.e('Biometric authentication error: $e');
+      logger.e('Error type: ${e.runtimeType}');
       _setErrorMessage('Lỗi xác thực sinh trắc học. Vui lòng thử lại.');
     }
   }
@@ -147,9 +148,13 @@ class LoginScreenState extends State<LoginScreen>
 
         // Then fetch and save user info with cookies
         final savedUsername = await _authService.getSavedUsername();
+        if (!mounted) return;
         if (savedUsername != null) {
           context.showLoading(message: appStrings.loadingUserInfo);
-          await _authService.fetchAndSaveUserInfo(savedUsername, cookies: result.cookies);
+          await _authService.fetchAndSaveUserInfo(
+            savedUsername,
+            cookies: result.cookies,
+          );
           if (!mounted) return;
         }
         context.hideLoading();
@@ -200,7 +205,10 @@ class LoginScreenState extends State<LoginScreen>
 
         // Then fetch and save user info with cookies
         context.showLoading(message: appStrings.loadingUserInfo);
-        await _authService.fetchAndSaveUserInfo(username, cookies: result.cookies);
+        await _authService.fetchAndSaveUserInfo(
+          username,
+          cookies: result.cookies,
+        );
         if (!mounted) return;
         context.hideLoading();
 
@@ -210,7 +218,9 @@ class LoginScreenState extends State<LoginScreen>
         if (recheckAvailable) {
           await _authService.enableBiometricForCredentials(username, password);
           if (mounted) {
-            setState(() { _biometricLoginEnabled = true; });
+            setState(() {
+              _biometricLoginEnabled = true;
+            });
           }
         }
 
@@ -260,21 +270,25 @@ class LoginScreenState extends State<LoginScreen>
   /// Lưu device token (FCM) lên server ngầm sau khi login thành công.
   /// Fire-and-forget: không block UI, không show message lỗi.
   void _saveDeviceTokenSilently({List<String>? cookies}) {
-    _authService.getSavedUserInfo().then((userInfo) {
-      if (userInfo != null && userInfo.id.isNotEmpty) {
-        DeviceTokenService.instance.saveDeviceToken(
-          userId: userInfo.id,
-          cookies: cookies,
-        );
-      }
-    }).catchError((_) {
-      // Ignore - chạy ngầm
-    });
+    _authService
+        .getSavedUserInfo()
+        .then((userInfo) {
+          if (userInfo != null && userInfo.id.isNotEmpty) {
+            DeviceTokenService.instance.saveDeviceToken(
+              userId: userInfo.id,
+              cookies: cookies,
+            );
+          }
+        })
+        .catchError((_) {
+          // Ignore - chạy ngầm
+        });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF020A12),
       extendBodyBehindAppBar: true,
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -285,33 +299,37 @@ class LoginScreenState extends State<LoginScreen>
                 backgroundOpacityAnimation: backgroundOpacityAnimation,
                 constraints: constraints,
               ),
-              
+
               // Content
               Positioned.fill(
                 child: SafeArea(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 20,
+                    ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 
+                        minHeight:
+                            constraints.maxHeight -
                             MediaQuery.of(context).padding.vertical,
                       ),
                       child: IntrinsicHeight(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(height: 40),
-                            
                             // Animated Logo with glow effect
                             AnimatedLogo(
                               logoAnimationController: logoAnimationController,
+                              logoOpacityAnimation: logoOpacityAnimation,
                               logoScaleAnimation: logoScaleAnimation,
                               logoSlideAnimation: logoSlideAnimation,
                               logoGlowAnimation: logoGlowAnimation,
                             ),
-                            
-                            const SizedBox(height: 40),
-                            
+
+                            const SizedBox(height: 24),
+
                             // Welcome Text
                             AnimatedBuilder(
                               animation: formAnimationController,
@@ -322,9 +340,9 @@ class LoginScreenState extends State<LoginScreen>
                                 );
                               },
                             ),
-                            
-                            const SizedBox(height: 40),
-                            
+
+                            const SizedBox(height: 28),
+
                             // Login Form
                             AnimatedBuilder(
                               animation: formAnimationController,
@@ -339,21 +357,25 @@ class LoginScreenState extends State<LoginScreen>
                                       passwordController: _passwordController,
                                       obscurePassword: _obscurePassword,
                                       errorMessage: _errorMessage,
-                                      isBiometricAvailable: _isBiometricAvailable,
-                                      biometricLoginEnabled: _biometricLoginEnabled,
+                                      isBiometricAvailable:
+                                          _isBiometricAvailable,
+                                      biometricLoginEnabled:
+                                          _biometricLoginEnabled,
                                       authService: _authService,
-                                      onTogglePasswordVisibility: _togglePasswordVisibility,
+                                      onTogglePasswordVisibility:
+                                          _togglePasswordVisibility,
                                       onLogin: _login,
-                                      onBiometricLogin: _authenticateWithBiometrics,
-                                      validateUsername: LoginValidators.validateUsername,
-                                      validatePassword: LoginValidators.validatePassword,
+                                      onBiometricLogin:
+                                          _authenticateWithBiometrics,
+                                      validateUsername:
+                                          LoginValidators.validateUsername,
+                                      validatePassword:
+                                          LoginValidators.validatePassword,
                                     ),
                                   ),
                                 );
                               },
                             ),
-                            
-                            const SizedBox(height: 30),
                           ],
                         ),
                       ),

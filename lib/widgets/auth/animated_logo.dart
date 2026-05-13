@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:truebpm/utils/global_store.dart';
 
 class AnimatedLogo extends StatelessWidget {
   final AnimationController logoAnimationController;
+  final Animation<double> logoOpacityAnimation;
   final Animation<double> logoScaleAnimation;
   final Animation<Offset> logoSlideAnimation;
   final Animation<double> logoGlowAnimation;
@@ -11,6 +11,7 @@ class AnimatedLogo extends StatelessWidget {
   const AnimatedLogo({
     super.key,
     required this.logoAnimationController,
+    required this.logoOpacityAnimation,
     required this.logoScaleAnimation,
     required this.logoSlideAnimation,
     required this.logoGlowAnimation,
@@ -19,73 +20,44 @@ class AnimatedLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 200,
+      height: 142,
       child: AnimatedBuilder(
         animation: logoAnimationController,
         builder: (context, child) {
-          return SlideTransition(
-            position: logoSlideAnimation,
-            child: Transform.scale(
-              scale: logoScaleAnimation.value,
-              child: Hero(
-                tag: 'app_logo',
-                child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Glow effect behind logo
-                      if (logoGlowAnimation.value > 0)
-                        Container(
-                          width: 170,
-                          height: 170,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.purple.withOpacity(
-                                  0.3 * logoGlowAnimation.value,
-                                ),
-                                blurRadius: 40,
-                                spreadRadius: 15,
-                              ),
-                              BoxShadow(
-                                color: Colors.deepPurple.withOpacity(
-                                  0.2 * logoGlowAnimation.value,
-                                ),
-                                blurRadius: 60,
-                                spreadRadius: 20,
-                              ),
-                            ],
-                          ),
+          return FadeTransition(
+            opacity: logoOpacityAnimation,
+            child: SlideTransition(
+              position: logoSlideAnimation,
+              child: Transform.scale(
+                scale: logoScaleAnimation.value,
+                child: Hero(
+                  tag: 'app_logo',
+                  child: Center(
+                    child: Container(
+                      width: 112,
+                      height: 112,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.94),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.55),
                         ),
-                      
-                      // Logo with glass effect
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(25),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(
-                            sigmaX: 1.0 * logoGlowAnimation.value,
-                            sigmaY: 1.0 * logoGlowAnimation.value,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(
-                                  0.2 * logoGlowAnimation.value,
-                                ),
-                                width: 1.5,
-                              ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2A75BC).withOpacity(
+                              0.18 + (0.08 * logoGlowAnimation.value),
                             ),
-                            child: Image.asset(
-                              assets.appLogo,
-                              width: 150,
-                              height: 150,
-                            ),
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(assets.appLogo, fit: BoxFit.cover),
+                      ),
+                    ),
                   ),
                 ),
               ),

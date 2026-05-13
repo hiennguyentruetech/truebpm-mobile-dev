@@ -15,7 +15,6 @@ class LoginBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Full screen background image
         Positioned.fill(
           child: FadeTransition(
             opacity: backgroundOpacityAnimation,
@@ -27,19 +26,20 @@ class LoginBackground extends StatelessWidget {
             ),
           ),
         ),
-        // Gradient overlay
         Positioned.fill(
           child: FadeTransition(
             opacity: backgroundOpacityAnimation,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.6),
-                    Colors.black.withOpacity(0.8),
+                    const Color(0xFF03111C).withOpacity(0.80),
+                    const Color(0xFF062B45).withOpacity(0.70),
+                    const Color(0xFF020A12).withOpacity(0.94),
                   ],
+                  stops: const [0.0, 0.45, 1.0],
                 ),
               ),
             ),

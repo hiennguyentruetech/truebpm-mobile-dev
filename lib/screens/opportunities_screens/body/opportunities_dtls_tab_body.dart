@@ -94,14 +94,15 @@ class _OpportunitiesDetailsTabBodyState extends CoreTabBodyState<OpportunitiesDe
 
   Widget _buildBasicInformationSection() {
     return CardSection(
-      title: 'General Opportunity Information',
+      title: 'General Information',
       headerIcon: Icons.article_outlined,
       headerColor: Colors.indigo,
       children: [
         ...CoreDynamicFields.buildFields(
           fieldConfigs: [
             { 'key': 'code', 'label': 'Code', 'widget': 'input', 'type': 'text', 'disabled': true },
-            { 'key': 'opportunityName', 'label': 'Opportunity Name', 'widget': 'input', 'type': 'text' },
+            { 'key': 'opportunityName', 'label': 'Name', 'widget': 'input', 'type': 'text' },
+            { 'key': 'departmentId', 'label': 'Department', 'widget': 'select', 'selectType': 'dropdown', 'data': 'DROPDOWN.OPPRTU/DEPARTMENT', 'display': 'name' },
             { 'key': 'ownerId', 'label': 'Owner', 'widget': 'select', 'selectType': 'dropdown', 'data': 'DROPDOWN.OPPRTU/USER_SALE_DEPARTMENT', 'display': 'fullName', 'required': true },
             { 'key': 'leaderId', 'label': 'Leader', 'widget': 'select', 'selectType': 'dropdown', 'data': 'DROPDOWN.OPPRTU/USER_SALE_DEPARTMENT', 'display': 'fullName' },
             { 'key': 'saleStageId', 'label': 'Sale Stage', 'widget': 'select', 'selectType': 'dropdown', 'data': 'DROPDOWN.OPPRTU/SALE_STAGE', 'display': 'name' },

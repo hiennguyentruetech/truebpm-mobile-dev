@@ -21,19 +21,21 @@ class WelcomeText extends StatelessWidget {
           children: [
             Text(
               appStrings.loginTitle,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                height: 1.12,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               appStrings.loginDescription,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white70,
-              ),
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withOpacity(0.76),
+                height: 1.35,
+              ),
             ),
           ],
         ),
