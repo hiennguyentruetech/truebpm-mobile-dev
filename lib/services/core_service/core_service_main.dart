@@ -232,6 +232,7 @@ class CoreService {
         error: e,
         stackTrace: stack,
         context: '_makeApiCall',
+        requestPayload: payload,
       );
 
       // Check if session expired

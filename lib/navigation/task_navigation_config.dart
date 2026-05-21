@@ -12,6 +12,7 @@ import 'package:truebpm/screens/weekly_report_screens/detail_weekly_report_scree
 import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
 import 'package:truebpm/screens/dashboard_config_screens/detail_dashboard_config_screen.dart';
 import 'package:truebpm/screens/contractor_submission_screens/detail_contractor_submission_screen.dart';
+import 'package:truebpm/screens/safety_training_process/detail_safety_training_process_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -22,6 +23,7 @@ enum TaskModuleType {
   travelRequest('TRAREQ'),
   travelClaim('TRACLA'),
   contractorSubmission('CONSUB'),
+  safetyTrainingProcess('SAFETR'),
   quotation('QUTATI'),
   weeklyReport('WKLRPT'),
   eLeave('ELEAVE'),
@@ -49,6 +51,8 @@ enum TaskModuleType {
         return TaskModuleType.travelClaim;
       case 'CONSUB':
         return TaskModuleType.contractorSubmission;
+      case 'SAFETR':
+        return TaskModuleType.safetyTrainingProcess;
       case 'WKLRPT':
         return TaskModuleType.weeklyReport;
       case 'ELEAVE':
@@ -166,6 +170,14 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.safetyTrainingProcess:
+        return DetailSafetyTrainingProcessScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.quotation:
         return DetailQuotationScreen(
           listItem: {'id': config.listItemId},
@@ -234,6 +246,8 @@ class TaskScreenFactory {
         return 'Travel Claim';
       case TaskModuleType.contractorSubmission:
         return 'Contractor Submission';
+      case TaskModuleType.safetyTrainingProcess:
+        return 'Safety Training Process';
       case TaskModuleType.quotation:
         return 'Quotation';
       case TaskModuleType.weeklyReport:
@@ -269,6 +283,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Travel Claim';
       case TaskModuleType.contractorSubmission:
         return 'Contractor Submission';
+      case TaskModuleType.safetyTrainingProcess:
+        return 'Safety Training Process';
       case TaskModuleType.quotation:
         return 'Quotation';
       case TaskModuleType.weeklyReport:
@@ -301,6 +317,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.receipt_long;
       case TaskModuleType.contractorSubmission:
         return Icons.assignment_turned_in;
+      case TaskModuleType.safetyTrainingProcess:
+        return Icons.health_and_safety;
       case TaskModuleType.quotation:
         return Icons.request_quote;
       case TaskModuleType.weeklyReport:

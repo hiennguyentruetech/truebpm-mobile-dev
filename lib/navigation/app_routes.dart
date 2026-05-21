@@ -18,6 +18,8 @@ class AppRoutes {
   travelClaim = '/travelClaim', detailTravelClaim = '/detailTravelClaim',
   // Contractor Submission routes
   contractorSubmission = '/contractorSubmission', detailContractorSubmission = '/detailContractorSubmission',
+  // Safety Training Process routes
+  safetyTrainingProcess = '/safetyTrainingProcess', detailSafetyTrainingProcess = '/detailSafetyTrainingProcess',
   // Menu module routes
   menu = '/menu', detailMenu = '/detailMenu',
   // Module management routes

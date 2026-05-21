@@ -31,6 +31,9 @@ import 'package:truebpm/screens/travel_claim_screens/travel_claim_page_screen.da
 // Contractor Submission module
 import 'package:truebpm/screens/contractor_submission_screens/contractor_submission_page_screen.dart';
 
+// Safety Training Process module
+import 'package:truebpm/screens/safety_training_process/safety_training_process_page_screen.dart';
+
 // All pages imported below are in menu_screens stack
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
 import 'package:truebpm/screens/menu_screens/detail_menu_screen.dart';
@@ -96,6 +99,10 @@ class AppPages {
     // Contractor Submission module route
     AppRoutes.contractorSubmission: (context) =>
         const ContractorSubmissionPageScreen(),
+
+    // Safety Training Process module route
+    AppRoutes.safetyTrainingProcess: (context) =>
+        const SafetyTrainingProcessPageScreen(),
 
     // Menu module routes
     AppRoutes.menu: (context) => const ListMenuScreen(),

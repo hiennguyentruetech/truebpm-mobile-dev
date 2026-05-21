@@ -280,10 +280,15 @@ extension CoreServiceActionApiExt on CoreService {
     String taskId,
     bool isApproved,
   ) async {
+    final safeItemDetail = _prepareTaskItemDetailForAction(
+      moduleCode,
+      itemDetail,
+    );
+
     // Create payload with special task-specific fields
     final payload = {
       "user": user,
-      "itemDetail": itemDetail,
+      "itemDetail": safeItemDetail,
       "moduleCode": moduleCode,
       "tabModuleCode": tabModuleCode,
       "dataSpy": dataSpy,
@@ -325,5 +330,55 @@ extension CoreServiceActionApiExt on CoreService {
     }
 
     return result;
+  }
+
+  Map<String, dynamic> _prepareTaskItemDetailForAction(
+    String moduleCode,
+    Map<String, dynamic> itemDetail,
+  ) {
+    final cloned = _deepCloneMap(itemDetail);
+
+    switch (moduleCode.toUpperCase()) {
+      case 'CONSUB':
+        return _stripConsubUiOnlyFields(cloned);
+      default:
+        return cloned;
+    }
+  }
+
+  Map<String, dynamic> _deepCloneMap(Map<String, dynamic> source) {
+    try {
+      final decoded = jsonDecode(jsonEncode(source));
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      // Fallback below keeps the action resilient even if a value is not JSON-safe.
+    }
+    return Map<String, dynamic>.from(source);
+  }
+
+  Map<String, dynamic> _stripConsubUiOnlyFields(Map<String, dynamic> source) {
+    dynamic strip(dynamic value) {
+      if (value is List) {
+        return value.map(strip).toList();
+      }
+      if (value is Map) {
+        final sanitized = <String, dynamic>{};
+        value.forEach((key, entryValue) {
+          final keyText = key.toString();
+          if (keyText == 'employeePicDisplay' ||
+              keyText == 'listEmployeePicDisplay') {
+            return;
+          }
+          sanitized[keyText] = strip(entryValue);
+        });
+        return sanitized;
+      }
+      return value;
+    }
+
+    final sanitized = strip(source);
+    if (sanitized is Map<String, dynamic>) return sanitized;
+    return source;
   }
 }

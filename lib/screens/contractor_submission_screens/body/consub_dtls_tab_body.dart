@@ -58,6 +58,8 @@ class _ConsubDetailsTabBodyState
       final Map<String, dynamic> item = entry is Map
           ? Map<String, dynamic>.from(entry)
           : <String, dynamic>{};
+      item['stepOrder'] = _normalizeIntegerNumber(item['stepOrder']);
+
       final List<dynamic> rawPics = item['listEmployeePic'] is List
           ? List<dynamic>.from(item['listEmployeePic'])
           : const [];
@@ -101,6 +103,15 @@ class _ConsubDetailsTabBodyState
     }).toList();
 
     _moduleData['approvalWorkFlow'] = normalized;
+  }
+
+  dynamic _normalizeIntegerNumber(dynamic value) {
+    if (value is num && value % 1 == 0) return value.toInt();
+    if (value is String) {
+      final parsed = num.tryParse(value);
+      if (parsed != null && parsed % 1 == 0) return parsed.toInt();
+    }
+    return value;
   }
 
   Map<String, dynamic> _normalizeEmployeeMap(Map<String, dynamic> employee) {
@@ -152,9 +163,35 @@ class _ConsubDetailsTabBodyState
 
     if (widget.onDataChanged != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        widget.onDataChanged!(_response);
+        widget.onDataChanged!(_buildSanitizedResponse());
       });
     }
+  }
+
+  Map<String, dynamic> _buildSanitizedResponse() {
+    final sanitized = _stripUiOnlyFields(_response);
+    if (sanitized is Map<String, dynamic>) return sanitized;
+    if (sanitized is Map) return Map<String, dynamic>.from(sanitized);
+    return Map<String, dynamic>.from(_response);
+  }
+
+  dynamic _stripUiOnlyFields(dynamic value) {
+    if (value is List) {
+      return value.map(_stripUiOnlyFields).toList();
+    }
+    if (value is Map) {
+      final sanitized = <String, dynamic>{};
+      value.forEach((key, entryValue) {
+        final keyText = key.toString();
+        if (keyText == 'employeePicDisplay' ||
+            keyText == 'listEmployeePicDisplay') {
+          return;
+        }
+        sanitized[keyText] = _stripUiOnlyFields(entryValue);
+      });
+      return sanitized;
+    }
+    return value;
   }
 
   void _setByPath(Map<String, dynamic> map, String path, dynamic value) {
@@ -272,7 +309,12 @@ class _ConsubDetailsTabBodyState
                 ],
               },
               'children': [
-                {'key': 'stepOrder', 'label': 'Flow Order', 'type': 'number'},
+                {
+                  'key': 'stepOrder',
+                  'label': 'Flow Order',
+                  'type': 'number',
+                  'decimalPlaces': 0,
+                },
                 {'key': 'name', 'label': 'Name'},
                 {
                   'key': 'listEmployeePic',
