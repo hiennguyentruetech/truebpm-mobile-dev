@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.truetech.truebpm.solomon</string>
+	<string>com.truetech.truebpm.dev</string>
 	<key>PROJECT_ID</key>
 	<string>fcmnotification-2f535</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:742772881078:ios:7371e2664344f0d6015817</string>
+	<string>1:742772881078:ios:3ef2de3753785261015817</string>
 </dict>
 </plist>

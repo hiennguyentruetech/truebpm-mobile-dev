@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA1tb69UNkoHsqadcvW-mLaTikdudEppXA',
-    appId: '1:742772881078:android:b479092b96485ad8015817',
+    appId: '1:742772881078:android:08c5982c7b46d3af015817',
     messagingSenderId: '742772881078',
     projectId: 'fcmnotification-2f535',
     storageBucket: 'fcmnotification-2f535.firebasestorage.app',
@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAJGOsBxwtOTSnkp6DrfhEXJkNN4U80XW4',
-    appId: '1:742772881078:ios:7371e2664344f0d6015817',
+    appId: '1:742772881078:ios:3ef2de3753785261015817',
     messagingSenderId: '742772881078',
     projectId: 'fcmnotification-2f535',
     storageBucket: 'fcmnotification-2f535.firebasestorage.app',
-    iosBundleId: 'com.truetech.truebpm.solomon',
+    iosBundleId: 'com.truetech.truebpm.dev',
   );
 }

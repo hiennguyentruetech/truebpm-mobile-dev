@@ -1,4 +1,4 @@
-package com.truetech.truebpm.solomon
+package com.truetech.truebpm.dev
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

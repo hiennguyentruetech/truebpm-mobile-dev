@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:742772881078:android:b479092b96485ad8015817",
+        "mobilesdk_app_id": "1:742772881078:android:08c5982c7b46d3af015817",
         "android_client_info": {
-          "package_name": "com.truetech.truebpm.solomon"
+          "package_name": "com.truetech.truebpm.dev"
         }
       },
       "oauth_client": [],
