@@ -28,6 +28,9 @@ import 'package:truebpm/screens/travel_request_screens/travel_request_page_scree
 // Travel Claim module
 import 'package:truebpm/screens/travel_claim_screens/travel_claim_page_screen.dart';
 
+// Contractor Submission module
+import 'package:truebpm/screens/contractor_submission_screens/contractor_submission_page_screen.dart';
+
 // All pages imported below are in menu_screens stack
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
 import 'package:truebpm/screens/menu_screens/detail_menu_screen.dart';
@@ -90,6 +93,9 @@ class AppPages {
     // Travel Claim module route
     AppRoutes.travelClaim: (context) => const TravelClaimPageScreen(),
 
+    // Contractor Submission module route
+    AppRoutes.contractorSubmission: (context) =>
+        const ContractorSubmissionPageScreen(),
 
     // Menu module routes
     AppRoutes.menu: (context) => const ListMenuScreen(),
@@ -115,11 +121,13 @@ class AppPages {
     AppRoutes.quotation: (context) => const QuotationPageScreen(),
 
     // Customer route
-    AppRoutes.customer: (context) => const CustomerPageScreen(),    // Weekly Report route
+    AppRoutes.customer: (context) =>
+        const CustomerPageScreen(), // Weekly Report route
     AppRoutes.weeklyReport: (context) => const WeeklyReportPageScreen(),
 
     // Project Management route
-    AppRoutes.projectManagement: (context) => const ProjectManagementPageScreen(),
+    AppRoutes.projectManagement: (context) =>
+        const ProjectManagementPageScreen(),
 
     // Project CMDR route
     AppRoutes.projectCmdr: (context) => const ProjectCmdrPageScreen(),

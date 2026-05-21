@@ -23,6 +23,9 @@ import 'package:truebpm/screens/travel_request_screens/travel_request_page_scree
 // Travel Claim Screens
 import 'package:truebpm/screens/travel_claim_screens/travel_claim_page_screen.dart';
 
+// Contractor Submission Screens
+import 'package:truebpm/screens/contractor_submission_screens/contractor_submission_page_screen.dart';
+
 // Menu Screens
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
 import 'package:truebpm/screens/menu_screens/detail_menu_screen.dart';
@@ -78,9 +81,12 @@ class StackRoutes {
     // Travel Claim Stack Routes
     AppRoutes.travelClaim: () => const TravelClaimPageScreen(),
 
-
     // Travel Request Stack Routes
     AppRoutes.travelRequest: () => const TravelRequestPageScreen(),
+
+    // Contractor Submission Stack Routes
+    AppRoutes.contractorSubmission: () =>
+        const ContractorSubmissionPageScreen(),
 
     // Menu Stack Routes
     AppRoutes.menu: () => const ListMenuScreen(),
@@ -148,7 +154,11 @@ class StackRoutes {
   }
 
   /// Navigate with swipe back support - replacement for Navigator.pushNamed
-  static Future<T?> navigateTo<T>(BuildContext context, String routeName, {Object? arguments}) {
+  static Future<T?> navigateTo<T>(
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
     final route = createRoute<T>(routeName, arguments: arguments);
     if (route != null) {
       return Navigator.push<T>(context, route);

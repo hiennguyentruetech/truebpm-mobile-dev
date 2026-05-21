@@ -6,14 +6,14 @@ import 'package:truebpm/navigation/app_routes.dart';
 class MenuNavigationService {
   static void navigateToPage(BuildContext context, MenuModel menu) {
     if (menu.applicationPageId == null) return;
-    
+
     final token = menu.applicationPageId!.token;
     // logger.i('Navigate to page: $token');
-    
+
     try {
       String routeName;
-  // token is non-null here (applicationPageId checked above)
-  final tokenStr = token;
+      // token is non-null here (applicationPageId checked above)
+      final tokenStr = token;
 
       switch (tokenStr) {
         case 'module-page':
@@ -55,6 +55,9 @@ class MenuNavigationService {
         case 'travel-claim-page':
           routeName = AppRoutes.travelClaim;
           break;
+        case 'contractor-submission-page':
+          routeName = AppRoutes.contractorSubmission;
+          break;
         case 'e-leave-page':
           routeName = AppRoutes.eLeave;
           break;
@@ -75,7 +78,7 @@ class MenuNavigationService {
       Navigator.pushNamed(context, AppRoutes.detailMenu);
     }
   }
-  
+
   static bool canNavigate(MenuModel menu) {
     return menu.applicationPageId != null && !menu.hasChildren;
   }

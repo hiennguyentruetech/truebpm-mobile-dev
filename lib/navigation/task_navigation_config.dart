@@ -11,6 +11,7 @@ import 'package:truebpm/screens/travel_claim_screens/detail_travel_claim_screen.
 import 'package:truebpm/screens/weekly_report_screens/detail_weekly_report_screen.dart';
 import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
 import 'package:truebpm/screens/dashboard_config_screens/detail_dashboard_config_screen.dart';
+import 'package:truebpm/screens/contractor_submission_screens/detail_contractor_submission_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -20,6 +21,7 @@ enum TaskModuleType {
   cmdrmd('CMDRMD'),
   travelRequest('TRAREQ'),
   travelClaim('TRACLA'),
+  contractorSubmission('CONSUB'),
   quotation('QUTATI'),
   weeklyReport('WKLRPT'),
   eLeave('ELEAVE'),
@@ -45,6 +47,8 @@ enum TaskModuleType {
         return TaskModuleType.travelRequest;
       case 'TRACLA':
         return TaskModuleType.travelClaim;
+      case 'CONSUB':
+        return TaskModuleType.contractorSubmission;
       case 'WKLRPT':
         return TaskModuleType.weeklyReport;
       case 'ELEAVE':
@@ -81,8 +85,10 @@ class TaskNavigationConfig {
 
   /// Tạo config từ task data
   factory TaskNavigationConfig.fromTask(Map<String, dynamic> task) {
-    final moduleCode = task['rootContainerId']?['displayDescription']?.toString() ?? '';
-    final parsedDisplayDescription = task['displayDescriptionParsed'] as Map<String, dynamic>?;
+    final moduleCode =
+        task['rootContainerId']?['displayDescription']?.toString() ?? '';
+    final parsedDisplayDescription =
+        task['displayDescriptionParsed'] as Map<String, dynamic>?;
     final listItemId = parsedDisplayDescription?['id']?.toString() ?? '';
     final taskId = task['id']?.toString() ?? '';
 
@@ -102,7 +108,7 @@ class TaskScreenFactory {
   /// Tạo target screen dựa trên config
   static Widget createScreen(TaskNavigationConfig config) {
     final moduleType = TaskModuleType.fromCode(config.moduleCode);
-    
+
     switch (moduleType) {
       case TaskModuleType.overtime:
         return DetailOTScreen(
@@ -146,6 +152,14 @@ class TaskScreenFactory {
 
       case TaskModuleType.travelClaim:
         return DetailTravelClaimScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
+      case TaskModuleType.contractorSubmission:
+        return DetailContractorSubmissionScreen(
           listItem: {'id': config.listItemId},
           initialTabCode: config.initialTabCode,
           fromTaskScreen: config.fromTaskScreen,
@@ -218,6 +232,8 @@ class TaskScreenFactory {
         return 'Travel Request';
       case TaskModuleType.travelClaim:
         return 'Travel Claim';
+      case TaskModuleType.contractorSubmission:
+        return 'Contractor Submission';
       case TaskModuleType.quotation:
         return 'Quotation';
       case TaskModuleType.weeklyReport:
@@ -251,6 +267,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Travel Request';
       case TaskModuleType.travelClaim:
         return 'Travel Claim';
+      case TaskModuleType.contractorSubmission:
+        return 'Contractor Submission';
       case TaskModuleType.quotation:
         return 'Quotation';
       case TaskModuleType.weeklyReport:
@@ -281,6 +299,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.flight_takeoff;
       case TaskModuleType.travelClaim:
         return Icons.receipt_long;
+      case TaskModuleType.contractorSubmission:
+        return Icons.assignment_turned_in;
       case TaskModuleType.quotation:
         return Icons.request_quote;
       case TaskModuleType.weeklyReport:
