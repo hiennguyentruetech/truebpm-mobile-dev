@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/utils/functions.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
@@ -71,7 +72,7 @@ class _SafetrDetailsTabBodyState
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     });
 
-    if (key == 'contractorSubmissionId') {
+    if (key == 'contractorSubmissionId' || key == 'topicTrainingId') {
       _loadAttendanceRows();
     }
 
@@ -102,7 +103,8 @@ class _SafetrDetailsTabBodyState
   Future<void> _loadAttendanceRows() async {
     final requestSerial = ++_attendanceRequestSerial;
     final selectedSubmissionIds = _extractSelectedSubmissionIds();
-    if (selectedSubmissionIds.isEmpty) {
+    final topicId = _extractTopicTrainingId();
+    if (selectedSubmissionIds.isEmpty || topicId == null) {
       if (mounted) {
         setState(() {
           _attendanceRows.clear();
@@ -120,22 +122,10 @@ class _SafetrDetailsTabBodyState
       });
     }
 
-    final ids = await _resolveAttendanceContractorIds(selectedSubmissionIds);
-    if (!mounted || requestSerial != _attendanceRequestSerial) return;
-
-    if (ids.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _attendanceRows.clear();
-          _attendanceError = null;
-          _attendanceLoading = false;
-        });
-      }
-      return;
-    }
-
-    final encodedIds = Uri.encodeQueryComponent(ids.join(','));
-    final endpoint = 'DROPDOWN.SAFETR/CONTRACTOR_EMPLOYEE?ids=$encodedIds';
+    final endpoint = _attendanceEmployeeEndpoint(
+      selectedSubmissionIds,
+      topicId,
+    );
     final response = await CoreService.instance.getDropdownData(endpoint);
 
     if (!mounted || requestSerial != _attendanceRequestSerial) return;
@@ -157,30 +147,6 @@ class _SafetrDetailsTabBodyState
     }
   }
 
-  Future<List<String>> _resolveAttendanceContractorIds(
-    List<String> selectedSubmissionIds,
-  ) async {
-    final directIds = _extractContractorIds(allowFallback: false);
-    if (directIds.isNotEmpty) return directIds;
-
-    final response = await CoreService.instance.getDropdownData(
-      _contractSubmissionEndpoint(),
-    );
-    if (response['success'] != true) return selectedSubmissionIds;
-
-    final selectedIdSet = selectedSubmissionIds.toSet();
-    final options = _normalizeDropdownOptions(response['data']);
-    final ids = <String>{};
-    for (final option in options) {
-      final optionId = _extractId(option['id']);
-      if (optionId != null && selectedIdSet.contains(optionId)) {
-        _collectContractorIds(option, ids, allowFallback: false);
-      }
-    }
-
-    return ids.isNotEmpty ? ids.toList() : selectedSubmissionIds;
-  }
-
   List<Map<String, dynamic>> _normalizeAttendanceRows(dynamic data) {
     final rows = _normalizeDropdownOptions(data);
     rows.sort((a, b) {
@@ -190,6 +156,17 @@ class _SafetrDetailsTabBodyState
     });
 
     return rows;
+  }
+
+  String _attendanceEmployeeEndpoint(
+    List<String> selectedSubmissionIds,
+    String topicId,
+  ) {
+    final encodedIds = selectedSubmissionIds
+        .map(Uri.encodeQueryComponent)
+        .join(',');
+    final encodedTopicId = Uri.encodeQueryComponent(topicId);
+    return 'DROPDOWN.SAFETR/CONTRACTOR_EMPLOYEE?ids=$encodedIds&topicId=$encodedTopicId';
   }
 
   List<Map<String, dynamic>> _normalizeDropdownOptions(dynamic data) {
@@ -210,28 +187,6 @@ class _SafetrDetailsTabBodyState
     return rows;
   }
 
-  List<String> _extractContractorIds({bool allowFallback = true}) {
-    final selection = _moduleData['contractorSubmissionId'];
-    final List<dynamic> items = selection is List
-        ? List<dynamic>.from(selection)
-        : (selection != null ? [selection] : const []);
-
-    final ids = <String>{};
-    for (final item in items) {
-      if (item is Map) {
-        _collectContractorIds(
-          Map<String, dynamic>.from(item),
-          ids,
-          allowFallback: allowFallback,
-        );
-      } else if (item is String && item.trim().isNotEmpty) {
-        ids.add(item);
-      }
-    }
-
-    return ids.toList();
-  }
-
   List<String> _extractSelectedSubmissionIds() {
     final selection = _moduleData['contractorSubmissionId'];
     final List<dynamic> items = selection is List
@@ -247,43 +202,8 @@ class _SafetrDetailsTabBodyState
     return ids.toList();
   }
 
-  void _collectContractorIds(
-    Map<String, dynamic> item,
-    Set<String> ids, {
-    bool allowFallback = true,
-  }) {
-    final initialCount = ids.length;
-
-    for (final key in const [
-      'contractorIds',
-      'contractorIdList',
-      'contractors',
-    ]) {
-      final values = item[key];
-      if (values is List) {
-        for (final value in values) {
-          final id = _extractId(value);
-          if (id != null) ids.add(id);
-        }
-      }
-    }
-
-    for (final path in const [
-      'contractorId',
-      'contractorID',
-      'contractor.id',
-      'contractorId.id',
-      'contractorInfo.id',
-      'contractorMap.id',
-    ]) {
-      final id = _extractId(_getByPath(item, path));
-      if (id != null) ids.add(id);
-    }
-
-    if (allowFallback && ids.length == initialCount) {
-      final fallbackId = _extractId(item['id']);
-      if (fallbackId != null) ids.add(fallbackId);
-    }
+  String? _extractTopicTrainingId() {
+    return _extractId(_moduleData['topicTrainingId']);
   }
 
   dynamic _getByPath(Map<String, dynamic> item, String path) {
@@ -369,7 +289,15 @@ class _SafetrDetailsTabBodyState
           },
         ]),
         ..._buildDynamicFields([
-          {'key': 'topic', 'label': 'Topic', 'type': 'textarea', 'maxLines': 4},
+          {
+            'key': 'topicTrainingId',
+            'widget': 'select',
+            'selectType': 'dropdown',
+            'label': 'Topic',
+            'hintText': 'Select topic',
+            'data': 'DROPDOWN.SAFETR/TOPIC_TRAINING',
+            'display': 'name',
+          },
         ]),
       ],
     );
@@ -476,6 +404,7 @@ class _SafetrDetailsTabBodyState
     final rowNo =
         int.tryParse(row['sortOrder']?.toString() ?? '') ?? (index + 1);
     final fullName = row['fullName']?.toString().trim() ?? '';
+    final approved = row['approved'];
 
     return Container(
       margin: EdgeInsets.only(
@@ -498,39 +427,51 @@ class _SafetrDetailsTabBodyState
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAttendanceItemHeader(rowNo, fullName),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
-            child: Column(
-              children: [
-                _buildAttendanceInfoRow(
-                  'Year of Birth',
-                  row['yearOfBirth']?.toString() ?? '',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(7),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(7),
+          onTap: () => _showAttendanceDetailPopup(row, rowNo, fullName),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildAttendanceItemHeader(rowNo, fullName, showDetailIcon: true),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
+                child: Column(
+                  children: [
+                    _buildAttendanceInfoRow(
+                      'Position',
+                      _attendanceText(row, 'positionTrainingId.name'),
+                    ),
+                    _buildAttendanceInfoRow(
+                      'ID No.',
+                      _attendanceText(row, 'identityNo'),
+                    ),
+                    _buildAttendanceInfoRow(
+                      'Company',
+                      _attendanceText(row, 'company'),
+                    ),
+                    _buildAttendanceInfoRow(
+                      'Approved',
+                      _attendanceApprovedText(approved),
+                    ),
+                  ],
                 ),
-                _buildAttendanceInfoRow(
-                  'Identity No.',
-                  row['identityNo']?.toString() ?? '',
-                ),
-                _buildAttendanceInfoRow(
-                  'Company',
-                  row['company']?.toString() ?? '',
-                ),
-                _buildAttendanceInfoRow(
-                  'Position',
-                  row['position']?.toString() ?? '',
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildAttendanceItemHeader(int rowNo, String fullName) {
+  Widget _buildAttendanceItemHeader(
+    int rowNo,
+    String fullName, {
+    bool showDetailIcon = false,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -591,9 +532,223 @@ class _SafetrDetailsTabBodyState
               ),
             ),
           ),
+          if (showDetailIcon) ...[
+            const SizedBox(width: 8),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.info_outline,
+                color: Colors.blue.shade700,
+                size: 18,
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  void _showAttendanceDetailPopup(
+    Map<String, dynamic> row,
+    int rowNo,
+    String fullName,
+  ) {
+    final title = fullName.isEmpty ? 'Attendee $rowNo' : fullName;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height * 0.82,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                spreadRadius: 3,
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade600, Colors.blue.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.badge_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Safety training attendance details',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Material(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: _buildAttendanceDetailRows(row, rowNo, title),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildAttendanceDetailRows(
+    Map<String, dynamic> row,
+    int rowNo,
+    String fullName,
+  ) {
+    final approved = row['approved'];
+
+    return [
+      _buildAttendanceInfoRow('No.', rowNo.toString()),
+      _buildAttendanceInfoRow('Full Name', fullName),
+      _buildAttendanceInfoRow(
+        'Position',
+        _attendanceText(row, 'positionTrainingId.name'),
+      ),
+      _buildAttendanceInfoRow('ID No.', _attendanceText(row, 'identityNo')),
+      _buildAttendanceInfoRow('Company', _attendanceText(row, 'company')),
+      _buildAttendanceInfoRow('Approved', _attendanceApprovedText(approved)),
+      _buildAttendanceInfoRow(
+        'Date of Birth',
+        _attendanceDate(row, 'dayOfBirth'),
+      ),
+      _buildAttendanceInfoRow(
+        'Rigger Date Issued',
+        _attendanceDate(row, 'riggerDateIssued'),
+      ),
+      _buildAttendanceInfoRow(
+        'Crane Operating Date Issued',
+        _attendanceDate(row, 'craneOperatingDateIssued'),
+      ),
+      _buildAttendanceInfoRow(
+        'License Start Day',
+        _attendanceDate(row, 'licenseNameStartDay'),
+      ),
+      _buildAttendanceInfoRow(
+        'License Expired Day',
+        _attendanceDate(row, 'licenseNameExpiredDay'),
+      ),
+      _buildAttendanceInfoRow(
+        'Rigger Decision',
+        _attendanceText(row, 'riggerDecision'),
+      ),
+      _buildAttendanceInfoRow(
+        'Crane Operating Decision',
+        _attendanceText(row, 'craneOperatingDecision'),
+      ),
+      _buildAttendanceInfoRow(
+        'Health Declaration Start Day',
+        _attendanceDate(row, 'healthDeclarationStartDay'),
+      ),
+      _buildAttendanceInfoRow(
+        'Health Declaration Expired Day',
+        _attendanceDate(row, 'healthDeclarationExpiredDay'),
+      ),
+      _buildAttendanceInfoRow(
+        'Accident Insurance Expired Day',
+        _attendanceDate(row, 'accidentInsuranceExpiredDay'),
+      ),
+      _buildAttendanceInfoRow(
+        'Labor Contract Expired Day',
+        _attendanceDate(row, 'laborContractExpiredDay'),
+      ),
+    ];
+  }
+
+  String _attendanceText(Map<String, dynamic> row, String path) {
+    final value = _getByPath(row, path);
+    if (value == null) return '';
+    return value.toString();
+  }
+
+  String _attendanceDate(Map<String, dynamic> row, String path) {
+    final value = _attendanceText(row, path).trim();
+    if (value.isEmpty) return '';
+    return Functions().formatDateTimeValue(value, 'date', 'ddMMyyyy');
+  }
+
+  String _attendanceApprovedText(dynamic approved) {
+    return approved is bool ? (approved ? 'Yes' : 'No') : '';
   }
 
   Widget _buildAttendanceInfoRow(String label, String value) {

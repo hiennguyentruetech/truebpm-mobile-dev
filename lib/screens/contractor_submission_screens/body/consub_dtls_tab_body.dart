@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:truebpm/services/auth_service.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
+import 'package:truebpm/widgets/popups/document_popup.dart';
 
 /// Tab body for CONSUB DTLS (Details)
 class ConsubDetailsTabBody extends CoreTabBody {
@@ -45,6 +47,7 @@ class _ConsubDetailsTabBodyState
     _itemDetail = Map<String, dynamic>.from(_response['itemDetail'] ?? {});
     _moduleData = Map<String, dynamic>.from(_itemDetail['value'] ?? {});
     _normalizeApprovalWorkflow();
+    _normalizeContractorEmployees();
     _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
     _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
     if (mounted) setState(() {});
@@ -105,6 +108,29 @@ class _ConsubDetailsTabBodyState
     _moduleData['approvalWorkFlow'] = normalized;
   }
 
+  void _normalizeContractorEmployees() {
+    final raw = _moduleData['contractorEmployee'];
+    if (raw is! List) return;
+
+    final normalized = raw.map((entry) {
+      final Map<String, dynamic> item = entry is Map
+          ? Map<String, dynamic>.from(entry)
+          : <String, dynamic>{};
+      item['sortOrder'] = _normalizeIntegerNumber(item['sortOrder']);
+
+      final positionTraining = item['positionTrainingId'];
+      if (positionTraining is Map) {
+        item['positionTrainingId'] = Map<String, dynamic>.from(
+          positionTraining,
+        );
+      }
+
+      return item;
+    }).toList();
+
+    _moduleData['contractorEmployee'] = normalized;
+  }
+
   dynamic _normalizeIntegerNumber(dynamic value) {
     if (value is num && value % 1 == 0) return value.toInt();
     if (value is String) {
@@ -156,6 +182,9 @@ class _ConsubDetailsTabBodyState
       if (key == 'approvalWorkFlow') {
         _normalizeApprovalWorkflow();
       }
+      if (key == 'contractorEmployee') {
+        _normalizeContractorEmployees();
+      }
 
       _itemDetail['value'] = Map<String, dynamic>.from(_moduleData);
       _response['itemDetail'] = Map<String, dynamic>.from(_itemDetail);
@@ -166,6 +195,50 @@ class _ConsubDetailsTabBodyState
         widget.onDataChanged!(_buildSanitizedResponse());
       });
     }
+  }
+
+  Future<void> _showContractorEmployeeDocuments(
+    BuildContext ctx,
+    Map<String, dynamic> item,
+  ) async {
+    final userInfo = await AuthService().getSavedUserInfo();
+    if (userInfo == null) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('User information not available'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final listItem = Map<String, dynamic>.from(item);
+    if (listItem['id'] == null) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('Employee id not available'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!ctx.mounted) return;
+    showDialog(
+      context: ctx,
+      builder: (context) => DocumentPopup(
+        moduleCode: 'CONSUB',
+        tabModuleCode: 'CTSBMS',
+        listItem: listItem,
+        userInfo: userInfo,
+        enableRevision: false,
+        enableDocumentType: false,
+      ),
+    );
   }
 
   Map<String, dynamic> _buildSanitizedResponse() {
@@ -187,7 +260,10 @@ class _ConsubDetailsTabBodyState
             keyText == 'listEmployeePicDisplay') {
           return;
         }
-        sanitized[keyText] = _stripUiOnlyFields(entryValue);
+        final sanitizedValue = _stripUiOnlyFields(entryValue);
+        sanitized[keyText] = keyText == 'stepOrder' || keyText == 'sortOrder'
+            ? _normalizeIntegerNumber(sanitizedValue)
+            : sanitizedValue;
       });
       return sanitized;
     }
@@ -221,6 +297,7 @@ class _ConsubDetailsTabBodyState
           children: [
             _buildGeneralInfoSection(),
             _buildDocumentInfoSection(),
+            _buildContractorEmployeeSection(),
             _buildSystemInfoSection(),
           ],
         ),
@@ -271,6 +348,176 @@ class _ConsubDetailsTabBodyState
             //   'display': 'fullName',
             //   'disabled': true,
             // },
+          ],
+          itemDetail: _itemDetail,
+          moduleData: _moduleData,
+          onChanged: _onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContractorEmployeeSection() {
+    return CardSection(
+      title: 'Contractor Employees',
+      headerIcon: Icons.groups_outlined,
+      headerColor: Colors.blue,
+      children: [
+        ...CoreDynamicFields.buildFields(
+          fieldConfigs: [
+            {
+              'key': 'contractorEmployee',
+              'widget': 'collection',
+              'label': 'Contractor Employees',
+              'itemLabel': 'Employee',
+              'allowAdd': false,
+              'allowRemove': false,
+              'editMode': 'modal',
+              'titleTemplate': '{fullName}',
+              'footerActions': [
+                {
+                  'type': 'document',
+                  'tooltip': 'Documents',
+                  'color': '#7C4DFF',
+                },
+              ],
+              'onFooterAction':
+                  (
+                    BuildContext ctx,
+                    Map<String, dynamic> item,
+                    Map<String, dynamic> action,
+                  ) async {
+                    final type = (action['type'] ?? '').toString();
+                    if (type == 'document') {
+                      await _showContractorEmployeeDocuments(ctx, item);
+                    }
+                  },
+              'summary': {
+                'layout': 'row',
+                'fields': [
+                  {'key': 'sortOrder', 'label': 'No.', 'layout': 'row'},
+                  {
+                    'key': 'identityNo',
+                    'label': 'Identity No.',
+                    'layout': 'row',
+                  },
+                  {
+                    'key': 'positionTrainingId.name',
+                    'label': 'Training Position',
+                    'layout': 'row',
+                  },
+                  {'key': 'company', 'label': 'Company', 'layout': 'row'},
+                ],
+              },
+              'children': [
+                {
+                  'key': 'sortOrder',
+                  'label': 'Sort Order',
+                  'type': 'number',
+                  'decimalPlaces': 0,
+                  'disabled': true,
+                },
+                {'key': 'fullName', 'label': 'Full Name', 'disabled': true},
+                {
+                  'key': 'positionTrainingId',
+                  'widget': 'select',
+                  'selectType': 'dropdown',
+                  'label': 'Training Position',
+                  'hintText': 'Select training position',
+                  'data': 'DROPDOWN.CONSUB/POSITION_TRAINING',
+                  'display': 'name',
+                },
+                {
+                  'key': 'identityNo',
+                  'label': 'Identity No.',
+                  'disabled': true,
+                },
+                {
+                  'key': 'dayOfBirth',
+                  'widget': 'datetime',
+                  'label': 'Date of Birth',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                  'disabled': true,
+                },
+                {'key': 'company', 'label': 'Company', 'disabled': true},
+                {
+                  'key': 'riggerDateIssued',
+                  'widget': 'datetime',
+                  'label': 'Rigger Date Issued',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'craneOperatingDateIssued',
+                  'widget': 'datetime',
+                  'label': 'Crane Operating Date Issued',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'licenseNameStartDay',
+                  'widget': 'datetime',
+                  'label': 'License Start Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'licenseNameExpiredDay',
+                  'widget': 'datetime',
+                  'label': 'License Expired Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {'key': 'riggerDecision', 'label': 'Rigger Decision'},
+                {
+                  'key': 'craneOperatingDecision',
+                  'label': 'Crane Operating Decision',
+                },
+                {
+                  'key': 'healthDeclarationStartDay',
+                  'widget': 'datetime',
+                  'label': 'Health Declaration Start Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'healthDeclarationExpiredDay',
+                  'widget': 'datetime',
+                  'label': 'Health Declaration Expired Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'accidentInsuranceExpiredDay',
+                  'widget': 'datetime',
+                  'label': 'Accident Insurance Expired Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'laborContractExpiredDay',
+                  'widget': 'datetime',
+                  'label': 'Labor Contract Expired Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'securityCardStartDay',
+                  'widget': 'datetime',
+                  'label': 'Security Card Start Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+                {
+                  'key': 'securityCardExpiredDay',
+                  'widget': 'datetime',
+                  'label': 'Security Card Expired Day',
+                  'datetimeType': 'date',
+                  'displayFormat': 'ddMMyyyy',
+                },
+              ],
+            },
           ],
           itemDetail: _itemDetail,
           moduleData: _moduleData,

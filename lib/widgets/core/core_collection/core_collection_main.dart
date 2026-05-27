@@ -25,6 +25,13 @@ class CoreCollection extends StatefulWidget {
   useAddFirstList; // Add new items to the beginning of list instead of end
   final Map<String, dynamic>?
   totalSummary; // Configuration for total summary view
+  final List<Map<String, dynamic>>? footerActions; // Extra item actions
+  final void Function(
+    BuildContext context,
+    Map<String, dynamic> item,
+    Map<String, dynamic> actionConfig,
+  )?
+  onFooterAction; // Callback for item actions
 
   const CoreCollection({
     super.key,
@@ -47,6 +54,8 @@ class CoreCollection extends StatefulWidget {
     this.useFloatingAddButton = false,
     this.useAddFirstList = false,
     this.totalSummary,
+    this.footerActions,
+    this.onFooterAction,
   });
 
   @override
@@ -56,8 +65,8 @@ class CoreCollection extends StatefulWidget {
 class _CoreCollectionState extends State<CoreCollection>
     with TickerProviderStateMixin {
   late List<Map<String, dynamic>> _items;
-  Map<int, AnimationController> _scaleControllers = {};
-  Map<int, Animation<double>> _scaleAnimations = {};
+  final Map<int, AnimationController> _scaleControllers = {};
+  final Map<int, Animation<double>> _scaleAnimations = {};
   // Removed unused FAB animation since we moved to screen-level FAB
 
   @override

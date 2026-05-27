@@ -288,7 +288,7 @@ class CoreDynamicFields {
     // Validate splitKey configuration
     if (splitKey && dropdownDisplay == null) {
       // If splitKey is true, dropdownDisplay should be provided
-      print(
+      debugPrint(
         'Warning: splitKey is true but dropdownDisplay is not provided for field $fieldName',
       );
     }
@@ -379,7 +379,7 @@ class CoreDynamicFields {
         : null;
 
     // Dynamic date constraints via path
-    dynamic _getByPathLocal(Map<String, dynamic>? map, String path) {
+    dynamic getByPathLocal(Map<String, dynamic>? map, String path) {
       if (map == null) return null;
       dynamic curr = map;
       for (final part in path.split('.')) {
@@ -396,23 +396,23 @@ class CoreDynamicFields {
         ? itemDetail['value'] as Map<String, dynamic>
         : <String, dynamic>{};
     if (config['minDatePath'] != null && minDate == null) {
-      final raw = _getByPathLocal(valueMap, config['minDatePath']);
-      if (raw is DateTime)
+      final raw = getByPathLocal(valueMap, config['minDatePath']);
+      if (raw is DateTime) {
         minDate = raw;
-      else if (raw is String) {
+      } else if (raw is String) {
         minDate = DateTime.tryParse(raw);
       }
     }
     if (config['maxDatePath'] != null && maxDate == null) {
-      final raw = _getByPathLocal(valueMap, config['maxDatePath']);
-      if (raw is DateTime)
+      final raw = getByPathLocal(valueMap, config['maxDatePath']);
+      if (raw is DateTime) {
         maxDate = raw;
-      else if (raw is String) {
+      } else if (raw is String) {
         maxDate = DateTime.tryParse(raw);
       }
     }
     if (defaultDatePath != null) {
-      final raw = _getByPathLocal(valueMap, defaultDatePath);
+      final raw = getByPathLocal(valueMap, defaultDatePath);
       if (raw is DateTime) {
         defaultDate = raw;
       } else if (raw is String) {
@@ -469,7 +469,7 @@ class CoreDynamicFields {
     bool unmetDependency = false;
     if (config['requireKeys'] is List) {
       for (final keyPath in (config['requireKeys'] as List)) {
-        final dep = _getByPathLocal(valueMap, keyPath.toString());
+        final dep = getByPathLocal(valueMap, keyPath.toString());
         if (dep == null || (dep is String && dep.isEmpty)) {
           unmetDependency = true;
           break;
@@ -612,6 +612,15 @@ class CoreDynamicFields {
     final Map<String, dynamic>? totalSummary =
         config['totalSummary'] as Map<String, dynamic>?;
     final String? titleTemplate = config['titleTemplate'];
+    final List<Map<String, dynamic>>? footerActions =
+        (config['footerActions'] as List?)?.cast<Map<String, dynamic>>();
+    final onFooterAction =
+        config['onFooterAction']
+            as void Function(
+              BuildContext,
+              Map<String, dynamic>,
+              Map<String, dynamic>,
+            )?;
 
     return CoreCollection(
       dataKey: fieldName,
@@ -638,6 +647,8 @@ class CoreDynamicFields {
       useAddFirstList: useAddFirstList,
       totalSummary: totalSummary,
       titleTemplate: titleTemplate,
+      footerActions: footerActions,
+      onFooterAction: onFooterAction,
     );
   }
 

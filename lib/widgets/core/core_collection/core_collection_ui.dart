@@ -134,28 +134,36 @@ extension _CoreCollectionUiExt on _CoreCollectionState {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(7),
-          onTap: _isDisabled ? null : () => _onItemTap(index),
-          child: AnimatedBuilder(
-            animation:
-                _scaleAnimations[index] ?? const AlwaysStoppedAnimation(1.0),
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _scaleAnimations[index]?.value ?? 1.0,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildItemHeader(index, item, showEditIcon: true),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
-                      child: Column(children: _buildItemFields(index, item)),
+        child: AnimatedBuilder(
+          animation:
+              _scaleAnimations[index] ?? const AlwaysStoppedAnimation(1.0),
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimations[index]?.value ?? 1.0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(7),
+                    onTap: _isDisabled ? null : () => _onItemTap(index),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildItemHeader(index, item, showEditIcon: true),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
+                          child: Column(
+                            children: _buildItemFields(index, item),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  _buildFooterActionsBar(item),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -195,27 +203,33 @@ extension _CoreCollectionUiExt on _CoreCollectionState {
           ),
         ],
       ),
-      child: TouchableOpacity(
-        onTap: _isDisabled
-            ? null
-            : () {
-                _onItemTap(index);
-                _showEditModal(index, item);
-              },
-        opacity: 0.4,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(7)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildItemHeader(index, item, showEditIcon: true),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
-                child: _buildItemSummary(item),
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(7)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TouchableOpacity(
+              onTap: _isDisabled
+                  ? null
+                  : () {
+                      _onItemTap(index);
+                      _showEditModal(index, item);
+                    },
+              opacity: 0.4,
+              duration: const Duration(milliseconds: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildItemHeader(index, item, showEditIcon: true),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(7, 7, 7, 7),
+                    child: _buildItemSummary(item),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            _buildFooterActionsBar(item),
+          ],
         ),
       ),
     );
@@ -345,6 +359,78 @@ extension _CoreCollectionUiExt on _CoreCollectionState {
         ],
       ),
     );
+  }
+
+  Widget _buildFooterActionsBar(Map<String, dynamic> item) {
+    final actions = widget.footerActions ?? const [];
+    if (actions.isEmpty || widget.onFooterAction == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(7),
+          bottomRight: Radius.circular(7),
+        ),
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        children: [..._buildFooterActionButtons(item), const Spacer()],
+      ),
+    );
+  }
+
+  List<Widget> _buildFooterActionButtons(Map<String, dynamic> item) {
+    final actions = widget.footerActions ?? const [];
+    return actions.map((cfg) {
+      final String type = (cfg['type'] ?? '').toString();
+      final String tooltip = (cfg['tooltip'] ?? '').toString();
+
+      IconData icon;
+      switch (type) {
+        case 'comment':
+          icon = Icons.comment_outlined;
+          break;
+        case 'document':
+          icon = Icons.description_outlined;
+          break;
+        case 'download':
+          icon = Icons.download_rounded;
+          break;
+        default:
+          icon = Icons.extension_rounded;
+      }
+
+      Color? color;
+      final dynamic colorCfg = cfg['color'];
+      if (colorCfg is Color) {
+        color = colorCfg;
+      } else if (colorCfg is int) {
+        color = Color(colorCfg);
+      } else if (colorCfg is String) {
+        String hex = colorCfg.trim();
+        if (hex.startsWith('#')) hex = hex.substring(1);
+        if (hex.length == 6) hex = 'FF$hex';
+        final intVal = int.tryParse(hex, radix: 16);
+        if (intVal != null) color = Color(intVal);
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: IconButton(
+          tooltip: tooltip.isEmpty ? null : tooltip,
+          icon: Icon(icon, size: 18),
+          color: color,
+          onPressed: () => widget.onFooterAction?.call(context, item, cfg),
+          padding: const EdgeInsets.all(4),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
+      );
+    }).toList();
   }
 
   List<Widget> _buildItemFields(int index, Map<String, dynamic> item) {

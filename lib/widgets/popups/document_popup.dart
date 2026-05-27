@@ -10,6 +10,10 @@ class DocumentPopup extends StatefulWidget {
   final String tabModuleCode;
   final Map<String, dynamic> listItem;
   final UserModel userInfo;
+  final bool enableRevision;
+  final bool enableDocumentType;
+  final String? dataRevision;
+  final String? dataDocumentType;
 
   const DocumentPopup({
     super.key,
@@ -17,6 +21,10 @@ class DocumentPopup extends StatefulWidget {
     required this.tabModuleCode,
     required this.listItem,
     required this.userInfo,
+    this.enableRevision = true,
+    this.enableDocumentType = true,
+    this.dataRevision = 'DROPDOWN.RESOURCE/REVISION',
+    this.dataDocumentType = 'DROPDOWN.PRJMGT/PROJECTDOCTYPE',
   });
 
   @override
@@ -35,7 +43,7 @@ class _DocumentPopupState extends State<DocumentPopup> {
 
   void _initializeProvider() async {
     _provider = CoreDetailProvider();
-    
+
     // Initialize provider with the data
     await _provider.initialize(
       widget.moduleCode,
@@ -46,7 +54,7 @@ class _DocumentPopupState extends State<DocumentPopup> {
         Navigator.of(context).pop();
       },
     );
-    
+
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -87,7 +95,10 @@ class _DocumentPopupState extends State<DocumentPopup> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade600, Colors.deepPurple.shade700],
+                  colors: [
+                    Colors.deepPurple.shade600,
+                    Colors.deepPurple.shade700,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -153,7 +164,7 @@ class _DocumentPopupState extends State<DocumentPopup> {
                 ],
               ),
             ),
-            
+
             // Content
             Expanded(
               child: _isLoading
@@ -166,10 +177,10 @@ class _DocumentPopupState extends State<DocumentPopup> {
                             moduleCode: widget.moduleCode,
                             tabCode: widget.tabModuleCode,
                             initialData: provider.rawResponse,
-                            enableRevision: true,
-                            enableDocumentType: true,
-                            dataRevision: 'DROPDOWN.RESOURCE/REVISION',
-                            dataDocumentType: 'DROPDOWN.PRJMGT/PROJECTDOCTYPE',
+                            enableRevision: widget.enableRevision,
+                            enableDocumentType: widget.enableDocumentType,
+                            dataRevision: widget.dataRevision,
+                            dataDocumentType: widget.dataDocumentType,
                             onDataChanged: (data) {
                               // Handle data changes if needed
                             },
