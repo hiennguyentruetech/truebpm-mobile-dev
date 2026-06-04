@@ -46,6 +46,9 @@ class MenuNavigationService {
         case 'project-management':
           routeName = AppRoutes.projectManagement;
           break;
+        case 'predictions-page':
+          routeName = AppRoutes.predictions;
+          break;
         case 'project-cmdr':
           routeName = AppRoutes.projectCmdr;
           break;

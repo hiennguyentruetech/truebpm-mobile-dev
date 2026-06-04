@@ -13,6 +13,7 @@ import 'package:truebpm/screens/quotation_screens/detail_quotation_screen.dart';
 import 'package:truebpm/screens/dashboard_config_screens/detail_dashboard_config_screen.dart';
 import 'package:truebpm/screens/contractor_submission_screens/detail_contractor_submission_screen.dart';
 import 'package:truebpm/screens/safety_training_process/detail_safety_training_process_screen.dart';
+import 'package:truebpm/screens/predictions_screens/detail_predictions_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
@@ -29,6 +30,7 @@ enum TaskModuleType {
   eLeave('ELEAVE'),
   dataSpy('DATASPY'),
   dashboardConfig('DASCFG'),
+  predictions('PREDIC'),
   generic('GENERIC');
 
   const TaskModuleType(this.code);
@@ -61,6 +63,8 @@ enum TaskModuleType {
         return TaskModuleType.dataSpy;
       case 'DASCFG':
         return TaskModuleType.dashboardConfig;
+      case 'PREDIC':
+        return TaskModuleType.predictions;
       case 'QUTATI':
         return TaskModuleType.quotation;
       case 'CTM':
@@ -218,6 +222,14 @@ class TaskScreenFactory {
           taskId: config.taskId,
         );
 
+      case TaskModuleType.predictions:
+        return DetailPredictionsScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
       case TaskModuleType.generic:
         return GenericDetailCoreScreen(
           moduleCode: config.moduleCode,
@@ -258,6 +270,8 @@ class TaskScreenFactory {
         return 'Data Spy';
       case TaskModuleType.dashboardConfig:
         return 'Dashboard Config';
+      case TaskModuleType.predictions:
+        return 'Predictions';
       case TaskModuleType.generic:
         return 'Task Detail';
     }
@@ -295,6 +309,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Data Spy';
       case TaskModuleType.dashboardConfig:
         return 'Dashboard Config';
+      case TaskModuleType.predictions:
+        return 'Predictions';
       case TaskModuleType.generic:
         return 'General Task';
     }
@@ -329,6 +345,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.analytics;
       case TaskModuleType.dashboardConfig:
         return Icons.dashboard_customize;
+      case TaskModuleType.predictions:
+        return Icons.sports_soccer;
       case TaskModuleType.generic:
         return Icons.task_alt;
     }

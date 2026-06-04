@@ -5,6 +5,7 @@ import 'package:truebpm/widgets/common/floating_add_button.dart';
 import 'package:truebpm/services/core_service.dart';
 // import 'package:truebpm/utils/core_api_logger.dart'; // Removed unused
 import 'package:truebpm/utils/logger.dart';
+import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/core_dynamic_fields.dart';
 import 'package:truebpm/widgets/loading_overlay.dart';
@@ -459,6 +460,12 @@ class _TRCInfoGeneralTabBodyState
       );
       LoadingOverlay.show(context, message: 'Generating expenses...');
       final res = await CoreService.instance.getDropdownData(endpoint);
+      if (res['statusCode'] == 401) {
+        if (context.mounted) {
+          await SessionHandler.handleSessionExpired(context);
+        }
+        return;
+      }
       if (res['success'] == true) {
         final data = res['data'];
         if (data is List) {

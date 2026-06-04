@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/utils/functions.dart';
 
@@ -30,6 +31,10 @@ class CoreSelectUtils {
           options = List.from(data);
         } else {
           options = [data]; // Wrap single item in list
+        }
+      } else if (response['statusCode'] == 401) {
+        if (context.mounted) {
+          await SessionHandler.handleSessionExpired(context);
         }
       } else {
         hadError = true;

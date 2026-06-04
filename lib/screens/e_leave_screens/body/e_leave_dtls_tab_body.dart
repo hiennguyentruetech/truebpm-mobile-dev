@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/utils/session_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truebpm/screens/e_leave_screens/body/e_leave_dtls_field_configs.dart';
 import 'package:truebpm/screens/e_leave_screens/body/e_leave_info_cards.dart';
@@ -67,9 +68,9 @@ class _ELeaveDetailsTabBodyState
           (_moduleData['id'] == null || _moduleData['id'].toString().isEmpty) &&
           (_moduleData['code'] == null ||
               _moduleData['code'].toString().isEmpty);
-      final dynamic _lt = _moduleData['leaveType'];
-      final String? leaveTypeId = (_lt is Map && _lt['id'] != null)
-          ? _lt['id'].toString()
+      final dynamic leaveType = _moduleData['leaveType'];
+      final String? leaveTypeId = (leaveType is Map && leaveType['id'] != null)
+          ? leaveType['id'].toString()
           : null;
       if (isNew && leaveTypeId != null && leaveTypeId.isNotEmpty) {
         _loadLeaveTypeStats(leaveTypeId);
@@ -268,6 +269,7 @@ class _ELeaveDetailsTabBodyState
 
       final endpoint = 'ELEAVE.LEAVESTATEBYEMPLOYEEID?employeeId=$employeeId';
       final result = await CoreService.instance.getDropdownData(endpoint);
+      if (await _handleSessionExpiredResponse(result)) return;
 
       if (result['success'] == true && result['data'] != null) {
         final data = result['data'];
@@ -282,9 +284,11 @@ class _ELeaveDetailsTabBodyState
     } catch (e) {
       // Error loading leave balance
     } finally {
-      setState(() {
-        _isLoadingBalance = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingBalance = false;
+        });
+      }
     }
   }
 
@@ -322,6 +326,7 @@ class _ELeaveDetailsTabBodyState
       final endpoint1 =
           'ELEAVE.USEDLEAVEDAYS?leaveTypeId=$leaveTypeId&currentYear=$currentYear&employeeId=$employeeId';
       final res1 = await CoreService.instance.getDropdownData(endpoint1);
+      if (await _handleSessionExpiredResponse(res1)) return;
       if (res1['success'] == true && res1['data'] != null) {
         final data = res1['data'];
         if (data is List && data.isNotEmpty) {
@@ -342,6 +347,7 @@ class _ELeaveDetailsTabBodyState
       // API 2: Total days per year for this leave type
       final endpoint2 = 'ELEAVE.LEAVETYPEBYID?leaveTypeId=$leaveTypeId';
       final res2 = await CoreService.instance.getDropdownData(endpoint2);
+      if (await _handleSessionExpiredResponse(res2)) return;
       if (res2['success'] == true && res2['data'] != null) {
         final data = res2['data'];
         if (data is List && data.isNotEmpty) {
@@ -367,11 +373,22 @@ class _ELeaveDetailsTabBodyState
     } catch (_) {
       // ignore errors, keep values null
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoadingLeaveTypeStats = false;
         });
+      }
     }
+  }
+
+  Future<bool> _handleSessionExpiredResponse(
+    Map<String, dynamic> response,
+  ) async {
+    if (response['statusCode'] != 401) return false;
+    if (mounted) {
+      await SessionHandler.handleSessionExpired(context);
+    }
+    return true;
   }
 
   @override

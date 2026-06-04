@@ -40,6 +40,8 @@ class AppRoutes {
   weeklyReport = '/weeklyReport', detailWeeklyReport = '/detailWeeklyReport',
   // Project Management routes
   projectManagement = '/projectManagement', detailProjectManagement = '/detailProjectManagement',
+  // Predictions routes
+  predictions = '/predictions', detailPredictions = '/detailPredictions',
   // Project CMDR routes
   projectCmdr = '/projectCmdr', detailProjectCmdr = '/detailProjectCmdr',
   // DataSpy routes

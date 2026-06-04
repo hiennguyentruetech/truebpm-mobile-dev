@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truebpm/services/core_service.dart';
 // import 'package:truebpm/utils/global_store.dart';
+import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/core/core_action_dialog.dart';
 import 'package:truebpm/navigation/task_navigation_config.dart';
 
@@ -16,7 +17,7 @@ class TaskNavigationService {
     try {
       // Tạo navigation config từ task
       final config = TaskNavigationConfig.fromTask(task);
-      
+
       // Validate config
       if (!config.isValid) {
         _showError(context, 'Unable to get module information');
@@ -25,24 +26,19 @@ class TaskNavigationService {
 
       // Fetch paged data nếu cần
       if (!skipFetchPaged) {
-        final success = await _fetchPagedData(config);
-        if (!success) {
-          if (context.mounted) {
-            _showError(context, 'Failed to load module data');
-          }
-          return;
-        }
+        final canContinue = await _ensurePagedData(context, config);
+        if (!canContinue) return;
       }
 
       // Tạo target screen dựa trên config
       final targetScreen = TaskScreenFactory.createScreen(config);
-      
+
       // Navigate và wait for result
       if (context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => targetScreen),
-        );
-        
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => targetScreen));
+
         // Call onReturn callback khi user quay lại
         onReturn?.call();
       }
@@ -70,24 +66,19 @@ class TaskNavigationService {
 
       // Fetch paged data nếu cần
       if (!skipFetchPaged) {
-        final success = await _fetchPagedData(config);
-        if (!success) {
-          if (context.mounted) {
-            _showError(context, 'Failed to load module data');
-          }
-          return;
-        }
+        final canContinue = await _ensurePagedData(context, config);
+        if (!canContinue) return;
       }
 
       // Tạo target screen
       final targetScreen = TaskScreenFactory.createScreen(config);
-      
+
       // Navigate
       if (context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => targetScreen),
-        );
-        
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => targetScreen));
+
         onReturn?.call();
       }
     } catch (e) {
@@ -98,8 +89,32 @@ class TaskNavigationService {
     }
   }
 
+  static Future<bool> _ensurePagedData(
+    BuildContext context,
+    TaskNavigationConfig config,
+  ) async {
+    var result = await _fetchPagedData(config);
+    if (result.success) return true;
+
+    if (result.sessionExpired) {
+      if (!context.mounted) return false;
+      final relogged = await SessionHandler.handleSessionExpired(context);
+      if (!relogged) return false;
+
+      result = await _fetchPagedData(config);
+      if (result.success) return true;
+    }
+
+    if (context.mounted) {
+      _showError(context, 'Failed to load module data');
+    }
+    return false;
+  }
+
   /// Fetch paged data cho module
-  static Future<bool> _fetchPagedData(TaskNavigationConfig config) async {
+  static Future<_PagedDataFetchResult> _fetchPagedData(
+    TaskNavigationConfig config,
+  ) async {
     try {
       final pagedData = await CoreService.instance.fetchPagedData(
         config.moduleCode,
@@ -108,11 +123,14 @@ class TaskNavigationService {
           'action': 'DETAIL',
         },
       );
-      
-      return pagedData != null;
+
+      if (pagedData == null) {
+        return const _PagedDataFetchResult.sessionExpired();
+      }
+      return const _PagedDataFetchResult.success();
     } catch (e) {
       // logger.e('Error fetching paged data: $e');
-      return false;
+      return const _PagedDataFetchResult.failed();
     }
   }
 
@@ -121,11 +139,7 @@ class TaskNavigationService {
     if (!context.mounted) return;
     CoreActionDialog.showResponseDialog(
       context,
-      response: {
-        'success': false,
-        'messageType': 'error',
-        'message': message,
-      },
+      response: {'success': false, 'messageType': 'error', 'message': message},
       title: 'Error',
     );
   }
@@ -142,7 +156,8 @@ class TaskNavigationService {
 
   /// Get module type từ task
   static TaskModuleType getModuleType(Map<String, dynamic> task) {
-    final moduleCode = task['rootContainerId']?['displayDescription']?.toString() ?? '';
+    final moduleCode =
+        task['rootContainerId']?['displayDescription']?.toString() ?? '';
     return TaskModuleType.fromCode(moduleCode);
   }
 
@@ -162,10 +177,28 @@ class TaskNavigationService {
       initialTabCode: initialTabCode,
     );
 
-    await navigateWithConfig(
-      context,
-      config,
-      onReturn: onReturn,
-    );
+    await navigateWithConfig(context, config, onReturn: onReturn);
   }
+}
+
+class _PagedDataFetchResult {
+  const _PagedDataFetchResult({
+    required this.success,
+    required this.sessionExpired,
+  });
+
+  const _PagedDataFetchResult.success()
+    : success = true,
+      sessionExpired = false;
+
+  const _PagedDataFetchResult.failed()
+    : success = false,
+      sessionExpired = false;
+
+  const _PagedDataFetchResult.sessionExpired()
+    : success = false,
+      sessionExpired = true;
+
+  final bool success;
+  final bool sessionExpired;
 }

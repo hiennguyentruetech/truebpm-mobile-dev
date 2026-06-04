@@ -16,6 +16,12 @@ extension TabDocCoreBodyTransferExt on _TabDocCoreBodyScreenState {
       final apiKey = widget.dataRevision ?? 'DROPDOWN.RESOURCE/REVISION';
 
       final response = await CoreService.instance.getDropdownData(apiKey);
+      if (response['statusCode'] == 401) {
+        if (mounted) {
+          await SessionHandler.handleSessionExpired(context);
+        }
+        return;
+      }
 
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];
@@ -55,6 +61,12 @@ extension TabDocCoreBodyTransferExt on _TabDocCoreBodyScreenState {
           widget.dataDocumentType ?? 'DROPDOWN.PRJMGT/PROJECTDOCTYPE';
 
       final response = await CoreService.instance.getDropdownData(apiKey);
+      if (response['statusCode'] == 401) {
+        if (mounted) {
+          await SessionHandler.handleSessionExpired(context);
+        }
+        return;
+      }
 
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];

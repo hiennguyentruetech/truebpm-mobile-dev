@@ -53,9 +53,9 @@ class CoreListProvider extends ChangeNotifier {
   int? get lastErrorStatusCode => _lastErrorStatusCode;
   String? get lastErrorMessage => _lastErrorMessage;
 
-  List<String> get headers => 
+  List<String> get headers =>
       _configListItem?.headersList ?? CoreConstants.defaultHeaders;
-  List<String> get contents => 
+  List<String> get contents =>
       _configListItem?.contentsList ?? CoreConstants.defaultContents;
 
   // Toolbar helper methods
@@ -73,35 +73,44 @@ class CoreListProvider extends ChangeNotifier {
   Function? _onSessionExpired;
 
   // Initialize
-  Future<void> initialize(String moduleCode, String? moduleName, {Function? onSessionExpired}) async {
+  Future<void> initialize(
+    String moduleCode,
+    String? moduleName, {
+    Function? onSessionExpired,
+  }) async {
     _displayModuleName = moduleName ?? moduleCode;
     _onSessionExpired = onSessionExpired; // Store callback for later use
     await fetchData(moduleCode, onSessionExpired: onSessionExpired);
   }
 
   // Fetch initial data
-  Future<void> fetchData(String moduleCode, {Function? onSessionExpired}) async {
+  Future<void> fetchData(
+    String moduleCode, {
+    Function? onSessionExpired,
+  }) async {
+    final sessionExpiredCallback = onSessionExpired ?? _onSessionExpired;
     _setLoadingOverlay(true);
     clearLastError();
-    
+
     try {
       UserModel? user = await _authService.getSavedUserInfo();
-      final payload = {
-        "user": user?.toJson() ?? {},
-        "moduleCode": moduleCode
-      };
-      
+      final payload = {"user": user?.toJson() ?? {}, "moduleCode": moduleCode};
+
       final response = await _coreService.fetchPagedData(moduleCode, payload);
       if (response == null) {
         // Only null means 401/session expired per CoreService
-        onSessionExpired?.call();
+        _setLoadingOverlay(false);
+        sessionExpiredCallback?.call();
         return;
       }
 
       // If server/network error map returned, capture error and let UI decide
-      if (response['success'] == false && (response['statusCode'] == null || response['statusCode'] >= 500)) {
+      if (response['success'] == false &&
+          (response['statusCode'] == null || response['statusCode'] >= 500)) {
         _lastErrorStatusCode = (response['statusCode'] as int?) ?? 500;
-        _lastErrorMessage = response['message']?.toString() ?? 'Connection error. Please try again later.';
+        _lastErrorMessage =
+            response['message']?.toString() ??
+            'Connection error. Please try again later.';
         notifyListeners();
         _setLoadingOverlay(false);
         return;
@@ -110,20 +119,26 @@ class CoreListProvider extends ChangeNotifier {
       if (response["dataSpies"] != null) {
         _dataSpies = DataSpies.fromJson(response["dataSpies"]);
         _selectedId = _dataSpies!.value.id;
-        _displayModuleName = response["moduleName"]?.toString() ?? 
-                            _displayModuleName ?? moduleCode;
-        
+        _displayModuleName =
+            response["moduleName"]?.toString() ??
+            _displayModuleName ??
+            moduleCode;
+
         if (response["configListItem"] != null) {
           _configListItem = ConfigListItem.fromJson(response["configListItem"]);
         }
-        
+
         // Store toolbar configuration
         if (response["toolbar"] != null) {
           _toolbar = response["toolbar"];
         }
-        
+
         notifyListeners();
-        await fetchListData(moduleCode, null, onSessionExpired: onSessionExpired);
+        await fetchListData(
+          moduleCode,
+          null,
+          onSessionExpired: sessionExpiredCallback,
+        );
       } else {
         // Missing expected data but not a 401: stop loader but stay on screen
         _setLoadingOverlay(false);
@@ -139,14 +154,15 @@ class CoreListProvider extends ChangeNotifier {
 
   // Fetch list data
   Future<void> fetchListData(
-    String moduleCode, 
+    String moduleCode,
     String? tabModuleCode, {
-    bool isLoadMore = false, 
+    bool isLoadMore = false,
     String? filterInput,
     Function? onSessionExpired,
   }) async {
+    final sessionExpiredCallback = onSessionExpired ?? _onSessionExpired;
     if (_dataSpies == null) return;
-    
+
     if (!isLoadMore) {
       _setLoading(true);
       _setLoadingOverlay(true);
@@ -170,11 +186,17 @@ class CoreListProvider extends ChangeNotifier {
         "pagination": isLoadMore ? _currentPagination + 1 : _currentPagination,
         if (_currentFilterInput.isNotEmpty) "filterInput": _currentFilterInput,
       };
-      
+
       final response = await _coreService.fetchListData(moduleCode, payload);
       if (response == null) {
         // Only null means 401/session expired
-        onSessionExpired?.call();
+        if (!isLoadMore) {
+          _setLoading(false);
+          _setLoadingOverlay(false);
+        } else {
+          _setLoadingMore(false);
+        }
+        sessionExpiredCallback?.call();
       } else if (response["data"] != null) {
         if (isLoadMore) {
           _listData.addAll(response["data"] as List);
@@ -185,13 +207,15 @@ class CoreListProvider extends ChangeNotifier {
           _setLoading(false);
           _setLoadingOverlay(false);
         }
-        
+
         _hasMoreRecords = response["value"]?["moreRecords"] == true;
         notifyListeners();
       } else {
         // Error map: capture and keep current list, just stop loaders
         _lastErrorStatusCode = (response['statusCode'] as int?) ?? 500;
-        _lastErrorMessage = response['message']?.toString() ?? 'Connection error. Please try again later.';
+        _lastErrorMessage =
+            response['message']?.toString() ??
+            'Connection error. Please try again later.';
         notifyListeners();
         if (!isLoadMore) {
           _setLoading(false);
@@ -217,23 +241,42 @@ class CoreListProvider extends ChangeNotifier {
   // Load more data
   Future<void> loadMoreData(String moduleCode, String? tabModuleCode) async {
     if (!_hasMoreRecords || _isLoadingMore || _loading) return;
-    
+
     _setLoadingOverlay(true);
-    await fetchListData(moduleCode, tabModuleCode, isLoadMore: true, onSessionExpired: _onSessionExpired);
+    await fetchListData(
+      moduleCode,
+      tabModuleCode,
+      isLoadMore: true,
+      onSessionExpired: _onSessionExpired,
+    );
     _setLoadingOverlay(false);
   }
 
   // Refresh data
   Future<void> refreshData(String moduleCode, String? tabModuleCode) async {
     _setLoadingOverlay(true);
-    await fetchListData(moduleCode, tabModuleCode, filterInput: _currentFilterInput, onSessionExpired: _onSessionExpired);
+    await fetchListData(
+      moduleCode,
+      tabModuleCode,
+      filterInput: _currentFilterInput,
+      onSessionExpired: _onSessionExpired,
+    );
     _setLoadingOverlay(false);
   }
 
   // Search functionality
-  void performSearch(String moduleCode, String? tabModuleCode, String searchQuery) {
+  void performSearch(
+    String moduleCode,
+    String? tabModuleCode,
+    String searchQuery,
+  ) {
     _setLoadingOverlay(true);
-    fetchListData(moduleCode, tabModuleCode, filterInput: searchQuery.trim(), onSessionExpired: _onSessionExpired);
+    fetchListData(
+      moduleCode,
+      tabModuleCode,
+      filterInput: searchQuery.trim(),
+      onSessionExpired: _onSessionExpired,
+    );
   }
 
   void toggleSearch() {
@@ -246,16 +289,24 @@ class CoreListProvider extends ChangeNotifier {
   }
 
   // DataSpy selection
-  void selectDataSpy(String? dataSpyId, String moduleCode, String? tabModuleCode) {
+  void selectDataSpy(
+    String? dataSpyId,
+    String moduleCode,
+    String? tabModuleCode,
+  ) {
     if (dataSpyId == null || _dataSpies == null) return;
-    
+
     _selectedId = dataSpyId;
     final selected = _dataSpies!.data.firstWhere((e) => e.id == dataSpyId);
     _dataSpies = DataSpies(data: _dataSpies!.data, value: selected);
-    
+
     _setLoadingOverlay(true);
     notifyListeners();
-    fetchListData(moduleCode, tabModuleCode, onSessionExpired: _onSessionExpired);
+    fetchListData(
+      moduleCode,
+      tabModuleCode,
+      onSessionExpired: _onSessionExpired,
+    );
   }
 
   // Private helper methods

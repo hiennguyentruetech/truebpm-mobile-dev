@@ -288,7 +288,11 @@ extension CoreServiceFileApiExt on CoreService {
       final userJsonStr = prefs.getString('user_info');
       if (userJsonStr == null) {
         logger.e('❌ No user info found for dropdown');
-        return {'success': false, 'message': 'No user info found'};
+        return {
+          'success': false,
+          'message': 'No user info found',
+          'statusCode': 401,
+        };
       }
 
       final url = '${hosts.coreUrl}$endpoint';
@@ -340,7 +344,11 @@ extension CoreServiceFileApiExt on CoreService {
 
       if (response.statusCode == 401) {
         _logAuthentication(context: 'Dropdown Request', isExpired: true);
-        return {'success': false, 'message': 'Session expired'};
+        return {
+          'success': false,
+          'message': 'Session expired',
+          'statusCode': 401,
+        };
       }
 
       _logApiResponse(
@@ -386,7 +394,11 @@ extension CoreServiceFileApiExt on CoreService {
 
       if (e is DioException && e.response?.statusCode == 401) {
         _logAuthentication(context: 'Dropdown Error', isExpired: true);
-        return {'success': false, 'message': 'Session expired'};
+        return {
+          'success': false,
+          'message': 'Session expired',
+          'statusCode': 401,
+        };
       }
 
       return {'success': false, 'message': 'Error: $e'};

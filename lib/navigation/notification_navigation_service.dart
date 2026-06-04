@@ -5,6 +5,7 @@ import 'package:truebpm/navigation/task_navigation_config.dart';
 import 'package:truebpm/screens/core_screens/detail_core_screen.dart';
 import 'package:truebpm/utils/global_store.dart';
 import 'package:truebpm/services/core_service.dart';
+import 'package:truebpm/utils/session_handler.dart';
 
 /// Service xử lý navigation từ notification đến màn hình chi tiết module
 class NotificationNavigationService {
@@ -20,7 +21,9 @@ class NotificationNavigationService {
     final recordId = notification.recordId;
 
     if (moduleCode == null) {
-      logger.w('⚠️ Cannot parse moduleCode from targetUrl: ${notification.targetUrl}');
+      logger.w(
+        '⚠️ Cannot parse moduleCode from targetUrl: ${notification.targetUrl}',
+      );
       return;
     }
 
@@ -48,7 +51,7 @@ class NotificationNavigationService {
   }
 
   /// Core navigation logic
-  /// 
+  ///
   /// Với task-list: kiểm tra task còn tồn tại cho user hay không
   /// - Nếu có task → lấy taskId + fetchPagedData rồi navigate (giống flow từ task-list thật)
   /// - Nếu không có task → fromTaskScreen=false (navigate đến module detail thông thường)
@@ -58,8 +61,10 @@ class NotificationNavigationService {
     String recordId,
     bool fromTaskScreen,
   ) async {
+    var loadingVisible = false;
     try {
       _showLoadingDialog(context);
+      loadingVisible = true;
 
       // Nếu đây là task-list notification → tìm task thật từ Bonita API
       bool shouldUseTaskScreen = fromTaskScreen;
@@ -74,12 +79,27 @@ class NotificationNavigationService {
 
           // Fetch paged data (giống flow task-list thật)
           // Nhưng KHÔNG fallback nếu fail — vẫn giữ task mode vì task tồn tại
-          final pagedSuccess = await _fetchPagedData(moduleCode, recordId);
-          if (!pagedSuccess) {
-            logger.w('⚠️ fetchPagedData failed, nhưng vẫn giữ task mode vì task tồn tại');
+          var pagedResult = await _fetchPagedData(moduleCode, recordId);
+          if (pagedResult.sessionExpired) {
+            if (!context.mounted) return;
+            if (loadingVisible) {
+              Navigator.of(context, rootNavigator: true).pop();
+              loadingVisible = false;
+            }
+            final relogged = await SessionHandler.handleSessionExpired(context);
+            if (!relogged) return;
+            pagedResult = await _fetchPagedData(moduleCode, recordId);
+            if (pagedResult.sessionExpired) return;
+          }
+          if (!pagedResult.success) {
+            logger.w(
+              '⚠️ fetchPagedData failed, nhưng vẫn giữ task mode vì task tồn tại',
+            );
           }
         } else {
-          logger.i('⚠️ Task không tồn tại cho user → fallback sang module detail');
+          logger.i(
+            '⚠️ Task không tồn tại cho user → fallback sang module detail',
+          );
           shouldUseTaskScreen = false;
         }
       }
@@ -107,21 +127,26 @@ class NotificationNavigationService {
       }
 
       if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
+        if (loadingVisible) {
+          Navigator.of(context, rootNavigator: true).pop(); // Dismiss loading
+          loadingVisible = false;
+        }
       }
 
       if (!context.mounted) return;
 
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => detailScreen),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => detailScreen));
     } catch (e) {
       logger.e('❌ Error navigating to detail: $e');
       if (context.mounted) {
         // Dismiss loading nếu còn
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (_) {}
+        if (loadingVisible) {
+          try {
+            Navigator.of(context, rootNavigator: true).pop();
+          } catch (_) {}
+        }
         _showErrorSnackBar(context, 'Error loading record');
       }
     }
@@ -129,14 +154,19 @@ class NotificationNavigationService {
 
   /// Tìm task matching trong danh sách task của user
   /// Return task data (đã parse displayDescription) nếu tìm thấy, null nếu không
-  /// 
+  ///
   /// displayDescription là JSON string cần parse:
   /// {"code":"ELEAVE-10081","id":"C20245EF-...","createdBy":"...",...}
   /// Trong đó `id` chính là recordId của phiếu
-  static Future<Map<String, dynamic>?> _findTaskForUser(String moduleCode, String recordId) async {
+  static Future<Map<String, dynamic>?> _findTaskForUser(
+    String moduleCode,
+    String recordId,
+  ) async {
     try {
-      logger.i('🔍 Finding task for moduleCode=$moduleCode, recordId=$recordId');
-      
+      logger.i(
+        '🔍 Finding task for moduleCode=$moduleCode, recordId=$recordId',
+      );
+
       final tasks = await CoreService.instance.fetchListTaskProcess();
       if (tasks == null || tasks.isEmpty) {
         logger.i('📭 No tasks found for user');
@@ -147,7 +177,8 @@ class NotificationNavigationService {
 
       for (final task in tasks) {
         // moduleCode nằm trong rootContainerId.displayDescription (plain string)
-        final taskModuleCode = task['rootContainerId']?['displayDescription']?.toString() ?? '';
+        final taskModuleCode =
+            task['rootContainerId']?['displayDescription']?.toString() ?? '';
 
         // recordId nằm trong displayDescription (JSON string cần parse)
         final displayDescStr = task['displayDescription']?.toString();
@@ -161,12 +192,16 @@ class NotificationNavigationService {
         }
         final taskRecordId = parsedDesc?['id']?.toString() ?? '';
 
-        logger.i('  🔎 Task: bonitaTaskId=${task['id']}, module=$taskModuleCode, recordId=$taskRecordId');
+        logger.i(
+          '  🔎 Task: bonitaTaskId=${task['id']}, module=$taskModuleCode, recordId=$taskRecordId',
+        );
 
         // So sánh case-insensitive (UUID có thể khác case giữa notification API và Bonita)
-        if (taskModuleCode.toUpperCase() == moduleCode.toUpperCase() && 
+        if (taskModuleCode.toUpperCase() == moduleCode.toUpperCase() &&
             taskRecordId.toUpperCase() == recordId.toUpperCase()) {
-          logger.i('✅ Matched task: bonitaTaskId=${task['id']}, moduleCode=$taskModuleCode, recordId=$taskRecordId');
+          logger.i(
+            '✅ Matched task: bonitaTaskId=${task['id']}, moduleCode=$taskModuleCode, recordId=$taskRecordId',
+          );
           // Gắn displayDescriptionParsed vào task data để TaskNavigationConfig.fromTask dùng được
           if (parsedDesc != null) {
             task['displayDescriptionParsed'] = parsedDesc;
@@ -175,7 +210,9 @@ class NotificationNavigationService {
         }
       }
 
-      logger.i('❌ No matching task found for moduleCode=$moduleCode, recordId=$recordId');
+      logger.i(
+        '❌ No matching task found for moduleCode=$moduleCode, recordId=$recordId',
+      );
       return null;
     } catch (e) {
       logger.e('⚠️ Error finding task: $e');
@@ -184,19 +221,22 @@ class NotificationNavigationService {
   }
 
   /// Fetch paged data cho module (giống TaskNavigationService._fetchPagedData)
-  static Future<bool> _fetchPagedData(String moduleCode, String recordId) async {
+  static Future<_PagedDataFetchResult> _fetchPagedData(
+    String moduleCode,
+    String recordId,
+  ) async {
     try {
-      final pagedData = await CoreService.instance.fetchPagedData(
-        moduleCode,
-        {
-          'listItem': {'id': recordId},
-          'action': 'DETAIL',
-        },
-      );
-      return pagedData != null;
+      final pagedData = await CoreService.instance.fetchPagedData(moduleCode, {
+        'listItem': {'id': recordId},
+        'action': 'DETAIL',
+      });
+      if (pagedData == null) {
+        return const _PagedDataFetchResult.sessionExpired();
+      }
+      return const _PagedDataFetchResult.success();
     } catch (e) {
       logger.e('⚠️ Error fetching paged data: $e');
-      return false;
+      return const _PagedDataFetchResult.failed();
     }
   }
 
@@ -227,4 +267,26 @@ class NotificationNavigationService {
       ),
     );
   }
+}
+
+class _PagedDataFetchResult {
+  const _PagedDataFetchResult({
+    required this.success,
+    required this.sessionExpired,
+  });
+
+  const _PagedDataFetchResult.success()
+    : success = true,
+      sessionExpired = false;
+
+  const _PagedDataFetchResult.failed()
+    : success = false,
+      sessionExpired = false;
+
+  const _PagedDataFetchResult.sessionExpired()
+    : success = false,
+      sessionExpired = true;
+
+  final bool success;
+  final bool sessionExpired;
 }

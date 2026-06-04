@@ -6,23 +6,18 @@ class CoreDetailResponse {
   final String? title;
   final List<TabConfig>? tabs;
 
-  CoreDetailResponse({
-    this.itemDetail,
-    this.toolbar,
-    this.title,
-    this.tabs,
-  });
+  CoreDetailResponse({this.itemDetail, this.toolbar, this.title, this.tabs});
 
   factory CoreDetailResponse.fromJson(Map<String, dynamic> json) {
     return CoreDetailResponse(
-      itemDetail: json['itemDetail'] != null 
-          ? ItemDetail.fromJson(json['itemDetail']) 
+      itemDetail: json['itemDetail'] != null
+          ? ItemDetail.fromJson(json['itemDetail'])
           : null,
-      toolbar: json['toolbar'] != null 
-          ? ToolbarConfig.fromJson(json['toolbar']) 
+      toolbar: json['toolbar'] != null
+          ? ToolbarConfig.fromJson(json['toolbar'])
           : null,
       title: json['title']?.toString(),
-      tabs: json['tabs'] != null 
+      tabs: json['tabs'] != null
           ? (json['tabs'] as List).map((e) => TabConfig.fromJson(e)).toList()
           : null,
     );
@@ -34,20 +29,16 @@ class ItemDetail {
   final DetailAttributes? attribute;
   final ToolbarConfig? toolbar;
 
-  ItemDetail({
-    required this.value,
-    this.attribute,
-    this.toolbar,
-  });
+  ItemDetail({required this.value, this.attribute, this.toolbar});
 
   factory ItemDetail.fromJson(Map<String, dynamic> json) {
     return ItemDetail(
       value: json['value'] ?? {},
-      attribute: json['attribute'] != null 
-          ? DetailAttributes.fromJson(json['attribute']) 
+      attribute: json['attribute'] != null
+          ? DetailAttributes.fromJson(json['attribute'])
           : null,
-      toolbar: json['toolbar'] != null 
-          ? ToolbarConfig.fromJson(json['toolbar']) 
+      toolbar: json['toolbar'] != null
+          ? ToolbarConfig.fromJson(json['toolbar'])
           : null,
     );
   }
@@ -97,10 +88,7 @@ class ToolbarConfig {
   final Map<String, bool> disabled;
   final Map<String, bool> hidden;
 
-  ToolbarConfig({
-    required this.disabled,
-    required this.hidden,
-  });
+  ToolbarConfig({required this.disabled, required this.hidden});
 
   factory ToolbarConfig.fromJson(Map<String, dynamic> json) {
     return ToolbarConfig(
@@ -115,6 +103,7 @@ class ToolbarConfig {
 
 class TabConfig {
   final String code;
+  final String? apiCode;
   final String name;
   final bool isDefault;
   final Widget Function({
@@ -123,10 +112,12 @@ class TabConfig {
     String? itemId,
     Map<String, dynamic>? initialData,
     Function(Map<String, dynamic>)? onDataChanged,
-  })? tabBodyBuilder;
+  })?
+  tabBodyBuilder;
 
   TabConfig({
     required this.code,
+    this.apiCode,
     required this.name,
     this.isDefault = false,
     this.tabBodyBuilder,
@@ -135,6 +126,7 @@ class TabConfig {
   factory TabConfig.fromJson(Map<String, dynamic> json) {
     return TabConfig(
       code: json['code']?.toString() ?? '',
+      apiCode: json['apiCode']?.toString(),
       name: json['name']?.toString() ?? '',
       isDefault: json['isDefault'] == true,
       // tabBodyBuilder không thể serialize từ JSON

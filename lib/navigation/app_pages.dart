@@ -61,6 +61,9 @@ import 'package:truebpm/screens/customer_screens/customer_page_screen.dart';
 // Project Management screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
 
+// Predictions screens
+import 'package:truebpm/screens/predictions_screens/predictions_page_screen.dart';
+
 // Project CMDR screens
 import 'package:truebpm/screens/project_cmdr_screens/project_cmdr_page_screen.dart';
 // Weekly Report screens
@@ -135,6 +138,9 @@ class AppPages {
     // Project Management route
     AppRoutes.projectManagement: (context) =>
         const ProjectManagementPageScreen(),
+
+    // Predictions route
+    AppRoutes.predictions: (context) => const PredictionsPageScreen(),
 
     // Project CMDR route
     AppRoutes.projectCmdr: (context) => const ProjectCmdrPageScreen(),

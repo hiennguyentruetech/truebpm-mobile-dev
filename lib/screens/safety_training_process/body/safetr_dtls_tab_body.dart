@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/utils/functions.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
+import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/widgets/core/core_tab_body.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 
@@ -129,6 +130,15 @@ class _SafetrDetailsTabBodyState
     final response = await CoreService.instance.getDropdownData(endpoint);
 
     if (!mounted || requestSerial != _attendanceRequestSerial) return;
+
+    if (response['statusCode'] == 401) {
+      setState(() {
+        _attendanceRows.clear();
+        _attendanceLoading = false;
+      });
+      await SessionHandler.handleSessionExpired(context);
+      return;
+    }
 
     if (response['success'] == true) {
       final rows = _normalizeAttendanceRows(response['data']);
