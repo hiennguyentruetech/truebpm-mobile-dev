@@ -50,6 +50,22 @@ class CoreDynamicFields {
 
       if (!shouldInclude) continue;
 
+      // Resolve dynamic data sources from the current field context.
+      final dynamic dataResolver = config['data'];
+      if (dataResolver is Function) {
+        dynamic resolvedData;
+        try {
+          resolvedData = Function.apply(dataResolver, [contextMap]);
+        } catch (_) {
+          try {
+            resolvedData = Function.apply(dataResolver, const []);
+          } catch (_) {
+            resolvedData = const <dynamic>[];
+          }
+        }
+        config['data'] = resolvedData;
+      }
+
       // Resolve dynamic templates in data endpoints (e.g., '.../API?x={{a.b}}')
       if (config['data'] is String &&
           (config['data'] as String).contains('{{')) {
@@ -166,6 +182,8 @@ class CoreDynamicFields {
     final int decimalPlaces = config['decimalPlaces'] ?? 0;
     final double? minValue = config['minValue']?.toDouble();
     final double? maxValue = config['maxValue']?.toDouble();
+    final bool allowNegative = config['allowNegative'] ?? false;
+    final bool useGrouping = config['useGrouping'] ?? true;
 
     // Convert type string to enum
     CoreInputType inputType;
@@ -217,6 +235,8 @@ class CoreDynamicFields {
       decimalPlaces: decimalPlaces,
       minValue: minValue,
       maxValue: maxValue,
+      allowNegative: allowNegative,
+      useGrouping: useGrouping,
       disabled: disabledOverride,
       hidden: hiddenOverride,
       onlyView: config['onlyView'] ?? false,
@@ -306,8 +326,8 @@ class CoreDynamicFields {
         selectType = CoreSelectType.select;
     }
 
-    // Build a stable key that changes when endpoint or field changes to avoid state reuse
-    final String dataKeyForKey = data is String ? data : 'static';
+    // Build a stable key that changes when endpoint/list changes to avoid stale options.
+    final String dataKeyForKey = _selectDataKey(data);
     final Key widgetKey = ValueKey<String>(
       'select:$fieldName|data:$dataKeyForKey',
     );
@@ -344,6 +364,23 @@ class CoreDynamicFields {
       splitKey: splitKey,
       dropdownDisplay: dropdownDisplay,
     );
+  }
+
+  static String _selectDataKey(dynamic data) {
+    if (data is String) return data;
+    if (data is List) {
+      final signatures = data.map((option) {
+        if (option is Map) {
+          final id = option['id'] ?? option['code'] ?? '';
+          final name =
+              option['name'] ?? option['fullName'] ?? option['label'] ?? '';
+          return '$id:$name';
+        }
+        return option.toString();
+      });
+      return 'list:${data.length}:${Object.hashAll(signatures)}';
+    }
+    return 'static';
   }
 
   /// Build CoreDateTime field from configuration

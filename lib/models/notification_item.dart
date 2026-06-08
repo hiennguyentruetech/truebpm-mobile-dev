@@ -128,6 +128,7 @@ class NotificationItem {
       'safety-training-process-page': 'SAFETR',
       'product-page': 'PRD',
       'customer-page': 'CTM',
+      'user-page': 'USER',
       'weekly-report-page': 'WKLRPT',
       'opportunities-page': 'OPP',
       'project-management-page': 'PRJMGT',

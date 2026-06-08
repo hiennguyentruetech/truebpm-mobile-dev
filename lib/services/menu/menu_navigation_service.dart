@@ -28,6 +28,9 @@ class MenuNavigationService {
         case 'customer-page':
           routeName = AppRoutes.customer;
           break;
+        case 'user-page':
+          routeName = AppRoutes.user;
+          break;
         case 'weekly-report-page':
           routeName = AppRoutes.weeklyReport;
           break;

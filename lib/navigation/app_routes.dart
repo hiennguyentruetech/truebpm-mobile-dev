@@ -36,6 +36,8 @@ class AppRoutes {
   quotation = '/quotation', detailQuotation = '/detailQuotation',
   // Customer routes
   customer = '/customer', detailCustomer = '/detailCustomer',
+  // User routes
+  user = '/user', detailUser = '/detailUser',
   // Product routes
   product = '/product', detailProduct = '/detailProduct',
   // Weekly Report routes

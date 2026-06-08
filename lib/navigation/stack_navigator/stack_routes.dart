@@ -54,6 +54,8 @@ import 'package:truebpm/screens/product_screens/product_page_screen.dart';
 import 'package:truebpm/screens/quotation_screens/quotation_page_screen.dart';
 // Customer Screens
 import 'package:truebpm/screens/customer_screens/customer_page_screen.dart';
+// User Screens
+import 'package:truebpm/screens/user_screens/user_page_screen.dart';
 // Project Management Screens
 import 'package:truebpm/screens/project_management_screens/project_management_page_screen.dart';
 // Predictions Screens
@@ -128,6 +130,9 @@ class StackRoutes {
 
     // Customer Stack Routes
     AppRoutes.customer: () => const CustomerPageScreen(),
+
+    // User Stack Routes
+    AppRoutes.user: () => const UserPageScreen(),
 
     // Weekly Report Stack Routes
     AppRoutes.weeklyReport: () => const WeeklyReportPageScreen(),

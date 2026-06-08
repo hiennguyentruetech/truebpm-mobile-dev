@@ -15,12 +15,14 @@ import 'package:truebpm/screens/contractor_submission_screens/detail_contractor_
 import 'package:truebpm/screens/safety_training_process/detail_safety_training_process_screen.dart';
 import 'package:truebpm/screens/predictions_screens/detail_predictions_screen.dart';
 import 'package:truebpm/screens/e_signing_screen/detail_e_signing_request_screen.dart';
+import 'package:truebpm/screens/user_screens/detail_user_screen.dart';
 
 /// Enum định nghĩa các loại module có thể navigate
 enum TaskModuleType {
   overtime('OVTIME'),
   carBooking('CARBKG'),
   product('PRD'),
+  user('USER'),
   cmdrmd('CMDRMD'),
   travelRequest('TRAREQ'),
   travelClaim('TRACLA'),
@@ -47,6 +49,8 @@ enum TaskModuleType {
         return TaskModuleType.carBooking;
       case 'PRD':
         return TaskModuleType.product;
+      case 'USER':
+        return TaskModuleType.user;
       case 'CMDRMD':
         return TaskModuleType.cmdrmd;
       case 'TRAREQ':
@@ -140,6 +144,14 @@ class TaskScreenFactory {
 
       case TaskModuleType.product:
         return DetailProductScreen(
+          listItem: {'id': config.listItemId},
+          initialTabCode: config.initialTabCode,
+          fromTaskScreen: config.fromTaskScreen,
+          taskId: config.taskId,
+        );
+
+      case TaskModuleType.user:
+        return DetailUserScreen(
           listItem: {'id': config.listItemId},
           initialTabCode: config.initialTabCode,
           fromTaskScreen: config.fromTaskScreen,
@@ -262,6 +274,8 @@ class TaskScreenFactory {
         return 'Car Booking';
       case TaskModuleType.product:
         return 'Product Management';
+      case TaskModuleType.user:
+        return 'User';
       case TaskModuleType.cmdrmd:
         return 'Project Management';
       case TaskModuleType.travelRequest:
@@ -303,6 +317,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return 'Car Booking';
       case TaskModuleType.product:
         return 'Product';
+      case TaskModuleType.user:
+        return 'User';
       case TaskModuleType.cmdrmd:
         return 'Project Management';
       case TaskModuleType.travelRequest:
@@ -341,6 +357,8 @@ extension TaskModuleTypeExtension on TaskModuleType {
         return Icons.directions_car;
       case TaskModuleType.product:
         return Icons.inventory_2;
+      case TaskModuleType.user:
+        return Icons.badge;
       case TaskModuleType.cmdrmd:
         return Icons.person;
       case TaskModuleType.travelRequest:

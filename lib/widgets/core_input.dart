@@ -28,7 +28,7 @@ class CoreInput extends StatefulWidget {
   /// Manually specify if the field is required (overrides API if set)
   final bool? required;
 
-  /// The key to bind value from itemDetail.value.<key>
+  /// The key to bind value from itemDetail.value.
   final String dataKey;
 
   /// The complete item detail response containing value, attribute, etc.
@@ -79,6 +79,12 @@ class CoreInput extends StatefulWidget {
   /// Maximum value for number type
   final double? maxValue;
 
+  /// Allow a leading minus sign for number type.
+  final bool allowNegative;
+
+  /// Format number with thousands grouping. Disable for small decimal inputs.
+  final bool useGrouping;
+
   /// Force-disable override. When set, takes precedence over attribute.disabled.
   final bool? disabled;
 
@@ -109,6 +115,8 @@ class CoreInput extends StatefulWidget {
     this.decimalPlaces = 0,
     this.minValue,
     this.maxValue,
+    this.allowNegative = false,
+    this.useGrouping = true,
     this.disabled,
     this.hidden,
     this.onlyView = false,
@@ -172,7 +180,7 @@ class _CoreInputState extends State<CoreInput> {
         if (widget.type == CoreInputType.number) {
           _controller.text = newValue == null || newValue.toString().isEmpty
               ? ''
-              : _formatNumberDisplay(newValue);
+              : _formatNumberForInput(newValue);
         } else {
           _controller.text = newValue?.toString() ?? '';
         }
@@ -184,7 +192,7 @@ class _CoreInputState extends State<CoreInput> {
     final value = _getCurrentValue();
     if (value != null && value.toString().isNotEmpty) {
       if (widget.type == CoreInputType.number) {
-        _controller.text = _formatNumberDisplay(value);
+        _controller.text = _formatNumberForInput(value);
       } else {
         _controller.text = value.toString();
       }
@@ -237,7 +245,7 @@ class _CoreInputState extends State<CoreInput> {
         final source = adjustedValue.isNotEmpty
             ? adjustedValue
             : (latestValue?.toString() ?? '');
-        final formatted = _formatNumberDisplay(source);
+        final formatted = _formatNumberForInput(source);
         if (_controller.text != formatted) {
           _controller.text = formatted;
           // Trigger onChanged with adjusted value
@@ -260,7 +268,9 @@ class _CoreInputState extends State<CoreInput> {
     if (widget.minValue == null && widget.maxValue == null) return input;
 
     // Parse the value (handle EU format with dots and commas)
-    String cleanValue = input.replaceAll('.', '').replaceAll(',', '.');
+    String cleanValue = widget.useGrouping
+        ? input.replaceAll('.', '').replaceAll(',', '.')
+        : input.replaceAll(',', '.');
     final double? numValue = double.tryParse(cleanValue);
 
     if (numValue == null) return input;
@@ -302,7 +312,9 @@ class _CoreInputState extends State<CoreInput> {
     if (!RegExp(r'\d$').hasMatch(input)) return input;
 
     // Parse the value (handle EU format with dots and commas)
-    String cleanValue = input.replaceAll('.', '').replaceAll(',', '.');
+    String cleanValue = widget.useGrouping
+        ? input.replaceAll('.', '').replaceAll(',', '.')
+        : input.replaceAll(',', '.');
     final double? numValue = double.tryParse(cleanValue);
 
     if (numValue == null) return input;
@@ -463,7 +475,7 @@ class _CoreInputState extends State<CoreInput> {
       case CoreInputType.number:
         return TextInputType.numberWithOptions(
           decimal: widget.decimalPlaces > 0,
-          signed: false,
+          signed: widget.allowNegative,
         );
       case CoreInputType.currency:
         return const TextInputType.numberWithOptions(
@@ -486,12 +498,32 @@ class _CoreInputState extends State<CoreInput> {
   List<TextInputFormatter> get _inputFormatters {
     switch (widget.type) {
       case CoreInputType.number:
+        if (!widget.useGrouping) {
+          return [
+            FilteringTextInputFormatter.allow(
+              widget.allowNegative ? RegExp(r'[0-9.,-]') : RegExp(r'[0-9.,]'),
+            ),
+            _PlainNumberInputFormatter(
+              decimalPlaces: widget.decimalPlaces,
+              allowNegative: widget.allowNegative,
+            ),
+          ];
+        }
         return [
           // Allow only digits when no decimals; allow comma when decimals are enabled
           FilteringTextInputFormatter.allow(
-            widget.decimalPlaces > 0 ? RegExp(r'[0-9,]') : RegExp(r'[0-9]'),
+            widget.allowNegative
+                ? (widget.decimalPlaces > 0
+                      ? RegExp(r'[0-9,-]')
+                      : RegExp(r'[0-9-]'))
+                : (widget.decimalPlaces > 0
+                      ? RegExp(r'[0-9,]')
+                      : RegExp(r'[0-9]')),
           ),
-          _NumberEuInputFormatter(decimalPlaces: widget.decimalPlaces),
+          _NumberEuInputFormatter(
+            decimalPlaces: widget.decimalPlaces,
+            allowNegative: widget.allowNegative,
+          ),
         ];
       case CoreInputType.currency:
         return [
@@ -526,6 +558,10 @@ class _CoreInputState extends State<CoreInput> {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return '';
 
+    if (!widget.useGrouping) {
+      return trimmed.replaceAll(',', '.');
+    }
+
     // Always remove thousand group separators '.' from display
     final noThousands = trimmed.replaceAll('.', '');
     // If contains comma, treat comma as decimal. Convert to dot decimal for machine value.
@@ -534,6 +570,27 @@ class _CoreInputState extends State<CoreInput> {
     }
     // Pure integer
     return noThousands;
+  }
+
+  String _formatNumberForInput(dynamic value) {
+    if (!widget.useGrouping) return _formatPlainNumberDisplay(value);
+    return _formatNumberDisplay(value);
+  }
+
+  String _formatPlainNumberDisplay(dynamic value) {
+    if (value == null) return '';
+    final text = value.toString().trim();
+    if (text.isEmpty) return '';
+
+    final parsed = num.tryParse(text.replaceAll(',', '.'));
+    if (parsed == null) return text;
+
+    if (widget.decimalPlaces > 0) {
+      final fixed = parsed.toStringAsFixed(widget.decimalPlaces);
+      return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+    }
+
+    return parsed.round().toString();
   }
 
   // Helper: format number for display (EU style: thousand '.' and decimal ',')
@@ -791,8 +848,9 @@ class _CoreInputState extends State<CoreInput> {
 
 /// Custom formatter for EU-style number inputs (thousand '.' and decimal ',')
 class _NumberEuInputFormatter extends TextInputFormatter {
-  _NumberEuInputFormatter({this.decimalPlaces = 0});
+  _NumberEuInputFormatter({this.decimalPlaces = 0, this.allowNegative = false});
   final int decimalPlaces;
+  final bool allowNegative;
 
   @override
   TextEditingValue formatEditUpdate(
@@ -804,8 +862,16 @@ class _NumberEuInputFormatter extends TextInputFormatter {
       return const TextEditingValue(text: '');
     }
 
+    final isNegative = allowNegative && raw.trimLeft().startsWith('-');
+
     // Allow only digits and comma. Ignore dots typed by user.
     raw = raw.replaceAll(RegExp(r'[^0-9,]'), '');
+    if (isNegative && raw.isEmpty) {
+      return const TextEditingValue(
+        text: '-',
+        selection: TextSelection.collapsed(offset: 1),
+      );
+    }
 
     // Split by comma (decimal separator). Only keep first comma.
     final firstComma = raw.indexOf(',');
@@ -832,6 +898,9 @@ class _NumberEuInputFormatter extends TextInputFormatter {
     if (firstComma >= 0) {
       display = '$grouped,$decRaw';
     }
+    if (isNegative && display.isNotEmpty && display != '0') {
+      display = '-$display';
+    }
 
     return TextEditingValue(
       text: display,
@@ -847,6 +916,69 @@ class _NumberEuInputFormatter extends TextInputFormatter {
       buf.write(digits[i]);
     }
     return buf.toString();
+  }
+}
+
+/// Plain decimal number formatter for small values where grouping is noisy.
+class _PlainNumberInputFormatter extends TextInputFormatter {
+  _PlainNumberInputFormatter({
+    this.decimalPlaces = 0,
+    this.allowNegative = false,
+  });
+
+  final int decimalPlaces;
+  final bool allowNegative;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final original = newValue.text;
+    if (original.isEmpty) return const TextEditingValue(text: '');
+
+    final isNegative = allowNegative && original.trimLeft().startsWith('-');
+    String raw = original.replaceAll(RegExp(r'[^0-9.,]'), '');
+    if (isNegative && raw.isEmpty) {
+      return const TextEditingValue(
+        text: '-',
+        selection: TextSelection.collapsed(offset: 1),
+      );
+    }
+
+    final separators = RegExp(r'[.,]').allMatches(raw).toList();
+    String intRaw = raw;
+    String decRaw = '';
+    String separator = '.';
+
+    if (decimalPlaces > 0 && separators.isNotEmpty) {
+      final firstSeparator = separators.first;
+      separator = firstSeparator.group(0) ?? '.';
+      intRaw = raw.substring(0, firstSeparator.start);
+      decRaw = raw
+          .substring(firstSeparator.end)
+          .replaceAll(RegExp(r'[.,]'), '');
+      if (decRaw.length > decimalPlaces) {
+        decRaw = decRaw.substring(0, decimalPlaces);
+      }
+    } else {
+      intRaw = raw.replaceAll(RegExp(r'[.,]'), '');
+    }
+
+    intRaw = intRaw.replaceAll(RegExp(r'^0+(?=\d)'), '');
+
+    String display = intRaw;
+    if (decimalPlaces > 0 && separators.isNotEmpty) {
+      display = '$intRaw$separator$decRaw';
+    }
+    if (isNegative && display.isNotEmpty && display != '0') {
+      display = '-$display';
+    }
+
+    return TextEditingValue(
+      text: display,
+      selection: TextSelection.collapsed(offset: display.length),
+    );
   }
 }
 
