@@ -531,27 +531,11 @@ class _PredictionsDetailsTabBodyState
         Stack(
           clipBehavior: Clip.none,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withOpacity(selected ? 0.30 : 0.20),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: _teamLogo(team, size: 52),
-            ),
+            _teamLogo(team, size: 66, accent: accent, elevated: true),
             if (selected)
               Positioned(
-                top: -4,
-                right: -7,
+                top: -10,
+                right: -8,
                 child: Container(
                   width: 22,
                   height: 22,
@@ -581,21 +565,17 @@ class _PredictionsDetailsTabBodyState
     );
   }
 
-  Widget _teamLogo(Map<String, dynamic> team, {double size = 34}) {
-    final logo = predictionText(team['logo'], fallback: '');
-    if (logo.isEmpty || logo == '--') {
-      return Icon(Icons.flag_outlined, size: size * 0.65, color: _blue);
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Image.network(
-        logo,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            Icon(Icons.flag_outlined, size: size * 0.65, color: _blue),
-      ),
+  Widget _teamLogo(
+    Map<String, dynamic> team, {
+    double size = 34,
+    Color accent = _blue,
+    bool elevated = false,
+  }) {
+    return PredictionTeamFlag(
+      logo: predictionText(team['logo'], fallback: ''),
+      size: size,
+      accent: accent,
+      elevated: elevated,
     );
   }
 

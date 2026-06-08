@@ -70,6 +70,59 @@ class GoldfishStakeIcon extends StatelessWidget {
   }
 }
 
+class PredictionTeamFlag extends StatelessWidget {
+  const PredictionTeamFlag({
+    super.key,
+    required this.logo,
+    this.size = 34,
+    this.accent = const Color(0xFF4E7FB9),
+    this.elevated = false,
+  });
+
+  final String logo;
+  final double size;
+  final Color accent;
+  final bool elevated;
+
+  @override
+  Widget build(BuildContext context) {
+    final flagHeight = size * 0.66;
+    final normalizedLogo = logo.trim();
+
+    return Container(
+      width: size,
+      height: flagHeight,
+      padding: EdgeInsets.all(size * 0.07),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: accent.withOpacity(0.22)),
+        boxShadow: elevated
+            ? [
+                BoxShadow(
+                  color: accent.withOpacity(0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ]
+            : null,
+      ),
+      child: normalizedLogo.isEmpty || normalizedLogo == '--'
+          ? Icon(Icons.flag_outlined, size: flagHeight * 0.58, color: accent)
+          : Image.network(
+              normalizedLogo,
+              width: size,
+              height: flagHeight,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.flag_outlined,
+                size: flagHeight * 0.58,
+                color: accent,
+              ),
+            ),
+    );
+  }
+}
+
 class _GoldfishPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

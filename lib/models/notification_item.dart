@@ -43,7 +43,8 @@ class NotificationItem {
       imageUrl: json['imageUrl'],
       isRead: json['isRead'] == true,
       readAt: json['readAt']?.toString(),
-      createdDate: DateTime.tryParse(json['createdDate'] ?? '') ?? DateTime.now(),
+      createdDate:
+          DateTime.tryParse(json['createdDate'] ?? '') ?? DateTime.now(),
       notificationConfigId: json['notificationConfigId'],
       isShowTemplate: json['isShowTemplate'],
       notificationTemplate: json['notificationTemplate'],
@@ -123,11 +124,18 @@ class NotificationItem {
       'car-booking-page': 'CARBKG',
       'travel-request-page': 'TRAREQ',
       'travel-claim-page': 'TRACLA',
+      'contractor-submission-page': 'CONSUB',
+      'safety-training-process-page': 'SAFETR',
       'product-page': 'PRD',
       'customer-page': 'CTM',
       'weekly-report-page': 'WKLRPT',
       'opportunities-page': 'OPP',
       'project-management-page': 'PRJMGT',
+      'project-cmdr-page': 'CMDRMD',
+      'dataspy-page': 'DATASPY',
+      'data-spy-page': 'DATASPY',
+      'dashboard-config-page': 'DASCFG',
+      'predictions-page': 'PREDIC',
     };
 
     // Nếu page nằm trong map → trả về module code
@@ -135,12 +143,14 @@ class NotificationItem {
       return pageToModuleCode[page];
     }
 
-    // Trường hợp task-list: extract module code từ query param 'code'
+    // Fallback: extract module code từ query param 'code'
     // e.g. "task-list?code=ELEAVE-10133" → "ELEAVE"
-    if (page == 'task-list') {
-      final code = targetRecordCode; // e.g. "ELEAVE-10133"
-      if (code != null && code.contains('-')) {
-        return code.split('-').first; // "ELEAVE"
+    // e.g. "contractor-submission-page?code=CONSUB-10044" → "CONSUB"
+    final code = targetRecordCode;
+    if (code != null && code.contains('-')) {
+      final moduleCode = code.split('-').first.trim();
+      if (moduleCode.isNotEmpty) {
+        return moduleCode;
       }
     }
 

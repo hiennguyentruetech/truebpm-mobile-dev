@@ -35,6 +35,7 @@ class _PredictionsHistoryTabBodyState
   Map<String, dynamic> _itemDetail = {};
   Map<String, dynamic> _moduleData = {};
   String _searchText = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -48,6 +49,12 @@ class _PredictionsHistoryTabBodyState
     if (oldWidget.initialData != widget.initialData) {
       _updateDataFromInitialData();
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _updateDataFromInitialData() {
@@ -68,19 +75,20 @@ class _PredictionsHistoryTabBodyState
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 760;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSearch(),
-              const SizedBox(height: 10),
-              if (isWide)
-                _buildWideTable(histories, constraints.maxWidth)
-              else
-                _buildMobileCards(histories),
-            ],
-          ),
+        return Column(
+          children: [
+            _buildSearch(),
+            Expanded(
+              child: isWide
+                  ? SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 16),
+                      child: _buildWideTable(histories, constraints.maxWidth),
+                    )
+                  : _buildMobileList(histories),
+            ),
+          ],
         );
       },
     );
@@ -109,29 +117,64 @@ class _PredictionsHistoryTabBodyState
 
   Widget _buildSearch() {
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blueGrey.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: const Color(0xFFEAF6FF),
+        border: Border(bottom: BorderSide(color: _line.withOpacity(0.9))),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: TextField(
-        onChanged: (value) => setState(() => _searchText = value),
-        decoration: const InputDecoration(
-          hintText: 'Search...',
-          prefixIcon: Icon(Icons.search, size: 19),
-          isDense: true,
-          filled: true,
-          fillColor: Color(0xFFF8FBFF),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFC7D9EC)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blueGrey.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          textInputAction: TextInputAction.search,
+          onChanged: (value) => setState(() => _searchText = value),
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            hintStyle: const TextStyle(
+              color: Color(0xFF91A5B9),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              size: 21,
+              color: _blue,
+            ),
+            suffixIcon: _searchText.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: Color(0xFF7B8EA4),
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchText = '');
+                    },
+                  ),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.transparent,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 12,
+            ),
+          ),
         ),
       ),
     );
@@ -515,17 +558,38 @@ class _PredictionsHistoryTabBodyState
     return totals;
   }
 
-  Widget _buildMobileCards(List<Map<String, dynamic>> histories) {
-    if (histories.isEmpty) return _emptyState();
+  Widget _buildMobileList(List<Map<String, dynamic>> histories) {
     final totals = _historyTotals(histories);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _mobileSummary(totals),
-        const SizedBox(height: 10),
-        ...histories.map(_mobileCard),
-      ],
+    if (histories.isEmpty) {
+      return ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
+        children: [_emptyState()],
+      );
+    }
+
+    return ListView.builder(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
+      cacheExtent: 900,
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: true,
+      itemCount: histories.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _mobileSummary(totals),
+          );
+        }
+
+        final item = histories[index - 1];
+        return RepaintBoundary(
+          key: ValueKey(item['id'] ?? item['code'] ?? index),
+          child: _mobileCard(item),
+        );
+      },
     );
   }
 
@@ -645,20 +709,10 @@ class _PredictionsHistoryTabBodyState
   }
 
   Widget _teamLogo(Map<String, dynamic> team, {double size = 24}) {
-    final logo = predictionText(team['logo'], fallback: '');
-    if (logo.isEmpty || logo == '--') {
-      return Icon(Icons.flag_outlined, size: size * 0.75, color: _blue);
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Image.network(
-        logo,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            Icon(Icons.flag_outlined, size: size * 0.75, color: _blue),
-      ),
+    return PredictionTeamFlag(
+      logo: predictionText(team['logo'], fallback: ''),
+      size: size,
+      accent: _blue,
     );
   }
 

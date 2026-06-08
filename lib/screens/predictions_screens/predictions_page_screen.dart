@@ -25,7 +25,7 @@ class PredictionsPageScreen extends StatelessWidget {
     TabConfig(
       code: 'PREDHIS',
       apiCode: 'DTLS',
-      name: "Others' Predictions",
+      name: "Other's Predictions",
       tabBodyBuilder: PredictionsHistoryTabBody.new,
     ),
     TabConfig(
