@@ -64,6 +64,9 @@ class MenuNavigationService {
         case 'safety-training-process-page':
           routeName = AppRoutes.safetyTrainingProcess;
           break;
+        case 'e-signing-request-page':
+          routeName = AppRoutes.eSigningRequest;
+          break;
         case 'e-leave-page':
           routeName = AppRoutes.eLeave;
           break;

@@ -332,6 +332,46 @@ extension CoreServiceActionApiExt on CoreService {
     return result;
   }
 
+  /// Digital signing action used before task approval for e-signing modules.
+  Future<Map<String, dynamic>?> signPdfForm({
+    required String moduleCode,
+    required Map<String, dynamic> user,
+    required Map<String, dynamic> itemDetail,
+    String tabModuleCode = 'PDF',
+  }) async {
+    final safeItemDetail = _prepareTaskItemDetailForAction(
+      moduleCode,
+      itemDetail,
+    );
+
+    final payload = {
+      'itemDetail': safeItemDetail,
+      'tabModuleCode': tabModuleCode,
+      'user': user,
+      'moduleCode': moduleCode,
+    };
+
+    logger.i('✍️ DIGITAL SIGNATURE ACTION: SIGN_PDF_FORM');
+    logger.i('  • Module: $moduleCode.$tabModuleCode');
+    logger.i('  • User: ${user['fullName'] ?? user['code']}');
+
+    final result = await performAction(
+      'SIGNATURE',
+      'SIGN',
+      'SIGN_PDF_FORM',
+      payload,
+    );
+
+    if (result != null) {
+      logger.i('✍️ DIGITAL SIGNATURE Response:');
+      logger.i('  • Success: ${result['success'] ?? false}');
+      logger.i('  • Message Type: ${result['messageType'] ?? 'N/A'}');
+      logger.i('  • Message: ${result['message'] ?? 'N/A'}');
+    }
+
+    return result;
+  }
+
   Map<String, dynamic> _prepareTaskItemDetailForAction(
     String moduleCode,
     Map<String, dynamic> itemDetail,
@@ -340,7 +380,8 @@ extension CoreServiceActionApiExt on CoreService {
 
     switch (moduleCode.toUpperCase()) {
       case 'CONSUB':
-        return _stripConsubUiOnlyFields(cloned);
+      case 'ESIGNG':
+        return _stripUiOnlyFields(cloned);
       default:
         return cloned;
     }
@@ -357,7 +398,7 @@ extension CoreServiceActionApiExt on CoreService {
     return Map<String, dynamic>.from(source);
   }
 
-  Map<String, dynamic> _stripConsubUiOnlyFields(Map<String, dynamic> source) {
+  Map<String, dynamic> _stripUiOnlyFields(Map<String, dynamic> source) {
     dynamic strip(dynamic value) {
       if (value is List) {
         return value.map(strip).toList();

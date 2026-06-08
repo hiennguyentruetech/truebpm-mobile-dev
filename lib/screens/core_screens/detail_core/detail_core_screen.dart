@@ -7,6 +7,7 @@ import 'package:truebpm/services/core_service.dart';
 import 'package:truebpm/services/auth_service.dart';
 import 'package:truebpm/utils/session_handler.dart';
 import 'package:truebpm/utils/keyboard_utils.dart';
+import 'package:truebpm/widgets/dialogs/digital_signature_waiting_dialog.dart';
 import 'package:truebpm/widgets/global_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 

@@ -20,6 +20,8 @@ class AppRoutes {
   contractorSubmission = '/contractorSubmission', detailContractorSubmission = '/detailContractorSubmission',
   // Safety Training Process routes
   safetyTrainingProcess = '/safetyTrainingProcess', detailSafetyTrainingProcess = '/detailSafetyTrainingProcess',
+  // E-Signing routes
+  eSigningRequest = '/eSigningRequest', detailESigningRequest = '/detailESigningRequest',
   // Menu module routes
   menu = '/menu', detailMenu = '/detailMenu',
   // Module management routes

@@ -216,6 +216,33 @@ extension _DetailCoreScreenTaskActionsExt on _DetailCoreScreenState {
       final itemDetail = _getItemDetail(provider);
       final dataSpy = _getDataSpy();
 
+      if (_usesDigitalSignatureApproval(widget.moduleCode)) {
+        provider.setLoadingOverlay(false);
+        final signatureResponse = await _handleDigitalSignatureApproval(
+          userData: userData,
+          itemDetail: itemDetail,
+        );
+        if (!mounted) return;
+
+        if (signatureResponse == null || signatureResponse['success'] != true) {
+          CoreActionDialog.showResponseDialog(
+            context,
+            response:
+                signatureResponse ??
+                {
+                  'success': false,
+                  'messageType': 'error',
+                  'message':
+                      'Digital signature failed or session expired. Approval was not submitted.',
+                },
+            title: 'Digital Signature',
+          );
+          return;
+        }
+
+        provider.setLoadingOverlay(true);
+      }
+
       // Call API with approve action (always use DTLS tab for task actions)
       final response = await CoreService.instance.performTaskAction(
         widget.moduleCode,
@@ -275,5 +302,56 @@ extension _DetailCoreScreenTaskActionsExt on _DetailCoreScreenState {
     } finally {
       provider.setLoadingOverlay(false);
     }
+  }
+
+  bool _usesDigitalSignatureApproval(String moduleCode) {
+    const modules = {'ESIGNG'};
+    return modules.contains(moduleCode.toUpperCase());
+  }
+
+  Future<Map<String, dynamic>?> _handleDigitalSignatureApproval({
+    required Map<String, dynamic> userData,
+    required Map<String, dynamic> itemDetail,
+  }) async {
+    final document = _getDigitalSignatureDocument(itemDetail);
+    final documentName = document?['fileName']?.toString().trim() ?? '';
+    final signerName =
+        userData['fullName']?.toString().trim().isNotEmpty == true
+        ? userData['fullName'].toString().trim()
+        : userData['code']?.toString().trim() ?? '';
+
+    return DigitalSignatureWaitingDialog.show(
+      context,
+      documentName: documentName,
+      signerName: signerName,
+      timeout: const Duration(minutes: 2),
+      onSign: () => CoreService.instance.signPdfForm(
+        moduleCode: widget.moduleCode,
+        user: userData,
+        itemDetail: itemDetail,
+      ),
+    );
+  }
+
+  Map<String, dynamic>? _getDigitalSignatureDocument(
+    Map<String, dynamic> itemDetail,
+  ) {
+    final value = itemDetail['value'];
+    if (value is! Map) return null;
+
+    for (final key in const [
+      'documentsNext',
+      'documentsAssignees',
+      'documents',
+    ]) {
+      final docs = value[key];
+      if (docs is List && docs.isNotEmpty) {
+        final first = docs.first;
+        if (first is Map<String, dynamic>) return first;
+        if (first is Map) return Map<String, dynamic>.from(first);
+      }
+    }
+
+    return null;
   }
 }

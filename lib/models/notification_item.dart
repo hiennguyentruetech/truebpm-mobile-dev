@@ -136,6 +136,7 @@ class NotificationItem {
       'data-spy-page': 'DATASPY',
       'dashboard-config-page': 'DASCFG',
       'predictions-page': 'PREDIC',
+      'e-signing-request-page': 'ESIGNG',
     };
 
     // Nếu page nằm trong map → trả về module code

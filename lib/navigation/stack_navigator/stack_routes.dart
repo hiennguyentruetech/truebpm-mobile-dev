@@ -29,6 +29,9 @@ import 'package:truebpm/screens/contractor_submission_screens/contractor_submiss
 // Safety Training Process Screens
 import 'package:truebpm/screens/safety_training_process/safety_training_process_page_screen.dart';
 
+// E-Signing Screens
+import 'package:truebpm/screens/e_signing_screen/e_signing_request_page_screen.dart';
+
 // Menu Screens
 import 'package:truebpm/screens/menu_screens/list_menu_screen.dart';
 import 'package:truebpm/screens/menu_screens/detail_menu_screen.dart';
@@ -96,6 +99,9 @@ class StackRoutes {
     // Safety Training Process Stack Routes
     AppRoutes.safetyTrainingProcess: () =>
         const SafetyTrainingProcessPageScreen(),
+
+    // E-Signing Stack Routes
+    AppRoutes.eSigningRequest: () => const ESigningRequestPageScreen(),
 
     // Menu Stack Routes
     AppRoutes.menu: () => const ListMenuScreen(),
